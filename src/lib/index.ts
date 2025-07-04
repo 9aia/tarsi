@@ -1,12 +1,15 @@
 import { readFile } from 'node:fs/promises'
 import { simpleGit } from 'simple-git'
 import { CONFIG } from '../config'
+import semver from 'semver'
 
 const git = simpleGit()
 
 export async function getLastTag(): Promise<string> {
-  const tags = await git.tags()
-  return tags.latest || ''
+  const tags = (await git.tags()).all
+  const sortedVersions = semver.rsort(tags)
+  const latestVersion = sortedVersions[0]
+  return latestVersion || ''
 }
 
 export async function getGitDiffSince(tag: string): Promise<string> {

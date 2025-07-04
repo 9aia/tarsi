@@ -14,6 +14,9 @@ importers:
       dedent:
         specifier: ^1.6.0
         version: 1.6.0
+      semver:
+        specifier: ^7.7.2
+        version: 7.7.2
       simple-git:
         specifier: ^3.28.0
         version: 3.28.0
@@ -122,6 +125,11 @@ packages:
 
   safe-buffer@5.2.1:
     resolution: {integrity: sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==}
+
+  semver@7.7.2:
+    resolution: {integrity: sha512-RF0Fw+rO5AMf9MAyaRXI4AV0Ulj5lMHqVxxdSgiVbixSCXoEmmX/jk0CuJw4+3SqroYO9VoUh+HcuJivvtJemA==}
+    engines: {node: '>=10'}
+    hasBin: true
 
   simple-git@3.28.0:
     resolution: {integrity: sha512-Rs/vQRwsn1ILH1oBUy8NucJlXmnnLeLCfcvbSehkPzbv3wwoFWIdtfd6Ndo6ZPhlPsCZ60CPI4rxurnwAa+a2w==}
@@ -274,6 +282,8 @@ snapshots:
       whatwg-url: 5.0.0
 
   safe-buffer@5.2.1: {}
+
+  semver@7.7.2: {}
 
   simple-git@3.28.0:
     dependencies:
