@@ -55,6 +55,8 @@ async function generate() {
   const unreleasedPrompt = dedent`
     You're an AI changelog writer. Given the previous changelog format and this git diff below, generate the new 'Unreleased' section based on this info, following the style of the previous changelog and the styleguide.
 
+    You must generate the changelog for a user perspective, not a developer perspective. This changelog shouldn't include any technical details, only the user-facing changes.
+
     --- Changelog styleguide ---
     ${CONFIG.changelogStyleguide}
 

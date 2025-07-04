@@ -18,19 +18,15 @@ export const CONFIG = {
 
     - **Added** for new features.
     - **Changed** for changes in existing functionality.
-    - **Enhancement** for enhancements and improvements of existing functionality.
+    - **Enhanced** for enhancements and improvements of existing functionality.
     - **Deprecated** for soon-to-be removed features.
-    - **Design** for design changes.
+    - **Beautified** for changes that are just aesthetic changes, such as colors, fonts, spacing, animations, etc.
     - **Removed** for now removed features.
     - **Fixed** for any bug fixes.
     - **Security** in case of vulnerabilities.
-    - **Performance** for performance improvements.
-    - **Refactor** for code changes that neither fixes a bug nor adds a feature.
-    - **Docs** for updating documentation.
-    - **Style** for formatting changes, missing semi-colons, etc.
+    - **Performance** for performance improvements, such as faster loading times, better memory usage, etc.
     - **Chore** for updating build tasks, package manager files, etc.
     - **Project Management** for tasks, backlogs, issues, etc.
-    - **DX** for developer experience improvements.
     - **Test** for adding missing tests.
     - **Other** for other changes that don't fit into the other categories.
   `,
