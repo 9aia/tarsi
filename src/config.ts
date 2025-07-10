@@ -13,6 +13,7 @@ export const CONFIG = {
     - The latest version comes first.
     - The release date of each version is displayed.
     - Mention whether you follow Semantic Versioning.
+    - Don't include periods at the end of the bullet items.
 
     # Types of changes
 
