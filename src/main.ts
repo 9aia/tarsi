@@ -2,6 +2,8 @@ import process from 'node:process'
 import generate from './commands/generate'
 import check from './commands/check'
 
+// TODO: add security command for security analysis
+
 async function main() {
   const args = process.argv.slice(2)
   const command = args[0]
