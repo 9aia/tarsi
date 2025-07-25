@@ -10,12 +10,12 @@ export async function generateContent({
   prompt: string
   model: string
 }) {
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY is not set')
+  if (!process.env.TARSI_GEMINI_API_KEY) {
+    throw new Error('TARSI_GEMINI_API_KEY is not set')
   }
 
   if (!ai) {
-    ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! })
+    ai = new GoogleGenAI({ apiKey: process.env.TARSI_GEMINI_API_KEY! })
   }
 
   const response = await ai.models.generateContent({
