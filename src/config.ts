@@ -14,6 +14,7 @@ export const CONFIG = {
     - The release date of each version is displayed.
     - Mention whether you follow Semantic Versioning.
     - Don't include periods at the end of the bullet items.
+    - Start with action verbs in the past tense.
 
     # Types of changes
 
@@ -50,5 +51,7 @@ export const CONFIG = {
     '!README.md',
     '!LICENSE',
     '!SECURITY.md',
+
+    '!design/*',
   ],
 }
