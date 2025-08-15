@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises"
-import semver from "semver"
+import * as semver from "semver"
 import { simpleGit } from "simple-git"
 import { CONFIG } from "../config"
 

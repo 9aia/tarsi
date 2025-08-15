@@ -1,14 +1,21 @@
 {
   "name": "tarsi",
+  "type": "module",
   "version": "0.0.0",
   "description": "AI-powered changelog generator",
   "author": "",
   "license": "ISC",
   "keywords": [],
-  "main": "index.js",
+  "module": "src/main.ts",
+  "bin": {
+    "tarsi": "./dist/tarsi"
+  },
   "scripts": {
+    "start": "bun .",
+    "dev": "bun --watch .",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "build": "bun build ./src/main.ts --outfile dist/tarsi --compile --minify --sourcemap",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
