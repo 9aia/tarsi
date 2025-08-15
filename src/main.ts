@@ -1,6 +1,6 @@
-import process from 'node:process'
-import generate from './commands/generate'
-import check from './commands/check'
+import process from "node:process"
+import check from "./commands/check"
+import generate from "./commands/generate"
 
 // TODO: add security command for security analysis
 
@@ -9,31 +9,31 @@ async function main() {
   const command = args[0]
 
   if (!command) {
-    console.log('🐵 Tarsi')
-    console.log('')
-    console.log('Usage: tarsi <command>')
-    console.log('')
-    console.log('Commands:')
-    console.log('  generate     📦 Generate changelog from git diff')
-    console.log('  check        🔍 Review changelog against git diff')
-    console.log('')
+    console.log("🐵 Tarsi")
+    console.log("")
+    console.log("Usage: tarsi <command>")
+    console.log("")
+    console.log("Commands:")
+    console.log("  generate     📦 Generate changelog from git diff")
+    console.log("  check        🔍 Review changelog against git diff")
+    console.log("")
     process.exit(1)
   }
 
   switch (command) {
-    case 'generate':
+    case "generate":
       await generate()
       break
-    case 'check':
+    case "check":
       await check()
       break
     default:
       console.error(`❌ Unknown command: ${command}`)
-      console.log('')
-      console.log('Available commands:')
-      console.log('  generate     📦 Generate changelog from git diff')
-      console.log('  check        🔍 Review changelog against git diff')
-      console.log('')
+      console.log("")
+      console.log("Available commands:")
+      console.log("  generate     📦 Generate changelog from git diff")
+      console.log("  check        🔍 Review changelog against git diff")
+      console.log("")
       process.exit(1)
   }
 }

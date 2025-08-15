@@ -2,17 +2,22 @@
   "name": "tarsi",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
   "author": "",
   "license": "ISC",
+  "keywords": [],
+  "main": "index.js",
+  "scripts": {
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
   "dependencies": {
     "@google/genai": "^1.6.0",
     "dedent": "^1.6.0",
     "semver": "^7.7.2",
     "simple-git": "^3.28.0"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^5.2.1"
   }
 }

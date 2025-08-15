@@ -1,5 +1,5 @@
-import process from 'node:process'
-import { GoogleGenAI } from '@google/genai'
+import process from "node:process"
+import { GoogleGenAI } from "@google/genai"
 
 let ai: GoogleGenAI | null = null
 
@@ -11,7 +11,7 @@ export async function generateContent({
   model: string
 }) {
   if (!process.env.TARSI_GEMINI_API_KEY) {
-    throw new Error('TARSI_GEMINI_API_KEY is not set')
+    throw new Error("TARSI_GEMINI_API_KEY is not set")
   }
 
   if (!ai) {

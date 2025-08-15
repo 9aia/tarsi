@@ -1,54 +1,54 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import dedent from 'dedent'
-import { CONFIG } from '../config'
-import { getGitDiffSince, getLastTag, readChangelog } from '../lib'
-import { generateContent } from '../lib/gemini'
+import { existsSync, writeFileSync } from "node:fs"
+import dedent from "dedent"
+import { CONFIG } from "../config"
+import { getGitDiffSince, getLastTag, readChangelog } from "../lib"
+import { generateContent } from "../lib/gemini"
 
 async function check() {
-  console.log('🐵 Tarsi')
-  console.log('================================')
+  console.log("🐵 Tarsi")
+  console.log("================================")
 
   // Get last tag
-  console.log('\n📋 Step 1: Getting last version tag...')
+  console.log("\n📋 Step 1: Getting last version tag...")
   const tag = await getLastTag()
-  console.log(`   Last version tag: ${tag || 'No tags found'}`)
+  console.log(`   Last version tag: ${tag || "No tags found"}`)
 
   if (!tag) {
-    console.log('   ⚠️  No tags found. Using all commits since repository creation.')
+    console.log("   ⚠️  No tags found. Using all commits since repository creation.")
   }
 
   // Get git diff
-  console.log('\n📊 Step 2: Generating git diff...')
+  console.log("\n📊 Step 2: Generating git diff...")
   const diff = await getGitDiffSince(tag)
-  const diffLines = diff.split('\n').length
+  const diffLines = diff.split("\n").length
   console.log(`   Diff contains ${diffLines} lines`)
 
   if (diffLines === 0) {
-    console.log('   ℹ️  No changes found since last tag')
+    console.log("   ℹ️  No changes found since last tag")
     return
   }
 
   // Check if generated changelog exists
-  console.log('\n📖 Step 3: Checking for the current changelog...')
+  console.log("\n📖 Step 3: Checking for the current changelog...")
   const changelogFile = CONFIG.changelogPath
   if (!existsSync(changelogFile)) {
     console.log(`   ❌ Changelog not found: ${changelogFile}`)
-    console.log('   💡 Run "tarsi generate" first to create a changelog')
+    console.log("   💡 Run \"tarsi generate\" first to create a changelog")
     return
   }
   console.log(`   ✅ Found changelog: ${changelogFile}`)
 
   // Read existing changelog
-  console.log('\n📚 Step 4: Reading existing changelog...')
+  console.log("\n📚 Step 4: Reading existing changelog...")
   const rawChangelog = await readChangelog()
   console.log(`   Existing changelog file: ${CONFIG.changelogPath}`)
   console.log(`   Existing changelog size: ${rawChangelog.length} characters`)
 
   // Preprocess changelog
-  console.log('\n🧹 Step 5: Preprocessing changelog...')
-  let content = rawChangelog.replace(/^---[\s\S]*?---/, '').trim()
+  console.log("\n🧹 Step 5: Preprocessing changelog...")
+  let content = rawChangelog.replace(/^---[\s\S]*?---/, "").trim()
   // Clean h1
-  content = content.replace(/^# Changelog\s*/m, '').trim()
+  content = content.replace(/^# Changelog\s*/m, "").trim()
   // Find all h2 (version headers)
   const allVersions = content.split(/^## /gm).slice(1)
   const versions = allVersions.slice(1)
@@ -58,7 +58,7 @@ async function check() {
   console.log(`   Unreleased section size: ${unreleasedSection.length} characters`)
 
   // Prepare AI check prompt
-  console.log('\n🤖 Step 6: Preparing AI check prompt...')
+  console.log("\n🤖 Step 6: Preparing AI check prompt...")
   const checkPrompt = dedent`
     You are a changelog reviewer. Analyze the generated changelog against the git diff and provide feedback.
 
@@ -73,7 +73,7 @@ async function check() {
     ${CONFIG.changelogStyleguide}
 
     --- Existing changelog ---
-    ${versions.join('\n')}
+    ${versions.join("\n")}
 
     --- Unreleased section to review ---
     ${unreleasedSection}
@@ -86,8 +86,8 @@ async function check() {
   console.log(`   Using model: ${CONFIG.model}`)
 
   // Generate review with AI
-  console.log('\n🔍 Step 7: Generating changelog review...')
-  console.log('   This may take a moment...')
+  console.log("\n🔍 Step 7: Generating changelog review...")
+  console.log("   This may take a moment...")
 
   const review = await generateContent({
     prompt: checkPrompt,
@@ -97,7 +97,7 @@ async function check() {
   console.log(`   Review size: ${review?.length || 0} characters`)
 
   // Save review to file
-  console.log('\n💾 Step 8: Saving review...')
+  console.log("\n💾 Step 8: Saving review...")
   const reviewFile = CONFIG.reviewPath
   const reviewContent = dedent`
     # Changelog Review
@@ -116,12 +116,12 @@ async function check() {
   console.log(`   Review saved to: ${reviewFile}`)
 
   // Display review summary
-  console.log('\n📋 Review Summary:')
-  console.log('================================')
+  console.log("\n📋 Review Summary:")
+  console.log("================================")
   console.log(review)
 
-  console.log('\n🎉 Check complete!')
-  console.log('================================')
+  console.log("\n🎉 Check complete!")
+  console.log("================================")
   console.log(`📄 Review saved to: ${reviewFile}`)
   console.log(`📊 Diff lines analyzed: ${diffLines}`)
   console.log(`🤖 AI model used: ${CONFIG.model}`)

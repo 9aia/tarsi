@@ -1,7 +1,7 @@
 export const CONFIG = {
-  model: 'gemini-2.5-flash',
-  reviewPath: 'pm/CHANGELOG.review.md',
-  changelogPath: 'pm/CHANGELOG.md',
+  model: "gemini-2.5-flash",
+  reviewPath: "pm/CHANGELOG.review.md",
+  changelogPath: "pm/CHANGELOG.md",
   changelogSliceEnd: 2,
   changelogStyleguide: `
     # Guiding Principles
@@ -34,24 +34,24 @@ export const CONFIG = {
   `,
   gitDiffPatterns: [
     // Generated files
-    '!worker-configuration.d.ts',
-    '!pnpm-lock.yaml',
+    "!worker-configuration.d.ts",
+    "!pnpm-lock.yaml",
 
-    '!db-client/*',
-    '!api-client/*',
-    '!psitta/*',
-    '!locales/script.ts',
-    '!psitta.config.ts',
-    '!pm/*',
-    '!co-authors*',
-    '!codeshare/*',
-    '!tarsi/*',
+    "!db-client/*",
+    "!api-client/*",
+    "!psitta/*",
+    "!locales/script.ts",
+    "!psitta.config.ts",
+    "!pm/*",
+    "!co-authors*",
+    "!codeshare/*",
+    "!tarsi/*",
 
-    '!docs/*',
-    '!README.md',
-    '!LICENSE',
-    '!SECURITY.md',
+    "!docs/*",
+    "!README.md",
+    "!LICENSE",
+    "!SECURITY.md",
 
-    '!design/*',
+    "!design/*",
   ],
 }
