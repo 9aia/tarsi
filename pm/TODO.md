@@ -6,3 +6,5 @@ description: Tasks and items for the release.
 
 - Config build
 - Config release and release
+- Add CONTRIBUTING.md
+- Add CODE_OF_CONDUCT.md
