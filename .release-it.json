@@ -5,9 +5,9 @@
     "tagName": "v@${version}"
   },
   "github": {
-    "draft": true,
     "release": true,
-    "releaseName": "v${version}"
+    "releaseName": "v${version}",
+    "releaseNotes": "echo 'Please refer to [CHANGELOG.md](https://github.com/9aia/tarsi/blob/main/pm/CHANGELOG.md) for details.'"
   },
   "npm": {
     "publish": true

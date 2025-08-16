@@ -24,8 +24,7 @@
     "generator",
     "release notes",
     "automation",
-    "git",
-    "ai"
+    "git"
   ],
   "module": "src/main.ts",
   "bin": {
