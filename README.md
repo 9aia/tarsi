@@ -15,6 +15,21 @@ npm install -g tarsi
 
 Or with other package managers like PNPM, Yarn, or Bun!
 
+### Adding the Script to your `package.json` (Recommended)
+
+Add the `changelog` script to your `package.json`:
+
+```jsonc
+// package.json
+{
+  // ...
+  "scripts": {
+    "changelog": "tarsi"
+  }
+  // ...
+}
+```
+
 ## Usage
 
 To generate a changelog from the git diff since the latest tag, run:
