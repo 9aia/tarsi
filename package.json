@@ -15,6 +15,7 @@
     "dev": "bun --watch .",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
     "build": "bun build ./src/main.ts --outfile dist/tarsi --compile --minify --sourcemap",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -28,6 +29,7 @@
     "@antfu/eslint-config": "^5.2.1",
     "@types/node": "^24.3.0",
     "@types/semver": "^7.7.0",
-    "eslint": "^9.33.0"
+    "eslint": "^9.33.0",
+    "typescript": "^5.9.2"
   }
 }
