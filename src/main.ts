@@ -2,6 +2,7 @@ import process from "node:process"
 import check from "./commands/check"
 import generate from "./commands/generate"
 
+// TODO: add genesis generation
 // TODO: add security command for security analysis
 
 async function main() {
