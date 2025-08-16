@@ -6,6 +6,8 @@ description: A detailed, chronological record of all changes made to a project, 
 
 ## [Unreleased]
 
+## [0.1.0] - 2025-08-15
+
 ### Added
 
 - Integrated Google Gemini AI (gemini-2.5-flash) to automatically generate user-focused changelogs from git changes

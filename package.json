@@ -1,7 +1,7 @@
 {
   "name": "tarsi",
   "type": "module",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "An AI-powered CLI for generating user-focused changelogs directly from git changes, minimizing manual effort.",
   "author": "Luis Emidio",
   "license": "MIT",
