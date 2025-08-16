@@ -43,6 +43,7 @@
     "lint:fix": "eslint . --fix",
     "typecheck": "tsc --noEmit",
     "build": "bun build ./src/main.ts --outfile dist/tarsi --compile --minify --sourcemap",
+    "release": "release-it",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
