@@ -1,5 +1,8 @@
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import path from "path";
+import { createRequire } from "module";
+
+const require = createRequire(import.meta.url);
 
 /**
  * Path to the user configuration file
@@ -39,17 +42,17 @@ type ConfigModule = { CONFIG: Partial<TarsiConfig> }
  * Sets up configuration by merging default config with user-defined config
  * @description Loads user configuration from tarsi.config.ts if it exists, otherwise returns default config
  * @param config - Default configuration object
- * @returns Promise resolving to merged configuration object
- * @throws {Error} If configuration file exists but cannot be imported or lacks CONFIG object
+ * @returns Merged configuration object
+ * @throws {Error} If configuration file exists but cannot be required or lacks CONFIG object
  */
-async function setupConfig(config: TarsiConfig) {
+function setupConfig(config: TarsiConfig): TarsiConfig {
     if (!existsSync(CONFIG_FILE_PATH)) {
         return config
     }
 
-    const module: ConfigModule = await import(CONFIG_FILE_PATH)
+    const module: ConfigModule = require(CONFIG_FILE_PATH)
     
-    // Validate that the imported module has a CONFIG object
+    // Validate that the required module has a CONFIG object
     if (!module || typeof module !== 'object' || !('CONFIG' in module)) {
         throw new Error(`Configuration file "${CONFIG_FILE_PATH}" must export a CONFIG object`)
     }
