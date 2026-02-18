@@ -44,6 +44,44 @@ To check the changelog against the git diff, run:
 tarsi check
 ```
 
+## Configuration
+
+You can customize Tarsi's behavior by creating a `tarsi.config.ts` file in your project root. This file should export a `CONFIG` object with your custom settings.
+
+### Example Configuration
+
+```typescript
+// tarsi.config.ts
+export const CONFIG = {
+  model: "gemini-2.5-flash",
+  reviewPath: "custom-review.md",
+  changelogPath: "CHANGELOG.md",
+  changelogSliceEnd: 2,
+  changelogStyleguide: `
+    # Custom Style Guide
+    - Use present tense for new features
+    - Group changes by type
+    - Include relevant PR numbers
+  `,
+  gitDiffPatterns: [
+    "!dist/*",
+    "!build/*",
+    "!node_modules/*",
+  ],
+}
+```
+
+### Configuration Options
+
+- **model**: AI model to use for content generation (default: "gemini-2.5-flash")
+- **reviewPath**: File path where generated reviews will be saved
+- **changelogPath**: File path to the changelog file
+- **changelogSliceEnd**: Number of entries to slice from the end of the changelog
+- **changelogStyleguide**: Style guide text for changelog formatting
+- **gitDiffPatterns**: Array of git diff patterns to exclude from analysis
+
+If no configuration file is found, Tarsi will use sensible defaults.
+
 ---
 
 [Contribute](./CONTRIBUTING.md) • [Security](./SECURITY.md) • [License](./LICENSE)
