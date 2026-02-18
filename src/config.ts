@@ -1,4 +1,6 @@
-export const CONFIG = {
+import { setupConfig } from "./lib/configuration"
+
+export const CONFIG = await setupConfig({
   model: "gemini-2.5-flash",
   reviewPath: "pm/CHANGELOG.review.md",
   changelogPath: "pm/CHANGELOG.md",
@@ -54,4 +56,4 @@ export const CONFIG = {
 
     "!design/*",
   ],
-}
+})
