@@ -25,4 +25,3 @@
 - `sturn leave` on exit — drops the actor's claims.
 
 <!-- /sturn:agent-awareness -->
-
