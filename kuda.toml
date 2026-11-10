@@ -1,0 +1,16 @@
+# kuda.toml — per-repo index config.
+
+[repo]
+
+[extract]
+kinds = ["manifest", "treesitter"]
+
+[summarize]
+kind = "template"
+
+[store]
+kind = "sqlite"
+path = ".kuda/index.sqlite"
+
+[cards]
+dir = ".kuda"

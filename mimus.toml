@@ -1,0 +1,12 @@
+# mimus.toml — per-repo critic config.
+
+[sources]
+docs = ["README.md", "AGENTS.md", "project/**/*.md"]
+comments = true
+
+[check]
+mechanical = true
+semantic = false
+
+[report]
+format = "human"
