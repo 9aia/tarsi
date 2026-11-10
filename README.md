@@ -1,7 +1,15 @@
 # Tarsi
 
-> [!WARNING]
-> **This repository is archived and no longer maintained.**
+> Generic release tool for the 9aia fleet — changelog → semver bump
+> → tag → publish, as a tamias content type and peregrin campaign.
+>
+> **Status: being rewritten in Rust** (ports-and-adapters, same
+> anatomy as tamias/bupha/peregrin). The TypeScript implementation
+> below is the legacy changelog-only version, kept for reference
+> until the rewrite lands — see the org ledger proposal P-013 /
+> plan PL-014.
+
+## Legacy: AI changelog CLI (TypeScript)
 
 Tarsi is an AI-powered CLI that automatically generates clear, user-focused changelogs from recent git changes, minimizing manual effort and keeping users informed.
 
