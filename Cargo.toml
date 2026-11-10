@@ -1,0 +1,24 @@
+[workspace]
+resolver = "2"
+members = [
+    "xtask",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/9aia/tarsi"
+description = "Generic release tool — changelog, semver bump, tag, publish"
+homepage = "https://9aia.com/tarsi"
+authors = ["9aia"]
+keywords = ["release", "changelog", "cli", "versioning"]
+categories = ["command-line-utilities", "development-tools"]
+readme = "README.md"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(coverage)"] }
+
+[workspace.lints.clippy]
+unwrap_used = "warn"

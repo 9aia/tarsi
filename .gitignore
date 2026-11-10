@@ -1,5 +1,11 @@
-node_modules
-dist
+target/
+coverage/
+*.profraw
 .env
-# myco worktree mount point
+
+# worktrees (orphan branches — created by `myco init` / repo tooling)
 project/
+docs/
+
+.kuda/index.sqlite
+.kuda/meta.json

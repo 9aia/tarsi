@@ -1,0 +1,17 @@
+# `tarsi-xtask`, not `xtask`: a shared CARGO_TARGET_DIR across repos
+# keys fingerprints/binaries by package name — a foreign `xtask`
+# package could own target/debug/xtask and run for `cargo xtask`
+# here.
+[package]
+name = "tarsi-xtask"
+description = "Repo chores: check / test / coverage / install / package / smoke / site"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+
+[lints]
+workspace = true

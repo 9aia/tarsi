@@ -1,0 +1,6 @@
+# Toolchain for tarsi — stable channel with the components the hooks
+# and xtask need (pre-commit runs `cargo fmt --check`, pre-push runs
+# `cargo xtask check` = fmt + clippy -D warnings).
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]
