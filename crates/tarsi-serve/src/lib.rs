@@ -299,15 +299,38 @@ fn execute_release(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
     let gh_repo = resolve_gh_repo(dir, &cfg);
     for u in &releasing {
         let unit = u["spec"]["name"].as_str().unwrap_or_default().to_string();
+        let version = u["new_version"].as_str().unwrap_or_default().to_string();
+        // Expand `[publish.ghreleases] assets` globs once per unit —
+        // `{unit}`/`{version}` substitute per release. Only done
+        // when this unit actually targets GitHub Releases and the
+        // publisher is enabled; expansion failure is reported on
+        // the ghreleases entry, not fatal to other targets.
+        let wants_gh = u["spec"]["publish"]
+            .as_array()
+            .is_some_and(|ps| ps.iter().any(|p| p.as_str() == Some("github-release")));
+        let (assets, asset_err) = if wants_gh && cfg.publish.ghreleases.enabled {
+            match tarsi_publish_ghreleases::expand_assets(
+                dir,
+                &cfg.publish.ghreleases.assets,
+                &unit,
+                &version,
+            ) {
+                Ok(a) => (a, None),
+                Err(e) => (Vec::new(), Some(e.to_string())),
+            }
+        } else {
+            (Vec::new(), None)
+        };
         let job = PublishJob {
             unit: unit.clone(),
-            version: u["new_version"].as_str().unwrap_or_default().to_string(),
+            version: version.clone(),
             manifest_dir: PathBuf::from(u["spec"]["path"].as_str().unwrap_or(".")),
             tag: u["tag"].as_str().unwrap_or_default().to_string(),
             notes: u["changelog_markdown"]
                 .as_str()
                 .unwrap_or_default()
                 .to_string(),
+            assets,
             dry_run,
         };
         for target in u["spec"]["publish"].as_array().cloned().unwrap_or_default() {
@@ -321,13 +344,17 @@ fn execute_release(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
                         .map_err(|e| e.to_string())
                 }
                 PublishTarget::GithubRelease if cfg.publish.ghreleases.enabled => {
-                    tarsi_publish_ghreleases::GhReleasePublisher::new(
-                        gh_repo.clone().unwrap_or_default(),
-                        cfg.publish.ghreleases.token_env.clone(),
-                    )
-                    .publish(&job)
-                    .map(|r| json!(r))
-                    .map_err(|e| e.to_string())
+                    if let Some(e) = &asset_err {
+                        Err(e.clone())
+                    } else {
+                        tarsi_publish_ghreleases::GhReleasePublisher::new(
+                            gh_repo.clone().unwrap_or_default(),
+                            cfg.publish.ghreleases.token_env.clone(),
+                        )
+                        .publish(&job)
+                        .map(|r| json!(r))
+                        .map_err(|e| e.to_string())
+                    }
                 }
                 _ => Ok(json!({ "unit": unit, "target": t, "ok": true, "detail": "disabled" })),
             };

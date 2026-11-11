@@ -9,6 +9,24 @@ use std::path::PathBuf;
 use tarsi_core::PublishTarget;
 use thiserror::Error;
 
+/// A file to attach to the release — already resolved by the
+/// caller (glob expansion + stat happen before the job is built;
+/// publishers stay pure consumers of concrete paths).
+#[derive(Debug, Clone)]
+pub struct PublishAsset {
+    /// Path to read at publish time (absolute, or relative to the
+    /// process cwd — caller's choice).
+    pub path: PathBuf,
+    /// Upload file name — the `?name=` query on the asset endpoint
+    /// and the identity used for idempotent replace.
+    pub name: String,
+    /// Declared content type; `None` → publisher guesses from the
+    /// file extension.
+    pub content_type: Option<String>,
+    /// Byte size — for dry-run reporting; publishers may re-stat.
+    pub size: u64,
+}
+
 /// Everything a publisher needs for one unit — already resolved
 /// by the caller (plan + config + secrets).
 #[derive(Debug, Clone)]
@@ -23,6 +41,9 @@ pub struct PublishJob {
     pub tag: String,
     /// Rendered release notes (changelog block / ghrelease body).
     pub notes: String,
+    /// Files to attach (release assets). Empty = notes-only
+    /// release. Targets that don't support assets ignore this.
+    pub assets: Vec<PublishAsset>,
     /// When true, impls validate + report but perform no remote
     /// writes. Dry-run is the safe default on integration surfaces.
     pub dry_run: bool,

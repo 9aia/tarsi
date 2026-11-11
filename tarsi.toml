@@ -18,3 +18,6 @@ enabled = false   # not on crates.io yet
 enabled = true
 token_env = "GITHUB_TOKEN"
 # repo defaults to the origin remote (9aia/tarsi)
+# Release assets: repo-root-relative globs; {unit}/{version} expand
+# per unit. Uncomment once dist/ artifacts exist:
+# assets = ["dist/{unit}-{version}-*"]

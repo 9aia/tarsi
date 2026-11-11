@@ -20,15 +20,17 @@ impl Publisher for DryRunPublisher {
     }
 
     fn publish(&self, job: &PublishJob) -> Result<PublishReport, tarsi_publish::PublishError> {
+        let assets = asset_suffix(job);
         Ok(PublishReport {
             unit: job.unit.clone(),
             target: self.target(),
             ok: true,
             detail: format!(
-                "dry-run: would publish {} {} to {}",
+                "dry-run: would publish {} {} to {}{}",
                 job.unit,
                 job.version,
-                job.manifest_dir.display()
+                job.manifest_dir.display(),
+                assets
             ),
         })
     }
@@ -52,14 +54,30 @@ impl Publisher for TargetDryRun {
     }
 
     fn publish(&self, job: &PublishJob) -> Result<PublishReport, tarsi_publish::PublishError> {
+        let assets = asset_suffix(job);
         Ok(PublishReport {
             unit: job.unit.clone(),
             target: self.0,
             ok: true,
             detail: format!(
-                "dry-run: would publish {} {} ({:?})",
-                job.unit, job.version, self.0
+                "dry-run: would publish {} {} ({:?}){}",
+                job.unit, job.version, self.0, assets
             ),
         })
     }
+}
+
+/// `, N asset(s): a, b` suffix for dry-run details — empty when
+/// the job carries no assets.
+fn asset_suffix(job: &PublishJob) -> String {
+    if job.assets.is_empty() {
+        return String::new();
+    }
+    let names = job
+        .assets
+        .iter()
+        .map(|a| a.name.as_str())
+        .collect::<Vec<_>>()
+        .join(", ");
+    format!(" +{} asset(s): {names}", job.assets.len())
 }

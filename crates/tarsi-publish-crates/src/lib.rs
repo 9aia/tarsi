@@ -120,6 +120,7 @@ mod tests {
             manifest_dir: "crates/u".into(),
             tag: "u-v1.0.0".into(),
             notes: String::new(),
+            assets: Vec::new(),
             dry_run: true,
         };
         let r = p.publish(&job).unwrap();

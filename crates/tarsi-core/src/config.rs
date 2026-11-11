@@ -132,6 +132,14 @@ pub struct GhReleasePublish {
     /// Repo override `owner/name`; default = git remote.
     #[serde(default)]
     pub repo: Option<String>,
+    /// Repo-root-relative glob patterns for release assets —
+    /// `{unit}` and `{version}` expand per releasing unit, e.g.
+    /// `["dist/{unit}-{version}-*", "{unit}/checksums.txt"]`.
+    /// A pattern with no glob magic must match an existing file;
+    /// magic patterns matching nothing are skipped. Empty =
+    /// notes-only releases.
+    #[serde(default)]
+    pub assets: Vec<String>,
 }
 
 impl Default for GhReleasePublish {
@@ -140,6 +148,7 @@ impl Default for GhReleasePublish {
             enabled: true,
             token_env: default_token_env(),
             repo: None,
+            assets: Vec::new(),
         }
     }
 }
@@ -198,6 +207,7 @@ skip = true
 
 [publish.ghreleases]
 token_env = "GH_TOKEN"
+assets = ["dist/{unit}-{version}-*"]
 "#;
         let cfg: Config = toml::from_str(text).unwrap();
         assert_eq!(cfg.release.changelog_path, "CHANGES.md");
@@ -208,6 +218,10 @@ token_env = "GH_TOKEN"
             .get("tamias-core")
             .is_some_and(|o| o.skip));
         assert_eq!(cfg.publish.ghreleases.token_env, "GH_TOKEN");
+        assert_eq!(
+            cfg.publish.ghreleases.assets,
+            vec!["dist/{unit}-{version}-*".to_string()]
+        );
         assert!(cfg.publish.crates.enabled);
     }
 

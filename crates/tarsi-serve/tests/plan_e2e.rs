@@ -108,3 +108,39 @@ fn release_dry_run_reports_without_mutating() {
     let manifest = std::fs::read_to_string(d.path().join("Cargo.toml")).unwrap();
     assert!(manifest.contains("0.1.0"));
 }
+
+#[test]
+fn release_dry_run_reports_configured_assets() {
+    let d = fixture();
+    // Artifact + ghreleases asset glob; {unit}/{version} substitute
+    // per releasing unit.
+    write(d.path(), "dist/aaa-0.2.0-linux.tar.gz", "fake");
+    write(
+        d.path(),
+        "tarsi.toml",
+        "[publish.ghreleases]\nassets = [\"dist/{unit}-*-linux.tar.gz\"]\n",
+    );
+    let req = Request {
+        op: "release".into(),
+        params: json!({ "dir": d.path().to_string_lossy(), "dry_run": true }),
+    };
+    let resp = dispatch(&GitVcs, &req);
+    let r = resp.result.unwrap();
+    assert_eq!(r["dry_run"], true);
+    let publish = r["publish"].as_array().unwrap();
+    let gh = publish
+        .iter()
+        .find(|p| p["target"] == "github-release" && p["unit"] == "aaa")
+        .expect("ghreleases report for aaa");
+    assert_eq!(gh["ok"], true, "{gh}");
+    let detail = gh["detail"].as_str().unwrap();
+    assert!(detail.contains("dry-run"), "{detail}");
+    assert!(detail.contains("aaa-0.2.0-linux.tar.gz"), "{detail}");
+    assert!(detail.contains("application/gzip"), "{detail}");
+    // bbb's version differs → its glob matches nothing → no assets.
+    let gh_bbb = publish
+        .iter()
+        .find(|p| p["target"] == "github-release" && p["unit"] == "bbb")
+        .expect("ghreleases report for bbb");
+    assert!(!gh_bbb["detail"].as_str().unwrap().contains("assets:"));
+}
