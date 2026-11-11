@@ -1,2 +1,7 @@
 [alias]
 xtask = "run --package tarsi-xtask --"
+
+# Scarab (and future 9aia) git deps resolve over ssh — let the git
+# CLI handle auth (ssh-agent) instead of cargo's built-in fetcher.
+[net]
+git-fetch-with-cli = true

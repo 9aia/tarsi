@@ -1,0 +1,15 @@
+[package]
+name = "tarsi-config"
+description = "tarsi.toml/tarsi.yml loading — scarab-config file discovery over tarsi_core::Config."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+scarab-config = { git = "ssh://git@github.com/9aia/scarab.git", rev = "8360f15b75ad7a84a9a6f2bd6d4dac6b0c2ae110", version = "0.1" }
+scarab-config-file = { git = "ssh://git@github.com/9aia/scarab.git", rev = "8360f15b75ad7a84a9a6f2bd6d4dac6b0c2ae110", version = "0.1" }
+tarsi-core = { path = "../tarsi-core" }
+
+[lints]
+workspace = true
