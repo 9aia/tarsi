@@ -1,0 +1,20 @@
+# tarsi's own release config — dogfoods the pipeline.
+# Units resolve from the cargo workspace (crates/*); versions are
+# workspace-inherited, so releasing units share one bump — keep
+# overrides minimal until per-unit workspace versions are supported.
+
+[release]
+styleguide = "keep-a-changelog"
+changelog_path = "CHANGELOG.md"
+diff_exclude = ["docs/**", "project/**", "*.md", ".github/**"]
+
+[release.unit_overrides.tarsi-xtask]
+skip = true
+
+[publish.crates]
+enabled = false   # not on crates.io yet
+
+[publish.ghreleases]
+enabled = true
+token_env = "GITHUB_TOKEN"
+# repo defaults to the origin remote (9aia/tarsi)

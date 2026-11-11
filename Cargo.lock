@@ -756,6 +756,7 @@ dependencies = [
  "tarsi-publish-crates",
  "tarsi-publish-dryrun",
  "tarsi-publish-ghreleases",
+ "tempfile",
  "thiserror",
 ]
 
