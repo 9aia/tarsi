@@ -16,8 +16,6 @@ pub struct Config {
     #[serde(default)]
     pub release: ReleaseConfig,
     #[serde(default)]
-    pub llm: LlmConfig,
-    #[serde(default)]
     pub publish: PublishConfig,
 }
 
@@ -84,35 +82,6 @@ pub struct UnitOverride {
     /// parent).
     #[serde(default)]
     pub skip: bool,
-}
-
-/// LLM/changelog-generation config. `provider = "none"` is the
-/// zero-key path — conventional titles verbatim.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct LlmConfig {
-    #[serde(default = "default_llm_provider")]
-    pub provider: String,
-    /// Model/endpoint hints for API providers — names and URLs,
-    /// never keys.
-    #[serde(default)]
-    pub model: Option<String>,
-    /// Extra styleguide text appended to the prompt.
-    #[serde(default)]
-    pub styleguide_extra: Option<String>,
-}
-
-impl Default for LlmConfig {
-    fn default() -> Self {
-        Self {
-            provider: default_llm_provider(),
-            model: None,
-            styleguide_extra: None,
-        }
-    }
-}
-
-fn default_llm_provider() -> String {
-    "none".to_string()
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -227,9 +196,6 @@ default_bump = "patch"
 [release.unit_overrides."tamias-core"]
 skip = true
 
-[llm]
-provider = "none"
-
 [publish.ghreleases]
 token_env = "GH_TOKEN"
 "#;
@@ -248,7 +214,6 @@ token_env = "GH_TOKEN"
     #[test]
     fn defaults_are_zero_key() {
         let cfg = Config::default();
-        assert_eq!(cfg.llm.provider, "none");
         assert!(!cfg.publish.dry_run);
         assert_eq!(cfg.release.tag_format, "{unit}-v{version}");
     }

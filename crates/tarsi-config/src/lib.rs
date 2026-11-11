@@ -48,7 +48,6 @@ mod tests {
         .unwrap();
         let cfg = load_in(&dir).unwrap();
         assert_eq!(cfg.release.changelog_path, "CHANGES.md");
-        assert_eq!(cfg.llm.provider, "none");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
