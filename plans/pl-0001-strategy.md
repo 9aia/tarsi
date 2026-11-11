@@ -3,7 +3,7 @@ id = "PL-001"
 title = "Strategy"
 status = "open"
 created = "2026-10-29"
-priority = "medium"
+priority = "med"
 +++
 
 ---
