@@ -1,0 +1,18 @@
+[package]
+name = "tarsi-core"
+description = "Pure release-domain model — plans, units, semver bumps, commit classification, changelog. No I/O."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+semver = { version = "1", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+thiserror = "2"
+
+[dev-dependencies]
+toml = "0.8"
+
+[lints]
+workspace = true
