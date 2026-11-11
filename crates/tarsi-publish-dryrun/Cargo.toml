@@ -1,0 +1,14 @@
+[package]
+name = "tarsi-publish-dryrun"
+description = "Dry-run Publisher — validates and reports every target without remote writes."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tarsi-publish = { path = "../tarsi-publish" }
+tarsi-core = { path = "../tarsi-core" }
+
+[lints]
+workspace = true

@@ -1,0 +1,16 @@
+[package]
+name = "tarsi-publish"
+description = "Publish port — per-forge Publisher impls (crates.io, GitHub Releases, dry-run)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tarsi-core = { path = "../tarsi-core" }
+thiserror = "2"
+
+[lints]
+workspace = true

@@ -1,0 +1,29 @@
+[package]
+name = "tarsi-serve"
+description = "tarsi service surface — ndjson ops (plan/changelog/notes/release) over tarsi-core + lasius-vcs."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "tarsi-serve"
+path = "src/main.rs"
+
+[dependencies]
+tarsi-core = { path = "../tarsi-core" }
+tarsi-config = { path = "../tarsi-config" }
+tarsi-manifest = { path = "../tarsi-manifest" }
+tarsi-publish = { path = "../tarsi-publish" }
+tarsi-publish-crates = { path = "../tarsi-publish-crates" }
+tarsi-publish-ghreleases = { path = "../tarsi-publish-ghreleases" }
+tarsi-publish-dryrun = { path = "../tarsi-publish-dryrun" }
+lasius-vcs = { git = "ssh://git@github.com/9aia/lasius.git", rev = "782c10840149d9a62ac9aa2d0c3a440233ffc86b" }
+lasius-vcs-git = { git = "ssh://git@github.com/9aia/lasius.git", rev = "782c10840149d9a62ac9aa2d0c3a440233ffc86b" }
+semver = { version = "1", features = ["serde"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+[lints]
+workspace = true

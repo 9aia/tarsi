@@ -1,0 +1,22 @@
+[package]
+name = "tarsi-manifest"
+description = "Cargo manifest scanning — workspace members → tarsi_core::ReleaseUnitSpec, version reads/writes."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+semver = { version = "1", features = ["serde"] }
+serde_json = "1"
+toml = "0.8"
+toml_edit = "0.22"
+tarsi-core = { path = "../tarsi-core" }
+thiserror = "2"
+
+[dev-dependencies]
+tempfile = "3"
+
+[lints]
+workspace = true

@@ -1,0 +1,15 @@
+[package]
+name = "tarsi-publish-crates"
+description = "crates.io Publisher — dep-ordered cargo publish with 429 retry (release.sh semantics)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tarsi-publish = { path = "../tarsi-publish" }
+tarsi-core = { path = "../tarsi-core" }
+thiserror = "2"
+
+[lints]
+workspace = true

@@ -1,0 +1,18 @@
+[package]
+name = "tarsi-publish-ghreleases"
+description = "GitHub Releases publisher — release create + notes via ureq (blocking, bupha-github convention)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tarsi-publish = { path = "../tarsi-publish" }
+tarsi-core = { path = "../tarsi-core" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+ureq = { version = "3", features = ["json"] }
+thiserror = "2"
+
+[lints]
+workspace = true
