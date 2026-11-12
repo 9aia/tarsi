@@ -1,6 +1,6 @@
 [package]
 name = "tarsi-serve"
-description = "tarsi service surface — ndjson ops (plan/changelog/notes/release) over tarsi-core + lasius-vcs."
+description = "tarsi service surface — ndjson ops (plan/changelog/notes/check/schema + granular bump/tag/publish + release) over tarsi-core + lasius-vcs."
 version.workspace = true
 edition.workspace = true
 license.workspace = true

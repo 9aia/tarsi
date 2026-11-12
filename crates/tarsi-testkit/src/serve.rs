@@ -8,9 +8,9 @@
 //! Two tiers:
 //!
 //! - [`assert_conformance`] — read-only ops: `manifest`,
-//!   `profiles`, `plan`, `changelog`, `notes`, plus the
-//!   unknown-op error path. Safe on [`crate::repo::workspace_repo`]
-//!   output as-is.
+//!   `profiles`, `plan`, `changelog`, `notes`, `check`, `schema`,
+//!   plus the unknown-op error path. Safe on
+//!   [`crate::repo::workspace_repo`] output as-is.
 //! - [`assert_release_conformance`] — the mutating `release` op:
 //!   requires a fixture with `origin` ([`crate::repo::workspace_repo`]
 //!   / [`crate::repo::single_unit_repo`] both provide one) and a
@@ -18,6 +18,10 @@
 //!   caller, so no forge is touched. Asserts the step order,
 //!   remote branch+tag state, changelog creation, and manifest
 //!   bumps.
+//! - [`assert_granular_tier`] — the granular ops (`bump` → `tag`
+//!   → `publish`) chained via `params.units` passthrough, the
+//!   node-shaped composition peregrin campaigns use. Same fixture
+//!   requirements as [`assert_release_tier`].
 
 use std::path::Path;
 
@@ -66,7 +70,17 @@ fn dir_params(dir: &Path) -> Value {
 /// On contract violation.
 pub fn assert_manifest_op(vcs: &dyn Vcs, dir: &Path) {
     let r = ok(vcs, "manifest", dir_params(dir));
-    for op in ["plan", "changelog", "notes", "release"] {
+    for op in [
+        "plan",
+        "changelog",
+        "notes",
+        "check",
+        "schema",
+        "bump",
+        "tag",
+        "publish",
+        "release",
+    ] {
         assert!(
             r["ops"]
                 .as_array()
@@ -74,6 +88,70 @@ pub fn assert_manifest_op(vcs: &dyn Vcs, dir: &Path) {
             "manifest ops missing {op:?}: {r}"
         );
     }
+}
+
+/// `schema` answers the op surface as data — every op in
+/// `manifest.ops` must appear with summary/params/returns.
+///
+/// # Panics
+/// On contract violation.
+pub fn assert_schema_op(vcs: &dyn Vcs, dir: &Path) {
+    let r = ok(vcs, "schema", dir_params(dir));
+    let ops = r["ops"].as_object().expect("schema.ops must be an object");
+    for op in [
+        "manifest",
+        "profiles",
+        "plan",
+        "changelog",
+        "notes",
+        "check",
+        "schema",
+        "bump",
+        "tag",
+        "publish",
+        "release",
+    ] {
+        let entry = ops
+            .get(op)
+            .unwrap_or_else(|| panic!("schema missing op {op:?}: {r}"));
+        assert!(entry["summary"].is_string(), "schema {op} summary: {entry}");
+        assert!(entry["params"].is_string(), "schema {op} params: {entry}");
+        assert!(entry["returns"].is_string(), "schema {op} returns: {entry}");
+    }
+}
+
+/// `check` on the workspace fixture: every releasing unit gets
+/// `tag-available`/`manifest-present`/`changelog-not-drifted`
+/// checks plus informational publish-target entries; all pass on
+/// a fresh repo. Returns the check result.
+///
+/// # Panics
+/// On contract violation.
+#[must_use]
+pub fn assert_check_op(vcs: &dyn Vcs, dir: &Path) -> Value {
+    let r = ok(vcs, "check", dir_params(dir));
+    assert_eq!(r["ok"], true, "fresh fixture must pass check: {r}");
+    assert_eq!(r["releasing"], 2, "both units release: {r}");
+    let checks = r["checks"].as_array().expect("checks array");
+    for unit in ["aaa", "bbb"] {
+        for name in ["tag-available", "manifest-present", "changelog-not-drifted"] {
+            let hit = checks
+                .iter()
+                .find(|c| c["check"] == name && c["unit"] == unit);
+            assert!(
+                hit.is_some_and(|c| c["ok"].as_bool() == Some(true)),
+                "check {name} for {unit} must pass: {r}"
+            );
+        }
+    }
+    assert!(
+        checks.iter().any(|c| c["check"]
+            .as_str()
+            .is_some_and(|s| s.starts_with("publish-"))),
+        "publish target checks present: {r}"
+    );
+    assert!(r["plan"]["units"].is_array(), "check echoes the plan: {r}");
+    r
 }
 
 /// `profiles` answers a list (env-dependent content — only the
@@ -213,8 +291,10 @@ pub fn assert_unknown_op_errors(vcs: &dyn Vcs, dir: &Path) {
 pub fn assert_conformance(vcs: &dyn Vcs, dir: &Path) {
     assert_manifest_op(vcs, dir);
     assert_profiles_op(vcs, dir);
+    assert_schema_op(vcs, dir);
     let _plan = assert_plan_op(vcs, dir);
     assert_changelog_notes_ops(vcs, dir);
+    let _check = assert_check_op(vcs, dir);
     assert_range_param(vcs, dir);
     assert_unknown_op_errors(vcs, dir);
 }
@@ -324,4 +404,220 @@ pub fn assert_release_conformance(vcs: &dyn Vcs, dir: &Path) {
 pub fn assert_release_tier(vcs: &dyn Vcs, dir: &Path) {
     assert_release_defaults_to_dry_run(vcs, dir);
     assert_release_conformance(vcs, dir);
+}
+
+/// `bump` with no `dry_run` param defaults to dry-run: reports the
+/// planned units, mutates nothing (HEAD unchanged, no changelog,
+/// no manifest bump).
+///
+/// # Panics
+/// On contract violation.
+pub fn assert_bump_defaults_to_dry_run(vcs: &dyn Vcs, dir: &Path) {
+    let pre_head = repo::git(dir, &["rev-parse", "HEAD"]);
+    let r = ok(vcs, "bump", dir_params(dir));
+    assert_eq!(r["dry_run"], true, "bump dry_run must default true: {r}");
+    assert_eq!(
+        r["bump"]["commit"],
+        Value::Null,
+        "dry-run bump has no commit: {r}"
+    );
+    let units = r["units"]
+        .as_array()
+        .expect("bump echoes units for chaining");
+    assert_eq!(units.len(), 2, "both units releasing: {r}");
+    assert_eq!(
+        repo::git(dir, &["rev-parse", "HEAD"]),
+        pre_head,
+        "dry-run bump creates no commit"
+    );
+    assert!(
+        !dir.join("crates/aaa/CHANGELOG.md").exists(),
+        "dry-run bump writes no changelog"
+    );
+}
+
+/// `tag` and `publish` dry-run defaults: no tags created, no
+/// forge calls (reports marked dry-run/disabled).
+///
+/// # Panics
+/// On contract violation.
+pub fn assert_tag_publish_dry_run_defaults(vcs: &dyn Vcs, dir: &Path) {
+    let before_tags = repo::git(dir, &["tag", "--list"]);
+    let r = ok(vcs, "tag", dir_params(dir));
+    assert_eq!(r["dry_run"], true, "tag dry_run must default true: {r}");
+    assert_eq!(
+        repo::git(dir, &["tag", "--list"]),
+        before_tags,
+        "dry-run tag creates no tags"
+    );
+
+    let p = ok(vcs, "publish", dir_params(dir));
+    assert_eq!(p["dry_run"], true, "publish dry_run must default true: {p}");
+    assert!(
+        p["publish"]
+            .as_array()
+            .is_some_and(|rs| { rs.iter().all(|r| r["ok"].as_bool() == Some(true)) }),
+        "dry-run publish reports all targets ok: {p}"
+    );
+}
+
+/// The granular chain — `bump` → `tag`(push) → `publish` — the
+/// node-shaped composition a peregrin campaign drives. Each op
+/// consumes the previous op's `units` echo via `params.units`
+/// (re-planning mid-chain would see the bump commit / new tags).
+/// Asserts the same end state as [`assert_release_conformance`]:
+/// bump commit on remote main, both tags at that commit, changelogs
+/// written, manifests bumped, publish reports collected.
+///
+/// # Panics
+/// On contract violation.
+pub fn assert_granular_release_chain(vcs: &dyn Vcs, dir: &Path) {
+    let pre_head = repo::git(dir, &["rev-parse", "HEAD"]);
+
+    // Step 1 — bump: changelogs + manifests + release commit.
+    let mut params = dir_params(dir);
+    params["dry_run"] = json!(false);
+    let b = ok(vcs, "bump", params);
+    assert_eq!(b["ok"], true, "bump failed: {b}");
+    let bump_commit = b["bump"]["commit"]
+        .as_str()
+        .expect("bump returns the release commit sha")
+        .to_string();
+    assert_ne!(bump_commit, pre_head, "bump creates a commit");
+    let steps: Vec<&str> = b["bump"]["steps_run"]
+        .as_array()
+        .expect("bump steps_run")
+        .iter()
+        .map(|s| s.as_str().unwrap_or(""))
+        .collect();
+    assert_eq!(
+        steps,
+        vec!["write-changelogs", "bump-manifests", "commit-bump"],
+        "bump step order: {b}"
+    );
+    let units = b["units"].as_array().expect("bump echoes units");
+    assert_eq!(units.len(), 2, "{b}");
+
+    // Step 2 — tag at the bump commit, pushed (required before
+    // publish; ghreleases pins `target_commitish`).
+    let mut params = dir_params(dir);
+    params["dry_run"] = json!(false);
+    params["push"] = json!(true);
+    params["units"] = b["units"].clone();
+    params["sha"] = json!(bump_commit);
+    let t = ok(vcs, "tag", params);
+    assert_eq!(t["ok"], true, "tag failed: {t}");
+    let tag_steps: Vec<&str> = t["tag"]["steps_run"]
+        .as_array()
+        .expect("tag steps_run")
+        .iter()
+        .map(|s| s.as_str().unwrap_or(""))
+        .collect();
+    assert_eq!(tag_steps, vec!["tag", "push"], "tag step order: {t}");
+    assert_eq!(
+        t["tag"]["pushed"]["branch"], true,
+        "tag push pushes the branch: {t}"
+    );
+    let tag_units = t["units"].as_array().expect("tag echoes units");
+
+    // Step 3 — publish against the pushed state.
+    let mut params = dir_params(dir);
+    params["dry_run"] = json!(false);
+    params["units"] = json!(tag_units);
+    params["commitish"] = json!(bump_commit);
+    let p = ok(vcs, "publish", params);
+    assert_eq!(p["ok"], true, "publish failed: {p}");
+    let publish = p["publish"].as_array().expect("publish reports");
+    assert!(
+        publish.iter().all(|r| r["ok"].as_bool() == Some(true)),
+        "all publish targets ok (disabled counts): {p}"
+    );
+    assert!(
+        p["targets"].as_array().is_some_and(|ts| !ts.is_empty()),
+        "publish names touched targets: {p}"
+    );
+
+    // End state — identical to the composed `release` op.
+    let remote = repo::ls_remote(dir);
+    assert_eq!(
+        remote.get("refs/heads/main").map(String::as_str),
+        Some(bump_commit.as_str()),
+        "remote main at bump commit: {remote:?}"
+    );
+    for tag in ["aaa-v0.2.0", "bbb-v0.1.1"] {
+        assert_eq!(
+            remote.get(&format!("refs/tags/{tag}")).map(String::as_str),
+            Some(bump_commit.as_str()),
+            "remote {tag} at bump commit: {remote:?}"
+        );
+    }
+    for unit in ["aaa", "bbb"] {
+        let cl = dir.join(format!("crates/{unit}/CHANGELOG.md"));
+        let text = std::fs::read_to_string(&cl).unwrap_or_else(|e| panic!("{}: {e}", cl.display()));
+        assert!(text.starts_with("# Changelog\n\n##"), "{text:?}");
+    }
+    let ws = std::fs::read_to_string(dir.join("Cargo.toml")).expect("workspace manifest");
+    assert!(ws.contains("0.1.1"), "workspace version bumped: {ws}");
+
+    // Post-release `check` is clean: the new tags bound each
+    // unit's range, so nothing is left to release (idempotent —
+    // a second release attempt plans zero units).
+    let resp = call(vcs, "check", dir_params(dir));
+    assert!(resp.ok, "post-release check must pass: {resp:?}");
+    assert_eq!(
+        resp.result.as_ref().map(|r| &r["releasing"]),
+        Some(&json!(0)),
+        "post-release check finds nothing to release: {resp:?}"
+    );
+}
+
+/// `check` drift detection: a changelog that already carries the
+/// version heading the plan wants to write fails
+/// `changelog-not-drifted` (and the op reports `ok:false`). The
+/// fixture file is removed afterwards so the release chain is
+/// unaffected.
+///
+/// # Panics
+/// On contract violation.
+pub fn assert_check_detects_drift(vcs: &dyn Vcs, dir: &Path) {
+    // aaa plans minor → 0.2.0; pre-seed its changelog with that
+    // heading — the "already released" drift signature.
+    let cl = dir.join("crates/aaa/CHANGELOG.md");
+    std::fs::write(
+        &cl,
+        "# Changelog\n\n## [0.2.0] - 2026-01-01\n\nalready here\n",
+    )
+    .expect("seed drifted changelog");
+    let resp = call(vcs, "check", dir_params(dir));
+    std::fs::remove_file(&cl).expect("remove drifted changelog");
+    assert!(!resp.ok, "drifted changelog must fail check: {resp:?}");
+    let checks = resp
+        .result
+        .as_ref()
+        .and_then(|r| r["checks"].as_array())
+        .expect("check result carries checks");
+    let drift = checks
+        .iter()
+        .find(|c| c["check"] == "changelog-not-drifted" && c["unit"] == "aaa")
+        .expect("aaa drift check present");
+    assert_eq!(drift["ok"], false, "aaa drift check fails: {drift}");
+    // bbb is untouched — its checks still pass.
+    let bbb_ok = checks
+        .iter()
+        .filter(|c| c["unit"] == "bbb")
+        .all(|c| c["ok"].as_bool() == Some(true));
+    assert!(bbb_ok, "bbb checks unaffected by aaa drift: {checks:?}");
+}
+
+/// The granular tier — call after writing
+/// [`repo::NO_PUBLISH_TOML`] to `<dir>/tarsi.toml` on a fresh
+/// [`repo::workspace_repo`].
+///
+/// # Panics
+/// On any contract violation.
+pub fn assert_granular_tier(vcs: &dyn Vcs, dir: &Path) {
+    assert_check_detects_drift(vcs, dir);
+    assert_bump_defaults_to_dry_run(vcs, dir);
+    assert_tag_publish_dry_run_defaults(vcs, dir);
+    assert_granular_release_chain(vcs, dir);
 }

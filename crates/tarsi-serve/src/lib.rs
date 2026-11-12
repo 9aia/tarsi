@@ -8,6 +8,13 @@
 //! `lasius-vcs` + `lasius-vcs-git`, planning via `tarsi-core`,
 //! publishing via `tarsi-publish*` impls. No orchestration or UI
 //! lives here — peregrin/pavo call these ops.
+//!
+//! Op surface (PL-014 D1): read ops `manifest`/`profiles`/`plan`/
+//! `changelog`/`notes`/`check`/`schema`; granular pipeline steps
+//! `bump` → `tag` → `publish` (each `dry_run`-defaulted, each
+//! echoing `units` for `params.units` chaining — the
+//! node-shaped composition peregrin campaigns drive); `release`
+//! stays as the composed, rollback-capable pipeline.
 
 use std::io::{BufRead, Write};
 use std::path::{Path, PathBuf};
@@ -66,7 +73,10 @@ pub fn dispatch(vcs: &dyn Vcs, req: &Request) -> Response {
         "manifest" => Response::ok(json!({
             "name": "tarsi-serve",
             "version": env!("CARGO_PKG_VERSION"),
-            "ops": ["manifest", "profiles", "plan", "changelog", "notes", "release"],
+            "ops": [
+                "manifest", "profiles", "plan", "changelog", "notes",
+                "check", "schema", "bump", "tag", "publish", "release",
+            ],
         })),
         "profiles" => Response::ok(json!({
             "profiles": tarsi_config::list_profiles()
@@ -122,25 +132,14 @@ pub fn dispatch(vcs: &dyn Vcs, req: &Request) -> Response {
             }
             Err(e) => Response::err(e),
         },
+        "check" => op_result(run_check(vcs, &dir, params)),
+        "schema" => Response::ok(op_schema()),
+        "bump" => op_result(op_bump(vcs, &dir, params)),
+        "tag" => op_result(op_tag(vcs, &dir, params)),
+        "publish" => op_result(op_publish(vcs, &dir, params)),
         "release" => {
             let v = execute_release(vcs, &dir, params);
-            // A failed release reports `ok:false` inside the result;
-            // surface it as a failed op too so `--yes` consumers and
-            // the ndjson loop see the failure, not a silent 200.
-            if v.get("ok").and_then(Value::as_bool) == Some(false) {
-                let msg = v
-                    .get("error")
-                    .and_then(Value::as_str)
-                    .unwrap_or("release failed")
-                    .to_string();
-                Response {
-                    ok: false,
-                    result: Some(v),
-                    error: Some(msg),
-                }
-            } else {
-                Response::ok(v)
-            }
+            op_result(v)
         }
         other => Response::err(format!("unknown op {other:?}")),
     }
@@ -156,6 +155,593 @@ fn build_plan(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Result<Value, String
     let plan = plan_release(&specs, &commits, Some(date)).map_err(|e| e.to_string())?;
     let plan_json = plan_to_json(&plan, &cfg);
     Ok(json!({ "specs": specs, "plan": plan_json }))
+}
+
+/// Result-value → [`Response`]: ops report failures inside the
+/// result (`{"ok": false, "error": …}`); surface them as failed
+/// ops too so `--yes` consumers and the ndjson loop see the
+/// failure, not a silent 200.
+fn op_result(v: Value) -> Response {
+    if v.get("ok").and_then(Value::as_bool) == Some(false) {
+        let msg = v
+            .get("error")
+            .and_then(Value::as_str)
+            .unwrap_or("op failed")
+            .to_string();
+        Response {
+            ok: false,
+            result: Some(v),
+            error: Some(msg),
+        }
+    } else {
+        Response::ok(v)
+    }
+}
+
+/// `dry_run` param — defaults TRUE on every mutating op (ADR-0003
+/// decision 1): real mutation requires `{"dry_run": false}`.
+fn dry_run_param(params: &Value) -> bool {
+    params
+        .get("dry_run")
+        .and_then(Value::as_bool)
+        .unwrap_or(true)
+}
+
+/// The units a granular op acts on. `params.units` carries
+/// plan-unit JSON from a prior op (`plan`/`check`/`bump` results
+/// all echo `plan.units`) — the composable path that lets
+/// peregrin nodes chain `bump → tag → publish` without
+/// re-planning (re-planning after `bump` would see the bump
+/// commit and after `tag` would see the new tags). Without it,
+/// the op plans fresh and takes the releasing subset.
+///
+/// Returns `(plan_json_or_null, releasing_units)`.
+fn releasing_units(
+    vcs: &dyn Vcs,
+    dir: &Path,
+    params: &Value,
+) -> Result<(Option<Value>, Vec<Value>), String> {
+    if let Some(us) = params.get("units").and_then(Value::as_array) {
+        let units: Vec<Value> = us
+            .iter()
+            .filter(|u| u["releases"].as_bool().unwrap_or(true))
+            .cloned()
+            .collect();
+        return Ok((None, units));
+    }
+    let plan_v = build_plan(vcs, dir, params)?;
+    let units = plan_v["plan"]["units"]
+        .as_array()
+        .map(|us| {
+            us.iter()
+                .filter(|u| u["releases"].as_bool().unwrap_or(false))
+                .cloned()
+                .collect()
+        })
+        .unwrap_or_default();
+    Ok((Some(plan_v["plan"].clone()), units))
+}
+
+/// `schema` op — the serve-op surface as data: every op, its
+/// params, and the shape of its result. Node authors (peregrin
+/// campaigns, agents) introspect this instead of reading source.
+fn op_schema() -> Value {
+    let mut ops = serde_json::Map::new();
+    for (name, summary, params, returns) in [
+        (
+            "manifest",
+            "op directory — name, version, ops[]",
+            "{}",
+            "{name, version, ops[]}",
+        ),
+        (
+            "profiles",
+            "installed `type: tarsi` release profiles",
+            "{}",
+            "{profiles[]}",
+        ),
+        (
+            "plan",
+            "release plan: units in topo order with bump, new_version, tag, changelog_markdown, publish_targets",
+            "{dir, profile?, range?, units?}",
+            "{specs, plan{units[], unattributed[], steps[]}}",
+        ),
+        (
+            "changelog",
+            "per-unit rendered changelog for releasing units",
+            "{dir, profile?, range?}",
+            "{changelogs[{unit, version, tag, markdown}]}",
+        ),
+        (
+            "notes",
+            "concatenated release notes for releasing units",
+            "{dir, profile?, range?}",
+            "{notes: string}",
+        ),
+        (
+            "check",
+            "read-only release validation: tag-free, manifest present, changelog not already released (drift), publish targets enabled-state",
+            "{dir, profile?, range?}",
+            "{ok, checks[{check, unit, ok, detail}], plan, releasing}",
+        ),
+        (
+            "bump",
+            "granular step: write changelogs + bump manifests + scoped commit (the release commit). Echoes `units` for the next step",
+            "{dir, profile?, range?, units?, dry_run?}",
+            "{ok, dry_run, plan?, bump{commit, units[], steps_run[]}}",
+        ),
+        (
+            "tag",
+            "granular step: create per-unit tags at `sha` (default HEAD); `push:true` pushes branch+tags — required before `publish`",
+            "{dir, profile?, range?, units?, sha?, push?, dry_run?}",
+            "{ok, dry_run, tag{sha, tags[], pushed{branch, tags[]}}, units[], steps_run[]}",
+        ),
+        (
+            "publish",
+            "granular step: run publish targets (crates.io, GitHub Releases) for the units; `commitish` pins the forge target (default HEAD)",
+            "{dir, profile?, range?, units?, commitish?, dry_run?}",
+            "{ok, dry_run, publish[{unit, target, ok, detail}], targets[], units[]}",
+        ),
+        (
+            "release",
+            "composed pipeline: plan → bump → tag → push → publish. Same ordering guarantees as the granular chain; rolls back on failure",
+            "{dir, profile?, range?, dry_run?}",
+            "{ok, dry_run, plan, steps_run[], publish[], rolled_back?}",
+        ),
+        (
+            "schema",
+            "this document — op names, params, result shapes",
+            "{}",
+            "{version, envelope, ops{name: {summary, params, returns}}}",
+        ),
+    ] {
+        ops.insert(
+            name.to_string(),
+            json!({
+                "summary": summary,
+                "params": params,
+                "returns": returns,
+            }),
+        );
+    }
+    json!({
+        "version": env!("CARGO_PKG_VERSION"),
+        "envelope": "request {\"op\": name, \"params\": {...}} → response {\"ok\": bool, \"result\"|\"error\"}",
+        "conventions": [
+            "every op takes `dir` (default .) plus the plan params `profile`/`range`",
+            "mutating ops (`bump`, `tag`, `publish`, `release`) default `dry_run: true` — pass `dry_run: false` to mutate",
+            "`units` accepts plan-unit JSON echoed by `plan`/`check`/`bump` — chain granular steps without re-planning",
+            "granular order: `bump` → `tag` (push:true) → `publish`; `release` composes the same stages atomically",
+        ],
+        "ops": ops,
+    })
+}
+
+/// `check` op — read-only release validation (the old `check`
+/// verb reborn as changelog-drift detection). For every releasing
+/// unit: the tag must be free, the manifest must exist, the
+/// changelog must not already contain the new version heading
+/// (drift = already released), and publish targets report their
+/// effective enabled state. `ok:false` when any hard check fails.
+fn run_check(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
+    let plan_v = match build_plan(vcs, dir, params) {
+        Ok(v) => v,
+        Err(e) => return json!({ "ok": false, "error": e }),
+    };
+    let cfg = load_config(dir, params).unwrap_or_default();
+    let releasing: Vec<Value> = plan_v["plan"]["units"]
+        .as_array()
+        .map(|us| {
+            us.iter()
+                .filter(|u| u["releases"].as_bool().unwrap_or(false))
+                .cloned()
+                .collect()
+        })
+        .unwrap_or_default();
+    let mut checks: Vec<Value> = Vec::new();
+    let mut push_check = |check: &str, unit: &Value, ok: bool, detail: String| {
+        checks.push(json!({
+            "check": check,
+            "unit": unit["spec"]["name"],
+            "ok": ok,
+            "detail": detail,
+        }));
+    };
+    for u in &releasing {
+        let tag = u["tag"].as_str().unwrap_or_default();
+        let exists = vcs.tag_exists(dir, tag);
+        push_check(
+            "tag-available",
+            u,
+            !exists,
+            if exists {
+                format!("tag {tag} already exists")
+            } else {
+                format!("tag {tag} is free")
+            },
+        );
+        let manifest = dir
+            .join(u["spec"]["path"].as_str().unwrap_or("."))
+            .join("Cargo.toml");
+        push_check(
+            "manifest-present",
+            u,
+            manifest.exists(),
+            manifest.display().to_string(),
+        );
+        // Drift: the changelog already carries the version heading
+        // this plan wants to write — the release likely already
+        // happened (or the range is wrong).
+        let version = u["new_version"].as_str().unwrap_or_default();
+        let cl = changelog_path(dir, u);
+        let drifted = std::fs::read_to_string(&cl)
+            .map(|s| s.contains(&format!("## [{version}]")))
+            .unwrap_or(false);
+        push_check(
+            "changelog-not-drifted",
+            u,
+            !drifted,
+            if drifted {
+                format!("{} already contains ## [{version}]", cl.display())
+            } else {
+                format!("{} has no [{version}] section yet", cl.display())
+            },
+        );
+        if let Some(targets) = u["spec"]["publish"].as_array() {
+            for t in targets {
+                let target = serde_json::from_value::<PublishTarget>(t.clone())
+                    .unwrap_or(PublishTarget::CratesIo);
+                let enabled = target_enabled(&cfg, &target);
+                // Informational — a disabled target is a config
+                // choice, not a failed check.
+                push_check(
+                    &format!("publish-{}", target_slug(&target)),
+                    u,
+                    true,
+                    if enabled {
+                        format!("{} enabled", target_slug(&target))
+                    } else {
+                        format!("{} disabled in config", target_slug(&target))
+                    },
+                );
+            }
+        }
+    }
+    let ok = checks.iter().all(|c| c["ok"].as_bool() == Some(true));
+    json!({
+        "ok": ok,
+        "checks": checks,
+        "releasing": releasing.len(),
+        "plan": plan_v["plan"],
+    })
+}
+
+/// `bump` failure shape — partial working-tree state is reported,
+/// never silently rolled back (granular ops leave compensation to
+/// the caller; `release` is the atomic path).
+fn bump_error(
+    plan: &Option<Value>,
+    releasing: &[Value],
+    created_files: &[PathBuf],
+    steps_run: &[Value],
+    step: &str,
+    e: String,
+) -> Value {
+    json!({
+        "ok": false,
+        "error": format!("{step}: {e}"),
+        "dry_run": false,
+        "plan": plan,
+        "bump": {
+            "commit": Value::Null,
+            "units": releasing,
+            "steps_run": steps_run,
+            "created_files": created_files.iter().map(|f| f.display().to_string()).collect::<Vec<_>>(),
+        },
+        "note": "partial state left in the working tree — inspect and clean up manually, or re-run `release` which rolls back",
+    })
+}
+
+/// `bump` op — granular pipeline step 1: write changelogs, bump
+/// manifests, stage the touched paths, create the release commit.
+/// Returns the commit sha plus the acting `units` (plan-unit JSON)
+/// so a campaign node can feed them to `tag`/`publish` via
+/// `params.units`.
+fn op_bump(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
+    let dry_run = dry_run_param(params);
+    let (plan, releasing) = match releasing_units(vcs, dir, params) {
+        Ok(v) => v,
+        Err(e) => return json!({ "ok": false, "error": e }),
+    };
+    if releasing.is_empty() {
+        return json!({
+            "ok": true,
+            "dry_run": dry_run,
+            "plan": plan,
+            "bump": { "commit": Value::Null, "units": [], "steps_run": [] },
+            "units": [],
+            "note": "nothing to release",
+        });
+    }
+    if dry_run {
+        return json!({
+            "ok": true,
+            "dry_run": true,
+            "plan": plan,
+            "bump": {
+                "commit": Value::Null,
+                "units": releasing.clone(),
+                "steps_run": [],
+            },
+            "units": releasing,
+            "note": "dry-run — pass dry_run:false to write changelogs, bump manifests, and commit",
+        });
+    }
+    let mut steps_run: Vec<Value> = Vec::new();
+    let mut created_files: Vec<PathBuf> = Vec::new();
+    for u in &releasing {
+        match write_changelog(dir, u) {
+            Ok(true) => created_files.push(changelog_path(dir, u)),
+            Ok(false) => {}
+            Err(e) => {
+                return bump_error(
+                    &plan,
+                    &releasing,
+                    &created_files,
+                    &steps_run,
+                    "write-changelogs",
+                    e,
+                )
+            }
+        }
+    }
+    steps_run.push(json!("write-changelogs"));
+    for u in &releasing {
+        let path = u["spec"]["path"].as_str().unwrap_or(".");
+        let ver = u["new_version"].as_str().unwrap_or_default();
+        if let Ok(v) = semver::Version::parse(ver) {
+            if let Err(e) = tarsi_manifest::write_unit_version(dir, path, &v) {
+                return bump_error(
+                    &plan,
+                    &releasing,
+                    &created_files,
+                    &steps_run,
+                    "bump-manifests",
+                    e.to_string(),
+                );
+            }
+        }
+    }
+    steps_run.push(json!("bump-manifests"));
+    if let Err(e) = stage_release_paths(vcs, dir, &releasing) {
+        return bump_error(
+            &plan,
+            &releasing,
+            &created_files,
+            &steps_run,
+            "stage-bump",
+            e,
+        );
+    }
+    if let Err(e) = vcs
+        .commit(dir, "chore(release): bump versions", None, true)
+        .map_err(|e| e.to_string())
+    {
+        return bump_error(
+            &plan,
+            &releasing,
+            &created_files,
+            &steps_run,
+            "commit-bump",
+            e,
+        );
+    }
+    steps_run.push(json!("commit-bump"));
+    let commit = vcs.head(dir);
+    json!({
+        "ok": true,
+        "dry_run": false,
+        "plan": plan,
+        "bump": {
+            "commit": commit,
+            "units": releasing.clone(),
+            "steps_run": steps_run,
+            "created_files": created_files.iter().map(|f| f.display().to_string()).collect::<Vec<_>>(),
+        },
+        // Top-level echo too — every granular op returns `units`
+        // so `params.units` chains uniformly.
+        "units": releasing,
+    })
+}
+
+/// `tag` op — granular pipeline step 2: create the per-unit tags.
+/// `sha` selects the target (default HEAD — the `bump` commit in
+/// the composed chain); `push: true` pushes the branch and the
+/// tags, which MUST happen before `publish` (GitHub Releases
+/// auto-creates `refs/tags/<tag>` at remote HEAD otherwise — see
+/// the ordering note on `execute_release`).
+fn op_tag(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
+    let dry_run = dry_run_param(params);
+    let push = params.get("push").and_then(Value::as_bool).unwrap_or(false);
+    let (plan, releasing) = match releasing_units(vcs, dir, params) {
+        Ok(v) => v,
+        Err(e) => return json!({ "ok": false, "error": e }),
+    };
+    let sha = params
+        .get("sha")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .or_else(|| vcs.head(dir));
+    if releasing.is_empty() {
+        return json!({
+            "ok": true,
+            "dry_run": dry_run,
+            "plan": plan,
+            "tag": { "sha": sha, "tags": [], "pushed": { "branch": false, "tags": [] }, "steps_run": [] },
+            "units": [],
+            "note": "nothing to release",
+        });
+    }
+    let tags: Vec<String> = releasing
+        .iter()
+        .map(|u| u["tag"].as_str().unwrap_or_default().to_string())
+        .collect();
+    if dry_run {
+        return json!({
+            "ok": true,
+            "dry_run": true,
+            "plan": plan,
+            "tag": {
+                "sha": sha,
+                "tags": tags.iter().map(|t| json!({ "tag": t, "sha": sha })).collect::<Vec<_>>(),
+                "pushed": { "branch": false, "tags": [] },
+                "steps_run": [],
+            },
+            "units": releasing,
+            "note": "dry-run — pass dry_run:false to create tags (push:true to publish them)",
+        });
+    }
+    let mut steps_run: Vec<Value> = Vec::new();
+    let mut created: Vec<String> = Vec::new();
+    for t in &tags {
+        match sha.as_deref() {
+            Some(s) if vcs.tag(dir, t, Some(s)) => created.push(t.clone()),
+            Some(_) => {
+                return json!({
+                    "ok": false,
+                    "error": format!("tag {t}: git tag failed"),
+                    "dry_run": false,
+                    "plan": plan,
+                    "tag": { "sha": sha, "tags": created, "pushed": { "branch": false, "tags": [] }, "steps_run": steps_run },
+                    "units": releasing,
+                });
+            }
+            None => {
+                return json!({
+                    "ok": false,
+                    "error": "tag: no target sha (pass `sha` or run on a commit)".to_string(),
+                    "dry_run": false,
+                    "plan": plan,
+                    "tag": { "sha": Value::Null, "tags": created, "pushed": { "branch": false, "tags": [] }, "steps_run": steps_run },
+                    "units": releasing,
+                });
+            }
+        }
+    }
+    steps_run.push(json!("tag"));
+    let mut pushed_tags: Vec<String> = Vec::new();
+    let mut branch_pushed = false;
+    if push {
+        if let Err(e) = vcs
+            .push_branch(dir, "origin", None)
+            .map_err(|e| e.to_string())
+        {
+            return json!({
+                "ok": false,
+                "error": format!("push: {e}"),
+                "dry_run": false,
+                "plan": plan,
+                "tag": { "sha": sha, "tags": created, "pushed": { "branch": branch_pushed, "tags": pushed_tags }, "steps_run": steps_run },
+                "units": releasing,
+                "note": "local tags created; remote push failed — tags are local-only until pushed",
+            });
+        }
+        branch_pushed = true;
+        for t in &created {
+            if let Err(e) = vcs.exec_out(dir, &["push", "origin", t]) {
+                return json!({
+                    "ok": false,
+                    "error": format!("push-tag {t}: {e}"),
+                    "dry_run": false,
+                    "plan": plan,
+                    "tag": { "sha": sha, "tags": created, "pushed": { "branch": branch_pushed, "tags": pushed_tags }, "steps_run": steps_run },
+                    "units": releasing,
+                    "note": "branch pushed; some tags may be unpushed — re-run `tag` with push:true or push manually",
+                });
+            }
+            pushed_tags.push(t.clone());
+        }
+        steps_run.push(json!("push"));
+    }
+    json!({
+        "ok": true,
+        "dry_run": false,
+        "plan": plan,
+        "tag": {
+            "sha": sha,
+            "tags": created.iter().map(|t| json!({ "tag": t, "sha": sha })).collect::<Vec<_>>(),
+            "pushed": { "branch": branch_pushed, "tags": pushed_tags },
+            "steps_run": steps_run,
+        },
+        "units": releasing,
+    })
+}
+
+/// `publish` op — granular pipeline step 3: run every unit ×
+/// publish target (crates.io, GitHub Releases). `commitish`
+/// pins the forge target commit (default HEAD — pass the `bump`
+/// commit sha; ghreleases sends it as `target_commitish`). Run
+/// after `tag` with `push:true` — forges resolve tags on the
+/// remote.
+fn op_publish(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
+    let dry_run = dry_run_param(params);
+    let (plan, releasing) = match releasing_units(vcs, dir, params) {
+        Ok(v) => v,
+        Err(e) => return json!({ "ok": false, "error": e }),
+    };
+    if releasing.is_empty() {
+        return json!({
+            "ok": true,
+            "dry_run": dry_run,
+            "plan": plan,
+            "publish": [],
+            "targets": [],
+            "units": [],
+            "note": "nothing to release",
+        });
+    }
+    let cfg = load_config(dir, params).unwrap_or_default();
+    let gh_repo = resolve_gh_repo(dir, &cfg);
+    let commitish = params
+        .get("commitish")
+        .and_then(Value::as_str)
+        .map(str::to_string)
+        .or_else(|| vcs.head(dir));
+    let publish_reports = run_publishers(
+        dir,
+        &cfg,
+        &gh_repo,
+        &releasing,
+        dry_run,
+        if dry_run { None } else { commitish },
+    );
+    let failed = publish_reports
+        .iter()
+        .filter(|r| r["ok"].as_bool() == Some(false))
+        .count();
+    let targets: Vec<String> = releasing
+        .iter()
+        .flat_map(|u| u["spec"]["publish"].as_array().cloned().unwrap_or_default())
+        .filter_map(|t| serde_json::from_value::<PublishTarget>(t).ok())
+        .map(|t| target_slug(&t).to_string())
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect();
+    // `units` echoes the full plan-unit objects (not just names) so
+    // the result can feed `params.units` of a follow-up op.
+    let mut v = json!({
+        "ok": failed == 0,
+        "dry_run": dry_run,
+        "plan": plan,
+        "publish": publish_reports,
+        "targets": targets,
+        "units": releasing,
+    });
+    if failed > 0 {
+        v["error"] = json!(format!("{failed} publish target(s) failed"));
+        v["note"] = json!("publish is not rolled back by this op — tags/commits already pushed stay; clean up forges manually or re-run after fixing");
+    }
+    v
 }
 
 /// Config for `dir` — `params.profile` selects a `type: tarsi`
@@ -259,6 +845,15 @@ fn target_enabled(cfg: &Config, t: &PublishTarget) -> bool {
     match t {
         PublishTarget::CratesIo => cfg.publish.crates.enabled,
         PublishTarget::GithubRelease => cfg.publish.ghreleases.enabled,
+    }
+}
+
+/// Stable slug for a publish target (`crates-io`, `github-release`)
+/// — matches the serde kebab-case wire form.
+fn target_slug(t: &PublishTarget) -> &'static str {
+    match t {
+        PublishTarget::CratesIo => "crates-io",
+        PublishTarget::GithubRelease => "github-release",
     }
 }
 

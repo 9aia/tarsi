@@ -44,6 +44,13 @@ fn serve_release_conforms_on_git() {
 }
 
 #[test]
+fn serve_granular_ops_conform_on_git() {
+    let fx = repo::workspace_repo();
+    repo::write(fx.path(), "tarsi.toml", repo::NO_PUBLISH_TOML);
+    serve::assert_granular_tier(&GitVcs, fx.path());
+}
+
+#[test]
 fn single_unit_repo_plans_one_release() {
     let fx = repo::single_unit_repo();
     let r = serve::ok(

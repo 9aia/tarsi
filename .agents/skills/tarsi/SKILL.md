@@ -39,16 +39,30 @@ Ops (all JSON in/out — no `--json` flag exists or is needed):
 | `plan` | `dir`, `profile?`, `range?` | units in topo order: bump, new_version, tag, changelog_markdown, publish_targets |
 | `changelog` | same | per-unit `{unit, version, tag, markdown}` for releasing units |
 | `notes` | same | concatenated release notes |
-| `release` | same + `dry_run` (default **true**) | executes the plan; pushes commit+tags *before* publishing |
+| `check` | same | read-only validation: `checks[]` (tag-available, manifest-present, changelog-not-drifted, publish-*) + plan; `ok:false` on drift |
+| `schema` | — | the op surface as data (params + result shapes) — introspect before driving |
+| `bump` | same + `dry_run` (default **true**) | step 1: changelogs + manifests + release commit → `bump{commit, units[]}` |
+| `tag` | same + `sha?`, `push?`, `dry_run` | step 2: tags at `sha` (default HEAD); `push:true` pushes branch+tags — **required before `publish`** |
+| `publish` | same + `commitish?`, `dry_run` | step 3: forge publishes; `commitish` pins the target (default HEAD) |
+| `release` | same + `dry_run` (default **true**) | composed pipeline: plan → bump → tag → push → publish, with rollback |
 
 `range` overrides the since-last-tag rev (e.g. `"HEAD~5..HEAD"`)
 for every unit. `profile` selects a `type: tarsi` pack by name
 (beats `$TARSI_PROFILE` and the config's `profile = "…"` key).
 
-Typical flow: `plan` → show the human → on approval `release`
-with `dry_run:false`. A failed publish rolls back local+remote
-state when nothing published; partial publishes are reported for
-manual cleanup — read `rolled_back`/`publish` in the result.
+Typical flow: `check` → `plan` → show the human → on approval
+either `release` with `dry_run:false` (atomic, rolls back on
+failure) **or** the granular chain `bump` → `tag{push:true}` →
+`publish`, each with `dry_run:false`. The granular ops are the
+peregrin-campaign shape: every mutating op echoes `units` (the
+plan-unit JSON it acted on) — pass it back as `params.units` to
+the next op instead of re-planning (re-planning mid-chain sees
+the bump commit and the new tags). Granular ops do **not** roll
+back — `bump`/`tag`/`publish` report partial state for the
+caller to compensate; `release` is the all-or-nothing path. Read
+`rolled_back`/`publish`/`note` in results. A failed `release`
+rolls back local+remote state when nothing published; partial
+publishes are reported for manual cleanup.
 
 ## Repo config — `tarsi.toml`
 
