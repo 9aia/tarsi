@@ -1,15 +1,22 @@
 [package]
 name = "tarsi-config"
-description = "tarsi.toml/tarsi.yml loading — scarab-config file discovery over tarsi_core::Config."
+description = "tarsi.toml/tarsi.yml loading — scarab-config file discovery over tarsi_core::Config, plus type:tarsi release-profile resolution."
 version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
 [dependencies]
-scarab-config = { git = "ssh://git@github.com/9aia/scarab.git", rev = "8360f15b75ad7a84a9a6f2bd6d4dac6b0c2ae110", version = "0.1" }
-scarab-config-file = { git = "ssh://git@github.com/9aia/scarab.git", rev = "8360f15b75ad7a84a9a6f2bd6d4dac6b0c2ae110", version = "0.1" }
+scarab-config = { git = "ssh://git@github.com/9aia/scarab.git", rev = "9364df88fad0ca46bd838467717a823893f47438", version = "0.1" }
+scarab-config-file = { git = "ssh://git@github.com/9aia/scarab.git", rev = "9364df88fad0ca46bd838467717a823893f47438", version = "0.1" }
+scarab-config-toml = { git = "ssh://git@github.com/9aia/scarab.git", rev = "9364df88fad0ca46bd838467717a823893f47438", version = "0.1" }
+scarab-config-yaml = { git = "ssh://git@github.com/9aia/scarab.git", rev = "9364df88fad0ca46bd838467717a823893f47438", version = "0.1" }
+semver = "1"
+serde_json = "1"
 tarsi-core = { path = "../tarsi-core" }
+
+[dev-dependencies]
+tempfile = "3"
 
 [lints]
 workspace = true

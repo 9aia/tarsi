@@ -13,6 +13,13 @@ use crate::unit::{PublishTarget, ReleaseUnitSpec, UnitsSpec};
 /// Top-level config — `tarsi.toml` or `tarsi.yaml`.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Config {
+    /// Named release profile to layer *under* this config — a
+    /// `type: tarsi` tamias pack or a dir under
+    /// `~/.config/tarsi/profiles/`. Resolved by `tarsi-config`
+    /// (profile dir becomes a config layer between the repo file
+    /// and the user file); ignored by planning itself.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub profile: Option<String>,
     #[serde(default)]
     pub release: ReleaseConfig,
     #[serde(default)]
@@ -60,7 +67,7 @@ impl Default for ReleaseConfig {
 }
 
 fn default_tag_format() -> String {
-    "{unit}-v{version}".to_string()
+    crate::unit::DEFAULT_TAG_FORMAT.to_string()
 }
 fn default_changelog_path() -> String {
     "CHANGELOG.md".to_string()
@@ -172,6 +179,14 @@ pub fn apply_overrides(mut specs: Vec<ReleaseUnitSpec>, cfg: &Config) -> Vec<Rel
             .is_some_and(|o| o.skip)
     });
     for s in &mut specs {
+        // Repo/profile-level default tag format: specs still
+        // carrying the built-in default (or none) adopt
+        // `release.tag_format`. Per-unit `unit_overrides` below
+        // always win, as does any spec format that differs from
+        // the built-in default.
+        if s.tag_format.is_empty() || s.tag_format == crate::unit::DEFAULT_TAG_FORMAT {
+            s.tag_format = cfg.release.tag_format.clone();
+        }
         if let Some(o) = cfg.release.unit_overrides.get(&s.name) {
             if o.bump.is_some() {
                 s.bump = o.bump;
@@ -182,9 +197,6 @@ pub fn apply_overrides(mut specs: Vec<ReleaseUnitSpec>, cfg: &Config) -> Vec<Rel
             if let Some(p) = &o.publish {
                 s.publish = p.clone();
             }
-        }
-        if s.tag_format.is_empty() {
-            s.tag_format = cfg.release.tag_format.clone();
         }
     }
     specs

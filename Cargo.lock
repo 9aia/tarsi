@@ -529,23 +529,27 @@ checksum = "9774ba4a74de5f7b1c1451ed6cd5285a32eddb5cccb8cc655a4e50009e06477f"
 [[package]]
 name = "scarab-config"
 version = "0.1.0"
-source = "git+ssh://git@github.com/9aia/scarab.git?rev=8360f15b75ad7a84a9a6f2bd6d4dac6b0c2ae110#8360f15b75ad7a84a9a6f2bd6d4dac6b0c2ae110"
+source = "git+ssh://git@github.com/9aia/scarab.git?rev=9364df88fad0ca46bd838467717a823893f47438#9364df88fad0ca46bd838467717a823893f47438"
+dependencies = [
+ "serde_json",
+]
 
 [[package]]
 name = "scarab-config-file"
 version = "0.1.0"
-source = "git+ssh://git@github.com/9aia/scarab.git?rev=8360f15b75ad7a84a9a6f2bd6d4dac6b0c2ae110#8360f15b75ad7a84a9a6f2bd6d4dac6b0c2ae110"
+source = "git+ssh://git@github.com/9aia/scarab.git?rev=9364df88fad0ca46bd838467717a823893f47438#9364df88fad0ca46bd838467717a823893f47438"
 dependencies = [
  "scarab-config",
  "scarab-config-toml",
  "scarab-config-yaml",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
 name = "scarab-config-toml"
 version = "0.1.0"
-source = "git+ssh://git@github.com/9aia/scarab.git?rev=8360f15b75ad7a84a9a6f2bd6d4dac6b0c2ae110#8360f15b75ad7a84a9a6f2bd6d4dac6b0c2ae110"
+source = "git+ssh://git@github.com/9aia/scarab.git?rev=9364df88fad0ca46bd838467717a823893f47438#9364df88fad0ca46bd838467717a823893f47438"
 dependencies = [
  "scarab-config",
  "serde",
@@ -555,7 +559,7 @@ dependencies = [
 [[package]]
 name = "scarab-config-yaml"
 version = "0.1.0"
-source = "git+ssh://git@github.com/9aia/scarab.git?rev=8360f15b75ad7a84a9a6f2bd6d4dac6b0c2ae110#8360f15b75ad7a84a9a6f2bd6d4dac6b0c2ae110"
+source = "git+ssh://git@github.com/9aia/scarab.git?rev=9364df88fad0ca46bd838467717a823893f47438#9364df88fad0ca46bd838467717a823893f47438"
 dependencies = [
  "scarab-config",
  "serde",
@@ -697,7 +701,12 @@ version = "0.1.0"
 dependencies = [
  "scarab-config",
  "scarab-config-file",
+ "scarab-config-toml",
+ "scarab-config-yaml",
+ "semver",
+ "serde_json",
  "tarsi-core",
+ "tempfile",
 ]
 
 [[package]]

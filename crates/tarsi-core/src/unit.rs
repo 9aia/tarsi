@@ -53,8 +53,14 @@ fn default_root() -> String {
     ".".to_string()
 }
 
+/// The built-in tag template — `{unit}-v{semver}`, the org
+/// convention (`tamias-core-v0.4.2`). Specs carrying this exact
+/// value are treated as *unset* by [`crate::config::apply_overrides`]
+/// so `release.tag_format`/profile conventions can take over.
+pub const DEFAULT_TAG_FORMAT: &str = "{unit}-v{version}";
+
 fn default_tag_format() -> String {
-    "{unit}-v{version}".to_string()
+    DEFAULT_TAG_FORMAT.to_string()
 }
 
 impl ReleaseUnitSpec {

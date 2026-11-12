@@ -66,7 +66,18 @@ pub fn dispatch(vcs: &dyn Vcs, req: &Request) -> Response {
         "manifest" => Response::ok(json!({
             "name": "tarsi-serve",
             "version": env!("CARGO_PKG_VERSION"),
-            "ops": ["manifest", "plan", "changelog", "notes", "release"],
+            "ops": ["manifest", "profiles", "plan", "changelog", "notes", "release"],
+        })),
+        "profiles" => Response::ok(json!({
+            "profiles": tarsi_config::list_profiles()
+                .iter()
+                .map(|p| json!({
+                    "name": p.name,
+                    "version": p.version,
+                    "description": p.description,
+                    "source": p.source,
+                }))
+                .collect::<Vec<_>>(),
         })),
         "plan" => match build_plan(vcs, &dir, params) {
             Ok(v) => Response::ok(v),
@@ -138,7 +149,7 @@ pub fn dispatch(vcs: &dyn Vcs, req: &Request) -> Response {
 /// Load config + specs + commits → plan, serialized with rendered
 /// changelog markdown per unit.
 fn build_plan(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Result<Value, String> {
-    let cfg = load_config(dir)?;
+    let cfg = load_config(dir, params)?;
     let specs = resolve_specs(dir, &cfg)?;
     let commits = gather_commits(vcs, dir, &specs, params)?;
     let date = today();
@@ -147,16 +158,22 @@ fn build_plan(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Result<Value, String
     Ok(json!({ "specs": specs, "plan": plan_json }))
 }
 
-fn load_config(dir: &Path) -> Result<Config, String> {
-    match tarsi_config::load_in(dir) {
+/// Config for `dir` — `params.profile` selects a `type: tarsi`
+/// release profile (beats `$TARSI_PROFILE` and the config's own
+/// `profile` key). No config anywhere → defaults, *unless* a
+/// profile was named: profile errors (missing dir, broken file)
+/// always surface — silently releasing under defaults would
+/// surprise.
+fn load_config(dir: &Path, params: &Value) -> Result<Config, String> {
+    let profile = params.get("profile").and_then(Value::as_str);
+    match tarsi_config::load_in_with_profile(dir, profile) {
         Ok(c) => Ok(c),
         Err(e) => {
-            // No tarsi.* anywhere → defaults (cargo workspace scan).
             // A present-but-broken file still errors loudly.
             let local = ["tarsi.toml", "tarsi.yaml", "tarsi.yml"]
                 .iter()
                 .any(|f| dir.join(f).exists());
-            if local {
+            if local || profile.is_some() {
                 Err(e)
             } else {
                 Ok(Config::default())
@@ -339,7 +356,7 @@ fn execute_release(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
     }
 
     let mut steps_run: Vec<Value> = Vec::new();
-    let cfg = load_config(dir).unwrap_or_default();
+    let cfg = load_config(dir, params).unwrap_or_default();
     let gh_repo = resolve_gh_repo(dir, &cfg);
 
     if dry_run {

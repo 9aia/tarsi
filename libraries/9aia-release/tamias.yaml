@@ -1,0 +1,27 @@
+# 9aia-release — the org's release profile, shipped as a
+# `type: tarsi` tamias content pack (PL-014 D2).
+#
+# `tamias install 9aia-release` (once `tamias-driver-tarsi`,
+# PL-014 D3, lands) drops this payload into the store; tarsi-serve
+# then resolves it by name — `tarsi-serve plan --set
+# profile=9aia-release`, `profile = "9aia-release"` in a repo's
+# tarsi.toml, or `$TARSI_PROFILE`. The payload's `tarsi.toml` is a
+# plain Config document layered between the repo config and
+# `~/.config/tarsi/` (repo > profile > user > defaults).
+#
+# `type: tarsi` manifest contract (D2):
+#   - payload root MUST carry `tarsi.{yaml,yml,toml}` — the profile
+#     config. It must NOT carry a `[profile]` table (`profile =
+#     "…"` is the *selector* key, a string).
+#   - `description` here is the profile's human label (also
+#     surfaced by the `profiles` op); an optional top-level
+#     `description` in `tarsi.toml` works for dir-only profiles.
+#   - extra files (styleguide.md, commit maps, …) may ride along;
+#     consumers resolve them relative to the profile dir.
+name: 9aia-release
+version: "0.1.0"
+type: tarsi
+description: >-
+  Org-wide release conventions: per-unit `{unit}-v{semver}` tags,
+  keep-a-changelog, cargo-workspace units, tag-only publishing
+  (ADR-0004 — crates.io is tamias-only, GH releases unused).

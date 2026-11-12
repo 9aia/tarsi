@@ -1,0 +1,31 @@
+# 9aia-release profile — org release conventions (PL-014 D2).
+#
+# This file IS a tarsi Config document: it layers under the
+# consuming repo's `tarsi.toml` (repo keys win) and over
+# `~/.config/tarsi/` (profile keys win). Keep it to *conventions* —
+# repo-specific overrides belong in the repo's own tarsi.toml.
+#
+# Mirrors the org's `scripts/release.sh` reality + ADR-0003/0004:
+# per-unit tags `{unit}-v{semver}`, keep-a-changelog sections,
+# workspace-member release units, dep-ordered publishes.
+
+[release]
+styleguide = "keep-a-changelog"
+changelog_path = "CHANGELOG.md"
+# Repo-docs noise never attributes commits to release units.
+diff_exclude = ["docs/**", "project/**", "*.md", ".github/**"]
+# tag_format defaults to "{unit}-v{version}" — stated here so the
+# convention is explicit, not implicit.
+tag_format = "{unit}-v{version}"
+
+[publish.crates]
+# ADR-0004: crates.io publishing is tamias-only — org repos tag +
+# tamias publish, never `cargo publish` directly.
+enabled = false
+
+[publish.ghreleases]
+# Org releases are tag-only (T-032); the capability stays for
+# external consumers who opt back in per-repo.
+enabled = false
+# token_env = "GITHUB_TOKEN"
+# repo defaults to the origin remote
