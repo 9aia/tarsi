@@ -1,21 +1,32 @@
-//! `tamias-driver-tarsi` — the tamias content driver for
-//! `type: tarsi` release-profile packs (PL-014 D3). One binary,
-//! the tamias wire only — see `tarsi_driver`'s module docs for the
-//! verb contract and install/placement semantics.
+//! `tamias-driver-tarsi` — dual-surface driver: the tamias content
+//! driver for `type: tarsi` release-profile packs (PL-014 D3) AND
+//! the pavo read-only view driver over tarsi release state. One
+//! binary, two consumers, disjoint argv — see `tarsi_driver`'s
+//! module docs for both contracts.
+//!
+//! pavo surface (verbs take no `--dir`/`--name`):
+//!
+//! - `manifest` — print the `pavo_protocol::DriverManifest` JSON
+//!   (discovery probe; never touches tarsi state).
+//! - `capabilities` — merged JSON advertising BOTH surfaces: pavo's
+//!   `{"capabilities": ["pavo",…], "verbs": […"serve"…]}` shape plus
+//!   tamias's `"types": ["tarsi"]` and the content verbs in
+//!   `verbs` — one payload satisfies both discoverers.
+//! - `serve` — ndjson JSON-RPC on stdio (`manifest`/`views`/`view`/
+//!   `query`); queries ride `tarsi-serve` one-shot ops (plan
+//!   preview, changelog preview, profile list). `$TARSI_SERVE`
+//!   overrides the `tarsi-serve` binary (default: PATH).
 //!
 //! ```text
+//! tamias-driver-tarsi manifest|capabilities|serve
 //! tamias-driver-tarsi <verb> --dir <d> --name <n> [--config <f>]
 //! ```
 //!
-//! `verb ∈ {capabilities, config-schema, install, deploy,
-//! uninstall, status, health, logs, hooks}`. tamias dispatches the
-//! lifecycle verbs with `--dir`/`--name` always present; the probe
-//! verbs take no flags. Every verb answers a JSON report on stdout;
-//! failures go to stderr with exit 1.
-//!
-//! Not yet implemented (D3 remainder): the pavo read-only surface
-//! (`manifest`/`serve` views over plans, changelog previews,
-//! publish history) — this binary answers only the tamias wire.
+//! `verb ∈ {config-schema, install, deploy, uninstall, status,
+//! health, logs, hooks}`. tamias dispatches the lifecycle verbs
+//! with `--dir`/`--name` always present; the probe verbs take no
+//! flags. Every verb answers a JSON report on stdout; failures go
+//! to stderr with exit 1.
 
 #![forbid(unsafe_code)]
 
@@ -24,7 +35,7 @@ use std::process::ExitCode;
 
 use tarsi_driver as drv;
 
-const USAGE: &str = "usage: tamias-driver-tarsi <verb> --dir <d> --name <n> [--config <f>]\n       verbs: capabilities config-schema install deploy uninstall status health logs hooks";
+const USAGE: &str = "usage: tamias-driver-tarsi manifest|capabilities|serve\n       tamias-driver-tarsi <verb> --dir <d> --name <n> [--config <f>]\n       verbs: capabilities config-schema install deploy uninstall status health logs hooks";
 
 /// The flags tamias appends to every dispatched verb.
 #[derive(Debug, Default)]
@@ -78,10 +89,17 @@ fn main() -> ExitCode {
         return ExitCode::from(2);
     };
     match verb {
-        "capabilities" => {
-            drv::emit(&drv::capabilities());
+        // pavo probes — bare argv, no --dir/--name. `capabilities`
+        // answers the merged pavo+tamias payload.
+        "manifest" => {
+            drv::emit(&drv::manifest_value());
             ExitCode::SUCCESS
         }
+        "capabilities" => {
+            drv::emit(&drv::capabilities_value());
+            ExitCode::SUCCESS
+        }
+        "serve" => ExitCode::from(drv::serve(&env()) as u8),
         "config-schema" => {
             drv::emit(&drv::config_schema());
             ExitCode::SUCCESS

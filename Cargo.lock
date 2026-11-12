@@ -414,6 +414,38 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
+name = "pavo-driver-kit"
+version = "0.1.0"
+source = "git+https://github.com/9aia/pavo?rev=a7aff58c0f4ef902df99dbd56a8eddad907bcf0b#a7aff58c0f4ef902df99dbd56a8eddad907bcf0b"
+dependencies = [
+ "pavo-protocol",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "pavo-protocol"
+version = "0.1.0"
+source = "git+https://github.com/9aia/pavo?rev=a7aff58c0f4ef902df99dbd56a8eddad907bcf0b#a7aff58c0f4ef902df99dbd56a8eddad907bcf0b"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror",
+]
+
+[[package]]
+name = "pavo-testkit"
+version = "0.1.0"
+source = "git+https://github.com/9aia/pavo?rev=a7aff58c0f4ef902df99dbd56a8eddad907bcf0b#a7aff58c0f4ef902df99dbd56a8eddad907bcf0b"
+dependencies = [
+ "pavo-protocol",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror",
+]
+
+[[package]]
 name = "percent-encoding"
 version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -723,6 +755,9 @@ dependencies = [
 name = "tarsi-driver"
 version = "0.1.0"
 dependencies = [
+ "pavo-driver-kit",
+ "pavo-protocol",
+ "pavo-testkit",
  "scarab-config",
  "scarab-config-yaml",
  "serde_json",

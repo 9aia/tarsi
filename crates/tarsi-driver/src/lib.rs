@@ -62,10 +62,26 @@
 //! - `config-schema` — JSON Schema (draft 2020-12) of the optional
 //!   `--config` file (see [`DriverConfig`]).
 //!
-//! **Not yet implemented (D3 remainder):** the pavo read-only
-//! surface (`manifest`/`serve` views over plans, changelog
-//! previews, publish history). This binary answers only the tamias
-//! wire today.
+//! # The pavo read-only surface
+//!
+//! The same binary is also a **pavo view driver** (PL-014 D3
+//! remainder): `manifest` prints the [`pavo_protocol::DriverManifest`]
+//! and `serve` answers ndjson JSON-RPC (`manifest`/`views`/`view`/
+//! `query`) over [`views`] — release plans, changelog previews, and
+//! publish-profile state, all read through `tarsi-serve` one-shot
+//! ops ([`data`]). The surfaces are disjoint by argv: pavo's probes
+//! (`manifest`/`capabilities`/`serve`) take no `--dir`/`--name`,
+//! tamias's verbs always carry them — `capabilities` answers a
+//! merged payload satisfying both discoverers. Nothing on the pavo
+//! side mutates: the serve ops called are `manifest`, `profiles`,
+//! `plan`, `changelog` — `release` is never dispatched.
+//!
+//! See `views.rs` for the view/ query mapping and `data.rs` for
+//! the `tarsi-serve` invocation (`$TARSI_SERVE` overrides the
+//! binary, default `tarsi-serve` on PATH).
+
+pub mod data;
+pub mod views;
 
 use std::fs;
 use std::path::{Component, Path, PathBuf};
@@ -119,24 +135,37 @@ pub struct DriverConfig {
     pub profiles_dir: Option<PathBuf>,
 }
 
-/// `capabilities` — the discovery payload tamias reads for `types`
-/// routing and verb warnings.
-pub fn capabilities() -> Value {
-    json!({
-        "capabilities": ["tamias"],
-        "verbs": [
-            "capabilities",
-            "config-schema",
-            "install",
-            "deploy",
-            "uninstall",
-            "status",
-            "health",
-            "logs",
-            "hooks",
-        ],
-        "types": ["tarsi"],
-    })
+/// `capabilities` — merged for both consumers of this binary.
+/// pavo's discovery checks `capabilities`/`verbs` for
+/// `"pavo"`/`"serve"`; tamias's checks `types` for the content kind
+/// and warns on undeclared `verbs`. One JSON answers both: the
+/// kit's `{capabilities, verbs}` shape plus `"types": ["tarsi"]`,
+/// `"tamias"` in `capabilities`, and every verb folded into
+/// `verbs`.
+pub fn capabilities_value() -> Value {
+    let m = views::manifest();
+    let mut v = pavo_driver_kit::capabilities_value(&m);
+    v["views"] = json!(m.views.len());
+    v["types"] = json!(["tarsi"]);
+    v["capabilities"] = json!(["pavo", "tamias"]);
+    let mut verbs: Vec<Value> = v["verbs"].as_array().cloned().unwrap_or_default();
+    for extra in [
+        "capabilities",
+        "config-schema",
+        "install",
+        "deploy",
+        "uninstall",
+        "status",
+        "health",
+        "logs",
+        "hooks",
+    ] {
+        if !verbs.iter().any(|x| x.as_str() == Some(extra)) {
+            verbs.push(json!(extra));
+        }
+    }
+    v["verbs"] = Value::Array(verbs);
+    v
 }
 
 /// `config-schema` — the reserved verb printing the JSON Schema of
@@ -690,6 +719,65 @@ pub fn emit(value: &Value) {
     }
 }
 
+// ---------------------------------------------------------------- pavo surface
+
+/// `manifest` verb payload — the pavo [`pavo_protocol::DriverManifest`]
+/// as a JSON value.
+pub fn manifest_value() -> Value {
+    serde_json::to_value(views::manifest()).unwrap_or(Value::Null)
+}
+
+/// Dispatch one parsed pavo wire [`pavo_protocol::wire::Request`] to
+/// its response. `env` feeds the `tarsi-serve` lookup
+/// (`$TARSI_SERVE` override) — injectable so tests never touch the
+/// process env.
+///
+/// Read-only by construction: the only serve ops reachable are
+/// `manifest`/`profiles`/`plan`/`changelog`; `release` is never
+/// dispatched. `render`/`submit`/`jobs`/`notifications` answer
+/// `ok:false` — the manifest claims none of them.
+pub fn dispatch(req: &pavo_protocol::wire::Request, env: Env<'_>) -> pavo_protocol::wire::Response {
+    use pavo_protocol::wire::{QueryResult, Request, Response, ViewSummary};
+    match req {
+        Request::Manifest => Response::ok_typed(&views::manifest()),
+        Request::Views => {
+            let summaries: Vec<ViewSummary> =
+                views::specs().iter().map(ViewSummary::from).collect();
+            Response::ok_typed(&summaries)
+        }
+        Request::View { view, params } => match views::view_result(view, params, env) {
+            Ok(result) => Response::ok_typed(&result),
+            Err(e) => Response::err(e),
+        },
+        Request::Query { query, params } => {
+            if !views::known_query(query) {
+                return Response::err(format!("unknown query: {query}"));
+            }
+            let payload = views::query_data(query, params, env);
+            Response::ok_typed(&QueryResult {
+                query: query.clone(),
+                data: payload,
+            })
+        }
+        Request::Render { kind, .. } => Response::err(format!(
+            "tamias-driver-tarsi claims no renderers (kind '{kind}')"
+        )),
+        Request::Submit { .. } => {
+            Response::err("tamias-driver-tarsi is read-only and implements no forms")
+        }
+        Request::Jobs => Response::err("tamias-driver-tarsi has no job feed"),
+        Request::Notifications => Response::err("tamias-driver-tarsi has no notification feed"),
+    }
+}
+
+/// The `serve` verb — ndjson JSON-RPC on stdio until EOF or a
+/// broken pipe, via pavo-driver-kit's loop (blank lines skip,
+/// parse failures answer `ok:false`, a dead client exits quietly).
+pub fn serve(env: Env<'_>) -> i32 {
+    let _ = pavo_driver_kit::serve_stdio(|req| dispatch(req, env));
+    0
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
@@ -977,9 +1065,21 @@ mod tests {
 
     #[test]
     fn capabilities_and_schema_shapes() {
-        let caps = capabilities();
+        let caps = capabilities_value();
         assert_eq!(caps["types"], json!(["tarsi"]));
-        assert!(caps["verbs"].as_array().unwrap().len() >= 7);
+        // Merged payload satisfies both discoverers.
+        assert!(caps["capabilities"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("pavo")));
+        assert!(caps["capabilities"]
+            .as_array()
+            .unwrap()
+            .contains(&json!("tamias")));
+        let verbs = caps["verbs"].as_array().unwrap();
+        for v in ["serve", "manifest", "install", "status", "config-schema"] {
+            assert!(verbs.contains(&json!(v)), "missing verb {v}");
+        }
         let schema = config_schema();
         assert_eq!(
             schema["$schema"],

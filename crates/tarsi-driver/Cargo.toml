@@ -16,9 +16,18 @@ tarsi-config = { path = "../tarsi-config" }
 scarab-config = { git = "ssh://git@github.com/9aia/scarab.git", rev = "9364df88fad0ca46bd838467717a823893f47438", version = "0.1" }
 scarab-config-yaml = { git = "ssh://git@github.com/9aia/scarab.git", rev = "9364df88fad0ca46bd838467717a823893f47438", version = "0.1" }
 serde_json = "1"
+# The public wire contract + driver-authoring kit — git deps until
+# pavo lands on the registry (`version` is the crates.io fallback).
+# All pavo crates share the one git source so the kit's
+# pavo-protocol types stay identical to this crate's.
+pavo-protocol = { git = "https://github.com/9aia/pavo", version = "0.1.0", rev = "a7aff58c0f4ef902df99dbd56a8eddad907bcf0b" }
+pavo-driver-kit = { git = "https://github.com/9aia/pavo", version = "0.1.0", rev = "a7aff58c0f4ef902df99dbd56a8eddad907bcf0b" }
 
 [dev-dependencies]
 tempfile = "3"
+# Conformance gate — `cargo test` runs pavo's wire-contract suite
+# against this crate's own `tamias-driver-tarsi serve` binary.
+pavo-testkit = { git = "https://github.com/9aia/pavo", version = "0.1.0", rev = "a7aff58c0f4ef902df99dbd56a8eddad907bcf0b" }
 
 [lints]
 workspace = true
