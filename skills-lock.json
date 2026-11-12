@@ -1,4 +1,11 @@
 {
   "version": 1,
-  "skills": {}
+  "skills": {
+    "tarsi": {
+      "source": "9aia/tarsi",
+      "sourceType": "local",
+      "skillPath": ".agents/skills/tarsi/SKILL.md",
+      "computedHash": "e17a86774f288890afe8f2694463cdf18422186d61c5a8a6949c8e3ad7cee0a2"
+    }
+  }
 }

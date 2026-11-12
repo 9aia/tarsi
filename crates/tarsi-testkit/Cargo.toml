@@ -10,7 +10,14 @@ publish = false
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+semver = { version = "1", features = ["serde"] }
+tempfile = "3"
 tarsi-core = { path = "../tarsi-core" }
+tarsi-serve = { path = "../tarsi-serve" }
+lasius-vcs = { git = "ssh://git@github.com/9aia/lasius.git", rev = "1cdd6f698b37ca51a130029f376416c4fdbc3dba" }
+
+[dev-dependencies]
+lasius-vcs-git = { git = "ssh://git@github.com/9aia/lasius.git", rev = "1cdd6f698b37ca51a130029f376416c4fdbc3dba" }
 
 [lints]
 workspace = true

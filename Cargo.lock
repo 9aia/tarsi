@@ -810,9 +810,14 @@ dependencies = [
 name = "tarsi-testkit"
 version = "0.1.0"
 dependencies = [
+ "lasius-vcs",
+ "lasius-vcs-git",
+ "semver",
  "serde",
  "serde_json",
  "tarsi-core",
+ "tarsi-serve",
+ "tempfile",
 ]
 
 [[package]]
