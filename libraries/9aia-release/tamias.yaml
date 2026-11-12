@@ -18,6 +18,14 @@
 #     `description` in `tarsi.toml` works for dir-only profiles.
 #   - extra files (styleguide.md, commit maps, …) may ride along;
 #     consumers resolve them relative to the profile dir.
+#
+# Bundled driver (D3): `cargo xtask pack` stages a release build of
+# `tamias-driver-tarsi` into `drivers/bin/<host-triple>/` (gitignored
+# build artifact). tamias registers bundled drivers *before*
+# dispatching `install`, so `tamias install --allow-drivers
+# ./libraries/9aia-release` self-provisions the `type: tarsi` driver
+# and lands this profile in the store — where `tarsi-serve profiles`
+# resolves it by name, versioned by the store label.
 name: 9aia-release
 version: "0.1.0"
 type: tarsi

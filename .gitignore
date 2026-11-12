@@ -12,3 +12,6 @@ docs/
 
 # tamias pack payload — built by `cargo xtask pack`
 /libraries/tarsi/tools/
+
+# tamias-driver-tarsi bundled-driver payload — built by `cargo xtask pack`
+/libraries/9aia-release/drivers/

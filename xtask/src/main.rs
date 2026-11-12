@@ -7,7 +7,8 @@
 //! - `coverage` — `cargo llvm-cov` (HTML → target/llvm-cov/html);
 //!   extra args pass through, e.g. `--fail-under-lines 97`
 //! - `install`  — release-build `tarsi-serve` → ~/.local/bin
-//! - `pack`     — stage the tamias pack payload (`libraries/tarsi`)
+//! - `pack`     — stage the tamias pack payloads (`libraries/tarsi`
+//!   + the `9aia-release` bundled driver)
 //! - `package`  — `cargo package --workspace` (verify: builds each packaged crate)
 //! - `smoke`    — install `tarsi` from crates.io + run it (post-publish check)
 //! - `site`     — build the docs site (docs/ worktree, VitePress)
@@ -69,30 +70,42 @@ fn stage_release_bin(bin: &str, dest: &std::path::Path) -> Result<(), String> {
     Ok(())
 }
 
-/// `cargo xtask pack` — stage the tamias pack payload (T-014):
-/// release-build `tarsi-serve` and drop it under
-/// `libraries/tarsi/tools/bin/<host-triple>/` — the payload-bin dir
-/// `tamias install` links onto PATH. Gitignored on purpose: the
-/// binary is a build artifact; the committed pack is just
-/// `tamias.yaml` + this staging verb.
+/// `cargo xtask pack` — stage the tamias pack payloads (T-014 +
+/// PL-014 D3): release-build `tarsi-serve` into
+/// `libraries/tarsi/tools/bin/<host-triple>/` (the payload-bin dir
+/// `tamias install` links onto PATH) and `tamias-driver-tarsi`
+/// into `libraries/9aia-release/drivers/bin/<host-triple>/` (the
+/// bundled-driver dir tamias registers before dispatching the
+/// `type: tarsi` install — the pack self-provisions its driver).
+/// Gitignored on purpose: binaries are build artifacts; the
+/// committed packs are just manifests + this staging verb.
 fn pack() -> Result<(), String> {
-    let status = Command::new("cargo")
-        .args(["build", "--release", "-p", "tarsi-serve"])
-        .status()
-        .map_err(|e| format!("cargo build: {e}"))?;
-    if !status.success() {
-        return Err("cargo build --release -p tarsi-serve failed".to_string());
+    for pkg in ["tarsi-serve", "tarsi-driver"] {
+        let status = Command::new("cargo")
+            .args(["build", "--release", "-p", pkg])
+            .status()
+            .map_err(|e| format!("cargo build -p {pkg}: {e}"))?;
+        if !status.success() {
+            return Err(format!("cargo build --release -p {pkg} failed"));
+        }
     }
     let triple = host_triple();
-    let dest = std::path::Path::new("libraries/tarsi/tools/bin")
+    let serve_dest = std::path::Path::new("libraries/tarsi/tools/bin")
         .join(&triple)
         .join("tarsi-serve");
-    stage_release_bin("tarsi-serve", &dest)?;
-    println!("pack staged: {}", dest.display());
+    stage_release_bin("tarsi-serve", &serve_dest)?;
+    let driver_dest = std::path::Path::new("libraries/9aia-release/drivers/bin")
+        .join(&triple)
+        .join("tamias-driver-tarsi");
+    stage_release_bin("tamias-driver-tarsi", &driver_dest)?;
+    println!("pack staged: {}", serve_dest.display());
+    println!("pack staged: {}", driver_dest.display());
     println!();
     println!("install the tarsi-serve command (payload bin):");
     println!("  tamias install ./libraries/tarsi");
     println!("  # or a pinned tarball: tamias bundle pack libraries/tarsi");
+    println!("install the org release profile (bundles its driver):");
+    println!("  tamias install --allow-drivers ./libraries/9aia-release");
     Ok(())
 }
 

@@ -720,6 +720,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "tarsi-driver"
+version = "0.1.0"
+dependencies = [
+ "scarab-config",
+ "scarab-config-yaml",
+ "serde_json",
+ "tarsi-config",
+ "tempfile",
+]
+
+[[package]]
 name = "tarsi-manifest"
 version = "0.1.0"
 dependencies = [
