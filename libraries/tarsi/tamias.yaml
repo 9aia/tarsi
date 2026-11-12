@@ -1,0 +1,33 @@
+# tarsi — the release tool as a tamias package (T-014: the command
+# ships as a `type: files` pack, no hand-rolled binary).
+#
+# `cargo xtask pack` release-builds `tarsi-serve` into
+# `tools/bin/<host-triple>/` (gitignored — a build artifact) and this
+# manifest ships it as a payload bin. `tamias install
+# ./libraries/tarsi` (or the packed `.tgz` / a registry ref) deploys
+# `tarsi-serve` onto PATH.
+#
+# There is deliberately **no `tarsi` CLI and no `shim: cli` bin**:
+# PL-0014's surface split is "release-expertise libs + `tarsi-serve`
+# bin only" — agents, campaigns, and humans all speak the ndjson
+# ops wire (`manifest`/`plan`/`changelog`/`notes`/`release`). The
+# one-shot front door is `hypha-serve-cli`: `tarsi-serve <op>
+# [--dir D] [--set k=v]… [--yes|--dry-run]`, e.g.
+# `tarsi-serve release --dir . --yes`. Peregrin's
+# `libraries/release` bundle calls exactly this. A future
+# `tamias-driver-tarsi` content driver (PL-0014 D3) is a different
+# artifact — `type: tarsi` profile packs — not this command pack.
+name: tarsi
+version: "0.1.0"
+type: files
+description: >-
+  Generic release tool — changelog → semver bump → tag → publish.
+  Ships the `tarsi-serve` binary: ndjson ops plane plus a one-shot
+  CLI (`tarsi-serve plan|changelog|notes|release --dir <repo>
+  [--yes]`). Driven by agents, peregrin campaigns, and humans.
+
+bins:
+  # The command — real binary, not a verb of a CLI shim. Deployed
+  # under its own name; the payload file keeps the same name.
+  - name: tarsi-serve
+    payload: tools/bin/x86_64-unknown-linux-gnu/tarsi-serve

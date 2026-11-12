@@ -9,3 +9,6 @@ docs/
 
 .kuda/index.sqlite
 .kuda/meta.json
+
+# tamias pack payload — built by `cargo xtask pack`
+/libraries/tarsi/tools/

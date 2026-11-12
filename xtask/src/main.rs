@@ -6,7 +6,8 @@
 //! - `test`     — `cargo nextest run` when installed, else `cargo test`
 //! - `coverage` — `cargo llvm-cov` (HTML → target/llvm-cov/html);
 //!   extra args pass through, e.g. `--fail-under-lines 97`
-//! - `install`  — release-install `tarsi` into ~/.cargo/bin
+//! - `install`  — release-build `tarsi-serve` → ~/.local/bin
+//! - `pack`     — stage the tamias pack payload (`libraries/tarsi`)
 //! - `package`  — `cargo package --workspace` (verify: builds each packaged crate)
 //! - `smoke`    — install `tarsi` from crates.io + run it (post-publish check)
 //! - `site`     — build the docs site (docs/ worktree, VitePress)
@@ -30,6 +31,69 @@ fn have_cargo_sub(sub: &str) -> bool {
         .status()
         .map(|s| s.success())
         .unwrap_or(false)
+}
+
+/// Captured stdout of a command — for probes like `rustc -vV`.
+fn run_out(args: &[&str]) -> Option<String> {
+    let (prog, rest) = args.split_first()?;
+    let out = Command::new(prog).args(rest).output().ok()?;
+    out.status
+        .success()
+        .then(|| String::from_utf8_lossy(&out.stdout).into_owned())
+}
+
+/// The host target triple — the `tools/bin/<triple>/` selector
+/// tamias uses for compiled payload bins.
+fn host_triple() -> String {
+    run_out(&["rustc", "-vV"])
+        .and_then(|v| {
+            v.lines()
+                .find_map(|l| l.strip_prefix("host: ").map(str::to_string))
+        })
+        .unwrap_or_else(|| "x86_64-unknown-linux-gnu".to_string())
+}
+
+/// Release-build `bin` and stage it at `dest` (creating parents,
+/// marking it executable on unix).
+fn stage_release_bin(bin: &str, dest: &std::path::Path) -> Result<(), String> {
+    if let Some(parent) = dest.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| format!("mkdir {}: {e}", parent.display()))?;
+    }
+    std::fs::copy(format!("target/release/{bin}"), dest)
+        .map_err(|e| format!("copy {bin} → {}: {e}", dest.display()))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(dest, std::fs::Permissions::from_mode(0o755));
+    }
+    Ok(())
+}
+
+/// `cargo xtask pack` — stage the tamias pack payload (T-014):
+/// release-build `tarsi-serve` and drop it under
+/// `libraries/tarsi/tools/bin/<host-triple>/` — the payload-bin dir
+/// `tamias install` links onto PATH. Gitignored on purpose: the
+/// binary is a build artifact; the committed pack is just
+/// `tamias.yaml` + this staging verb.
+fn pack() -> Result<(), String> {
+    let status = Command::new("cargo")
+        .args(["build", "--release", "-p", "tarsi-serve"])
+        .status()
+        .map_err(|e| format!("cargo build: {e}"))?;
+    if !status.success() {
+        return Err("cargo build --release -p tarsi-serve failed".to_string());
+    }
+    let triple = host_triple();
+    let dest = std::path::Path::new("libraries/tarsi/tools/bin")
+        .join(&triple)
+        .join("tarsi-serve");
+    stage_release_bin("tarsi-serve", &dest)?;
+    println!("pack staged: {}", dest.display());
+    println!();
+    println!("install the tarsi-serve command (payload bin):");
+    println!("  tamias install ./libraries/tarsi");
+    println!("  # or a pinned tarball: tamias bundle pack libraries/tarsi");
+    Ok(())
 }
 
 fn main() {
@@ -73,7 +137,40 @@ fn main() {
                 std::process::exit(1)
             }
         }
-        "install" => run(&["cargo", "install", "--path", "crates/tarsi-cli", "--force"]),
+        "install" => {
+            // There is no `tarsi` cargo bin — the command ships as
+            // the tamias pack (`cargo xtask pack` + `tamias install
+            // ./libraries/tarsi`). This is the dev shortcut: release-
+            // build `tarsi-serve` into ~/.local/bin.
+            let status = Command::new("cargo")
+                .args(["build", "--release", "-p", "tarsi-serve"])
+                .status()
+                .map_err(|e| format!("cargo build: {e}"));
+            match status {
+                Ok(s) if s.success() => {}
+                Ok(s) => std::process::exit(s.code().unwrap_or(1)),
+                Err(e) => {
+                    eprintln!("xtask: {e}");
+                    std::process::exit(1);
+                }
+            }
+            let home = std::env::var_os("HOME")
+                .map_or_else(|| std::path::PathBuf::from("/"), std::path::PathBuf::from);
+            let out = home.join(".local/bin");
+            if let Err(e) = stage_release_bin("tarsi-serve", &out.join("tarsi-serve")) {
+                eprintln!("xtask: {e}");
+                std::process::exit(1);
+            }
+            println!("installed tarsi-serve to {}", out.display());
+            std::process::exit(0)
+        }
+        "pack" => match pack() {
+            Ok(()) => std::process::exit(0),
+            Err(e) => {
+                eprintln!("xtask: {e}");
+                std::process::exit(1);
+            }
+        },
         "package" => run(&["cargo", "package", "--workspace", "--allow-dirty"]),
         "smoke" => {
             eprintln!("xtask: smoke not wired yet (needs crates.io publish)");
@@ -84,7 +181,7 @@ fn main() {
             std::process::exit(1)
         }
         _ => {
-            eprintln!("usage: cargo xtask <check|test|coverage|install|package|smoke|site>");
+            eprintln!("usage: cargo xtask <check|test|coverage|install|pack|package|smoke|site>");
             std::process::exit(2);
         }
     };

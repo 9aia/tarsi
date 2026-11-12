@@ -9,6 +9,26 @@
 > until the rewrite lands — see the org ledger proposal P-013 /
 > plan PL-014.
 
+## Distribution (Rust rewrite)
+
+The command ships as a tamias pack — `libraries/tarsi/tamias.yaml`
+declares `tarsi-serve` as a `tools/bin/<triple>/` payload bin (T-014;
+there is no `tarsi` CLI — the surface is `tarsi-serve`'s ops).
+
+```bash
+cargo xtask pack    # release-build → libraries/tarsi/tools/bin/<triple>/
+tamias install ./libraries/tarsi   # deploys `tarsi-serve` onto PATH
+```
+
+`tarsi-serve` has two modes: no args → ndjson ops loop on stdio;
+`<op> [--dir D] [--set k=v]… [--yes|--dry-run]` → one-shot JSON
+(`manifest`/`plan`/`changelog`/`notes`/`release`). A repo's
+`tarsi.toml` configures units and publish targets; peregrin's
+`libraries/release` bundle drives `tarsi-serve release --yes`.
+
+Dev shortcut without tamias: `cargo xtask install` puts a release
+`tarsi-serve` in `~/.local/bin`.
+
 ## Legacy: AI changelog CLI (TypeScript)
 
 Tarsi is an AI-powered CLI that automatically generates clear, user-focused changelogs from recent git changes, minimizing manual effort and keeping users informed.
