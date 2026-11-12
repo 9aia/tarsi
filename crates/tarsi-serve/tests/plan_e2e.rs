@@ -93,6 +93,35 @@ fn plan_since_tags_attributes_and_orders() {
 }
 
 #[test]
+fn plan_annotates_disabled_publish_targets() {
+    let d = fixture();
+    write(
+        d.path(),
+        "tarsi.toml",
+        "[publish.crates]\nenabled = false\n[publish.ghreleases]\nenabled = false\n",
+    );
+    let req = Request {
+        op: "plan".into(),
+        params: json!({ "dir": d.path().to_string_lossy() }),
+    };
+    let resp = dispatch(&GitVcs, &req);
+    assert!(resp.ok, "{:?}", resp.error);
+    let r = resp.result.unwrap();
+    let units = r["plan"]["units"].as_array().unwrap();
+    for u in units {
+        let targets = u["publish_targets"].as_array().unwrap();
+        assert!(
+            targets.iter().any(|t| t["target"] == "github-release"),
+            "declared targets still listed: {targets:?}"
+        );
+        assert!(
+            targets.iter().all(|t| t["enabled"] == false),
+            "disabled config must surface as enabled:false: {targets:?}"
+        );
+    }
+}
+
+#[test]
 fn release_dry_run_reports_without_mutating() {
     let d = fixture();
     let req = Request {

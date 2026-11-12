@@ -143,7 +143,7 @@ fn build_plan(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Result<Value, String
     let commits = gather_commits(vcs, dir, &specs, params)?;
     let date = today();
     let plan = plan_release(&specs, &commits, Some(date)).map_err(|e| e.to_string())?;
-    let plan_json = plan_to_json(&plan);
+    let plan_json = plan_to_json(&plan, &cfg);
     Ok(json!({ "specs": specs, "plan": plan_json }))
 }
 
@@ -234,7 +234,18 @@ fn latest_tag(vcs: &dyn Vcs, dir: &Path, spec: &ReleaseUnitSpec) -> Option<Strin
         .map(|(t, _)| t)
 }
 
-fn plan_to_json(plan: &ReleasePlan) -> Value {
+/// Whether a publish target is enabled in config — `spec.publish`
+/// declares *intent*; `publish.<target>.enabled` is the switch
+/// execution honors. Surfaced in plan output so consumers see the
+/// effective state, not just the declaration.
+fn target_enabled(cfg: &Config, t: &PublishTarget) -> bool {
+    match t {
+        PublishTarget::CratesIo => cfg.publish.crates.enabled,
+        PublishTarget::GithubRelease => cfg.publish.ghreleases.enabled,
+    }
+}
+
+fn plan_to_json(plan: &ReleasePlan, cfg: &Config) -> Value {
     let units: Vec<Value> = plan
         .units
         .iter()
@@ -247,6 +258,10 @@ fn plan_to_json(plan: &ReleasePlan) -> Value {
                 "releases": u.releases(),
                 "changelog_markdown": u.changelog.render(),
                 "commits": u.commits.len(),
+                "publish_targets": u.spec.publish.iter().map(|t| json!({
+                    "target": t,
+                    "enabled": target_enabled(cfg, t),
+                })).collect::<Vec<_>>(),
             })
         })
         .collect();
@@ -693,29 +708,73 @@ fn write_changelog(dir: &Path, unit: &Value) -> Result<bool, String> {
     let merged = if existing.trim().is_empty() {
         format!("# Changelog\n\n{md}\n")
     } else {
-        // Insert after the leading `# ` title block (title + blank).
-        let mut lines = existing.lines();
-        let mut prefix = String::new();
-        for line in lines.by_ref() {
-            prefix.push_str(line);
-            prefix.push('\n');
-            if line.trim().is_empty() {
-                break;
-            }
-        }
-        // `prefix` already ends with the blank line after the
-        // title — adding another `\n` here produced a double blank.
-        if !prefix.ends_with("\n\n") {
-            prefix.push('\n');
-        }
-        let rest: String = lines.collect::<Vec<_>>().join("\n");
-        format!("{prefix}{md}\n\n{rest}")
+        splice_changelog(&existing, md)
     };
     if let Some(parent) = file.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
     std::fs::write(&file, merged).map_err(|e| e.to_string())?;
     Ok(!existed)
+}
+
+/// Splice a rendered `## [x.y.z] - date` block into an existing
+/// changelog, keeping strict keep-a-changelog order — title →
+/// preamble → `## [Unreleased]` → releases newest-first. The new
+/// section goes immediately *before* the first versioned
+/// `## [..]` heading (so `[Unreleased]` and any preamble stay on
+/// top); when only `[Unreleased]` exists it appends after it;
+/// with no release headings at all it keeps the legacy splice
+/// directly under the title block. Line-based rebuild preserves
+/// the file's trailing newline (and trailing blank lines).
+fn splice_changelog(existing: &str, md: &str) -> String {
+    let mut lines = existing.lines();
+    // Title block: the `# ` heading plus the blank line after it
+    // (or everything, when the file has no blank line at all).
+    let mut head: Vec<&str> = Vec::new();
+    for line in lines.by_ref() {
+        head.push(line);
+        if line.trim().is_empty() {
+            break;
+        }
+    }
+    let rest: Vec<&str> = lines.collect();
+
+    let is_versioned = |l: &&str| {
+        let t = l.trim_start();
+        t.starts_with("## [") && !t.starts_with("## [Unreleased]")
+    };
+    let is_unreleased = |l: &&str| l.trim_start().starts_with("## [Unreleased]");
+    let insert_at = rest
+        .iter()
+        .position(is_versioned)
+        .or_else(|| rest.iter().any(is_unreleased).then_some(rest.len()))
+        .unwrap_or(0);
+
+    let mut out = String::new();
+    for l in &head {
+        out.push_str(l);
+        out.push('\n');
+    }
+    if !head.last().is_some_and(|l| l.trim().is_empty()) {
+        out.push('\n'); // blank line after the title
+    }
+    for l in &rest[..insert_at] {
+        out.push_str(l);
+        out.push('\n');
+    }
+    if !out.ends_with("\n\n") {
+        out.push('\n'); // exactly one blank line before the section
+    }
+    out.push_str(md);
+    out.push('\n');
+    if insert_at < rest.len() {
+        out.push('\n'); // blank line after the section
+        for l in &rest[insert_at..] {
+            out.push_str(l);
+            out.push('\n');
+        }
+    }
+    out
 }
 
 /// owner/repo from `origin` remote or config override.
@@ -795,6 +854,44 @@ mod tests {
         assert!(s.starts_with("# Changelog\n\n## 0.2.0"), "{s:?}");
         assert!(!s.contains("# Changelog\n\n\n"), "double blank: {s:?}");
         assert!(s.contains("## 0.1.0"), "old entry kept: {s:?}");
+        assert!(s.ends_with('\n'), "trailing newline kept: {s:?}");
+    }
+
+    #[test]
+    fn changelog_splice_keeps_unreleased_and_preamble_on_top() {
+        let d = tempfile::tempdir().unwrap();
+        let f = d.path().join("CHANGELOG.md");
+        std::fs::write(
+            &f,
+            "# Changelog\n\nPreamble prose.\n\n## [Unreleased]\n\n### Added\n\n- pending\n\n## [0.1.0] - 2026-01-01\n\nold\n",
+        )
+        .unwrap();
+        write_changelog(
+            d.path(),
+            &unit(".", "## [0.2.0] - 2026-02-01\n\nnew entry\n"),
+        )
+        .unwrap();
+        let s = std::fs::read_to_string(&f).unwrap();
+        let preamble = s.find("Preamble prose.").unwrap();
+        let unreleased = s.find("## [Unreleased]").unwrap();
+        let new_rel = s.find("## [0.2.0]").unwrap();
+        let old = s.find("## [0.1.0]").unwrap();
+        assert!(
+            preamble < unreleased && unreleased < new_rel && new_rel < old,
+            "keep-a-changelog order violated: {s:?}"
+        );
+        assert!(s.ends_with('\n'), "trailing newline kept: {s:?}");
+    }
+
+    #[test]
+    fn changelog_splice_appends_after_lone_unreleased() {
+        let d = tempfile::tempdir().unwrap();
+        let f = d.path().join("CHANGELOG.md");
+        std::fs::write(&f, "# Changelog\n\n## [Unreleased]\n\n- pending\n").unwrap();
+        write_changelog(d.path(), &unit(".", "## [0.1.0]\n\nfirst\n")).unwrap();
+        let s = std::fs::read_to_string(&f).unwrap();
+        assert!(s.find("## [Unreleased]") < s.find("## [0.1.0]"), "{s:?}");
+        assert!(s.ends_with("first\n"), "single trailing newline: {s:?}");
     }
 
     #[test]
