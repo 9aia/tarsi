@@ -111,7 +111,26 @@ pub fn dispatch(vcs: &dyn Vcs, req: &Request) -> Response {
             }
             Err(e) => Response::err(e),
         },
-        "release" => Response::ok(execute_release(vcs, &dir, params)),
+        "release" => {
+            let v = execute_release(vcs, &dir, params);
+            // A failed release reports `ok:false` inside the result;
+            // surface it as a failed op too so `--yes` consumers and
+            // the ndjson loop see the failure, not a silent 200.
+            if v.get("ok").and_then(Value::as_bool) == Some(false) {
+                let msg = v
+                    .get("error")
+                    .and_then(Value::as_str)
+                    .unwrap_or("release failed")
+                    .to_string();
+                Response {
+                    ok: false,
+                    result: Some(v),
+                    error: Some(msg),
+                }
+            } else {
+                Response::ok(v)
+            }
+        }
         other => Response::err(format!("unknown op {other:?}")),
     }
 }
@@ -239,8 +258,42 @@ fn plan_to_json(plan: &ReleasePlan) -> Value {
     json!({ "units": units, "unattributed": unattributed, "steps": plan.steps() })
 }
 
+/// How far the mutation phase got — rollback undoes exactly this
+/// much, nothing more.
+#[derive(Default)]
+struct ReleaseState {
+    /// HEAD before the release commit (rollback target).
+    pre_sha: Option<String>,
+    /// The bump commit exists locally.
+    committed: bool,
+    /// Local tags created for this release.
+    tags: Vec<String>,
+    /// The branch was pushed to `origin`.
+    branch_pushed: bool,
+    /// Tags already pushed to `origin` (subset of `tags`, in order).
+    tags_pushed: Vec<String>,
+    /// Changelog files this run *created* (didn't exist before) —
+    /// `reset --hard` won't remove untracked files, so rollback
+    /// deletes them explicitly.
+    created_files: Vec<PathBuf>,
+}
+
 /// `release` op — executes plan steps. `dry_run` defaults TRUE:
 /// real mutation requires `{"dry_run": false}`.
+///
+/// Ordering is load-bearing: the bump commit **and** the tags are
+/// pushed *before* any publish call. GitHub Releases auto-creates
+/// `refs/tags/<tag>` at the remote HEAD when the tag doesn't exist
+/// yet — publishing first would pin the remote tag to the
+/// pre-release commit forever. Pushing first means the release
+/// attaches to the tag we created.
+///
+/// Every mutation step propagates errors (no `let _ =`): the first
+/// failure rolls back everything done so far (remote tags/branch,
+/// local commit/tags, created changelog files) and the op reports
+/// `ok:false`. If *some* publish target succeeded before another
+/// failed, rollback is skipped — deleting the tag would orphan a
+/// live release — and the report asks for manual cleanup instead.
 fn execute_release(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
     let dry_run = params
         .get("dry_run")
@@ -261,6 +314,7 @@ fn execute_release(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
         .unwrap_or_default();
     if releasing.is_empty() {
         return json!({
+            "ok": true,
             "dry_run": dry_run,
             "plan": plan_v["plan"],
             "steps_run": [],
@@ -270,34 +324,279 @@ fn execute_release(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
     }
 
     let mut steps_run: Vec<Value> = Vec::new();
-    let mut publish_reports: Vec<Value> = Vec::new();
-
-    if !dry_run {
-        for u in &releasing {
-            let _ = write_changelog(dir, u);
-        }
-        steps_run.push(json!("write-changelogs"));
-        for u in &releasing {
-            let path = u["spec"]["path"].as_str().unwrap_or(".");
-            let ver = u["new_version"].as_str().unwrap_or_default();
-            if let Ok(v) = semver::Version::parse(ver) {
-                let _ = tarsi_manifest::write_unit_version(dir, path, &v);
-            }
-        }
-        steps_run.push(json!("bump-manifests"));
-        let _ = git(dir, &["add", "-A"]);
-        let _ = git(dir, &["commit", "-m", "chore(release): bump versions"]);
-        steps_run.push(json!("commit-bump"));
-        for u in &releasing {
-            let tag = u["tag"].as_str().unwrap_or_default();
-            let _ = vcs.tag(dir, tag, None);
-        }
-        steps_run.push(json!("tag"));
-    }
-
     let cfg = load_config(dir).unwrap_or_default();
     let gh_repo = resolve_gh_repo(dir, &cfg);
-    for u in &releasing {
+
+    if dry_run {
+        let publish_reports = run_publishers(dir, &cfg, &gh_repo, &releasing, true, None);
+        let failed = publish_reports
+            .iter()
+            .filter(|r| r["ok"].as_bool() == Some(false))
+            .count();
+        let mut v = json!({
+            "ok": failed == 0,
+            "dry_run": true,
+            "plan": plan_v["plan"],
+            "steps_run": steps_run,
+            "publish": publish_reports,
+        });
+        if failed > 0 {
+            v["error"] = json!(format!("{failed} publish target(s) failed"));
+        }
+        return v;
+    }
+
+    let mut st = ReleaseState {
+        pre_sha: vcs.head(dir),
+        ..ReleaseState::default()
+    };
+
+    if let Err(e) = mutate_release(vcs, dir, &releasing, &mut st, &mut steps_run) {
+        let rolled_back = rollback(vcs, dir, &st);
+        return json!({
+            "ok": false,
+            "error": e,
+            "dry_run": false,
+            "plan": plan_v["plan"],
+            "steps_run": steps_run,
+            "publish": [],
+            "rolled_back": rolled_back,
+        });
+    }
+
+    // Everything is on the remote now — publish against it. The
+    // bump sha is the tag target; ghreleases sends it as
+    // `target_commitish` so the release can never guess wrong.
+    let commitish = vcs.head(dir);
+    let publish_reports = run_publishers(dir, &cfg, &gh_repo, &releasing, false, commitish);
+    let failures: Vec<&Value> = publish_reports
+        .iter()
+        .filter(|r| r["ok"].as_bool() == Some(false))
+        .collect();
+    if !failures.is_empty() {
+        let any_ok = publish_reports
+            .iter()
+            .any(|r| r["ok"].as_bool() == Some(true) && r["disabled"].as_bool() != Some(true));
+        // Roll back only when *nothing* published — otherwise the
+        // tag delete would orphan a live release; leave the state
+        // and say so.
+        let rolled_back = if any_ok {
+            json!({
+                "attempted": false,
+                "reason": "a publish target succeeded — partial state left for manual cleanup",
+            })
+        } else {
+            rollback(vcs, dir, &st)
+        };
+        return json!({
+            "ok": false,
+            "error": format!("{} publish target(s) failed", failures.len()),
+            "dry_run": false,
+            "plan": plan_v["plan"],
+            "steps_run": steps_run,
+            "publish": publish_reports,
+            "rolled_back": rolled_back,
+        });
+    }
+
+    json!({
+        "ok": true,
+        "dry_run": false,
+        "plan": plan_v["plan"],
+        "steps_run": steps_run,
+        "publish": publish_reports,
+    })
+}
+
+/// The mutation phase: changelogs → manifests → scoped stage →
+/// commit → tags → **push commit+tags** → (publish happens after,
+/// in [`execute_release`]). Errors are `"step: detail"` strings;
+/// `st` tracks progress for [`rollback`].
+fn mutate_release(
+    vcs: &dyn Vcs,
+    dir: &Path,
+    releasing: &[Value],
+    st: &mut ReleaseState,
+    steps_run: &mut Vec<Value>,
+) -> Result<(), String> {
+    for u in releasing {
+        if write_changelog(dir, u)? {
+            st.created_files.push(changelog_path(dir, u));
+        }
+    }
+    steps_run.push(json!("write-changelogs"));
+    for u in releasing {
+        let path = u["spec"]["path"].as_str().unwrap_or(".");
+        let ver = u["new_version"].as_str().unwrap_or_default();
+        if let Ok(v) = semver::Version::parse(ver) {
+            tarsi_manifest::write_unit_version(dir, path, &v)
+                .map_err(|e| format!("bump-manifests: {e}"))?;
+        }
+    }
+    steps_run.push(json!("bump-manifests"));
+    stage_release_paths(vcs, dir, releasing)?;
+    vcs.commit(dir, "chore(release): bump versions", None, true)
+        .map_err(|e| format!("commit-bump: {e}"))?;
+    st.committed = true;
+    steps_run.push(json!("commit-bump"));
+    for u in releasing {
+        let tag = u["tag"].as_str().unwrap_or_default().to_string();
+        if !vcs.tag(dir, &tag, None) {
+            return Err(format!("tag {tag}: git tag failed"));
+        }
+        st.tags.push(tag);
+    }
+    steps_run.push(json!("tag"));
+    // Push the commit AND the tags before publishing — see the
+    // ordering note on `execute_release`.
+    vcs.push_branch(dir, "origin", None)
+        .map_err(|e| format!("push: {e}"))?;
+    st.branch_pushed = true;
+    for t in &st.tags {
+        vcs.exec_out(dir, &["push", "origin", t])
+            .map_err(|e| format!("push-tag {t}: {e}"))?;
+        st.tags_pushed.push(t.clone());
+    }
+    steps_run.push(json!("push"));
+    Ok(())
+}
+
+/// Stage only the files tarsi touched — `CHANGELOG.md` +
+/// `Cargo.toml` per releasing unit, plus the workspace-root
+/// `Cargo.toml`/`Cargo.lock` and `tarsi.*` config candidates.
+/// Never `git add -A`: unrelated dirty files must not ride the
+/// release commit.
+fn stage_release_paths(vcs: &dyn Vcs, dir: &Path, releasing: &[Value]) -> Result<(), String> {
+    let mut paths = std::collections::BTreeSet::new();
+    for u in releasing {
+        let p = u["spec"]["path"].as_str().unwrap_or(".");
+        let p = if p.is_empty() { "." } else { p };
+        for f in ["CHANGELOG.md", "Cargo.toml"] {
+            paths.insert(format!("{p}/{f}"));
+        }
+    }
+    for f in [
+        "Cargo.toml",
+        "Cargo.lock",
+        "tarsi.toml",
+        "tarsi.yaml",
+        "tarsi.yml",
+    ] {
+        paths.insert(f.to_string());
+    }
+    let existing: Vec<String> = paths.into_iter().filter(|p| dir.join(p).exists()).collect();
+    if existing.is_empty() {
+        return Ok(());
+    }
+    let mut args: Vec<&str> = vec!["add", "--"];
+    args.extend(existing.iter().map(String::as_str));
+    vcs.exec_out(dir, &args)
+        .map(|_| ())
+        .map_err(|e| format!("stage-bump: {e}"))
+}
+
+/// Undo everything [`ReleaseState`] records — best-effort, per-step
+/// results reported. Remote cleanup runs before local so a failed
+/// local reset can't strand pushed tags.
+fn rollback(vcs: &dyn Vcs, dir: &Path, st: &ReleaseState) -> Value {
+    fn record(steps: &mut Vec<Value>, step: String, res: Result<(), String>) {
+        steps.push(match res {
+            Ok(()) => json!({ "step": step, "ok": true }),
+            Err(e) => json!({ "step": step, "ok": false, "error": e }),
+        });
+    }
+    let mut steps: Vec<Value> = Vec::new();
+    for t in &st.tags_pushed {
+        record(
+            &mut steps,
+            format!("delete-remote-tag {t}"),
+            vcs.exec_out(dir, &["push", "origin", "--delete", t])
+                .map(|_| ())
+                .map_err(|e| e.to_string()),
+        );
+    }
+    if st.branch_pushed {
+        match (&st.pre_sha, vcs.current_branch(dir)) {
+            (Some(pre), Some(branch)) => {
+                let refspec = format!("{pre}:refs/heads/{branch}");
+                record(
+                    &mut steps,
+                    format!("reset-remote-branch {branch}"),
+                    vcs.exec_out(dir, &["push", "--force-with-lease", "origin", &refspec])
+                        .map(|_| ())
+                        .map_err(|e| e.to_string()),
+                );
+            }
+            _ => steps.push(json!({
+                "step": "reset-remote-branch",
+                "ok": false,
+                "error": "skipped: no pre-release sha or detached HEAD — reset the remote branch manually",
+            })),
+        }
+    }
+    if st.committed {
+        if let Some(pre) = &st.pre_sha {
+            record(
+                &mut steps,
+                "reset-local".to_string(),
+                vcs.exec_out(dir, &["reset", "--hard", pre])
+                    .map(|_| ())
+                    .map_err(|e| e.to_string()),
+            );
+        }
+    }
+    // Remove changelog files this run created — `reset --hard`
+    // only restores tracked files. Only delete when still
+    // untracked (a pre-existing CHANGELOG is tracked and was
+    // already restored by the reset).
+    for f in &st.created_files {
+        let rel = f
+            .strip_prefix(dir)
+            .unwrap_or(f)
+            .to_string_lossy()
+            .replace('\\', "/");
+        let tracked = vcs
+            .exec_out(dir, &["ls-files", "--error-unmatch", "--", &rel])
+            .is_ok();
+        if !tracked {
+            // `reset --hard` already removes files that only existed
+            // in the rolled-back commit — absent is success.
+            let res = if f.exists() {
+                std::fs::remove_file(f).map_err(|e| e.to_string())
+            } else {
+                Ok(())
+            };
+            record(&mut steps, format!("remove-created {rel}"), res);
+        }
+    }
+    for t in &st.tags {
+        record(
+            &mut steps,
+            format!("delete-local-tag {t}"),
+            if vcs.delete_tag(dir, t) {
+                Ok(())
+            } else {
+                Err("git tag -d failed".to_string())
+            },
+        );
+    }
+    let ok = steps.iter().all(|s| s["ok"].as_bool() == Some(true));
+    json!({ "attempted": true, "ok": ok, "steps": steps })
+}
+
+/// Run every unit × publish target, collecting per-target reports.
+/// `commitish` is the pushed bump sha — sent to forges as the
+/// release target so they never guess a commit.
+fn run_publishers(
+    dir: &Path,
+    cfg: &Config,
+    gh_repo: &Option<String>,
+    releasing: &[Value],
+    dry_run: bool,
+    commitish: Option<String>,
+) -> Vec<Value> {
+    let mut publish_reports: Vec<Value> = Vec::new();
+    for u in releasing {
         let unit = u["spec"]["name"].as_str().unwrap_or_default().to_string();
         let version = u["new_version"].as_str().unwrap_or_default().to_string();
         // Expand `[publish.ghreleases] assets` globs once per unit —
@@ -332,6 +631,7 @@ fn execute_release(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
                 .to_string(),
             assets,
             dry_run,
+            commitish: commitish.clone(),
         };
         for target in u["spec"]["publish"].as_array().cloned().unwrap_or_default() {
             let t =
@@ -356,7 +656,12 @@ fn execute_release(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
                         .map_err(|e| e.to_string())
                     }
                 }
-                _ => Ok(json!({ "unit": unit, "target": t, "ok": true, "detail": "disabled" })),
+                // `disabled: true` marks a skipped target — it must
+                // not count as a successful publish when deciding
+                // whether a failure warrants rollback.
+                _ => Ok(
+                    json!({ "unit": unit, "target": t, "ok": true, "detail": "disabled", "disabled": true }),
+                ),
             };
             publish_reports.push(match entry {
                 Ok(v) => v,
@@ -364,33 +669,27 @@ fn execute_release(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
             });
         }
     }
-
-    if !dry_run {
-        let _ = vcs.push(dir, "origin", &[]);
-        for u in &releasing {
-            if let Some(tag) = u["tag"].as_str() {
-                let _ = vcs.push_tag(dir, "origin", tag);
-            }
-        }
-        steps_run.push(json!("push"));
-    }
-
-    json!({
-        "dry_run": dry_run,
-        "plan": plan_v["plan"],
-        "steps_run": steps_run,
-        "publish": publish_reports,
-    })
+    publish_reports
 }
 
-fn write_changelog(dir: &Path, unit: &Value) -> Result<(), String> {
+/// `<unit path>/CHANGELOG.md` for a plan unit.
+fn changelog_path(dir: &Path, unit: &Value) -> PathBuf {
     let path = unit["spec"]["path"].as_str().unwrap_or(".");
+    dir.join(path).join("CHANGELOG.md")
+}
+
+/// Write (or prepend into) a unit's `CHANGELOG.md`.
+/// Returns `Ok(true)` when the file was newly created — rollback
+/// uses that to remove files `reset --hard` can't reach.
+fn write_changelog(dir: &Path, unit: &Value) -> Result<bool, String> {
+    let file = changelog_path(dir, unit);
     let md = unit["changelog_markdown"].as_str().unwrap_or_default();
     if md.is_empty() {
-        return Ok(());
+        return Ok(false);
     }
-    let file = dir.join(path).join("CHANGELOG.md");
+    let existed = file.exists();
     let existing = std::fs::read_to_string(&file).unwrap_or_default();
+    let md = md.trim_end();
     let merged = if existing.trim().is_empty() {
         format!("# Changelog\n\n{md}\n")
     } else {
@@ -404,27 +703,19 @@ fn write_changelog(dir: &Path, unit: &Value) -> Result<(), String> {
                 break;
             }
         }
+        // `prefix` already ends with the blank line after the
+        // title — adding another `\n` here produced a double blank.
+        if !prefix.ends_with("\n\n") {
+            prefix.push('\n');
+        }
         let rest: String = lines.collect::<Vec<_>>().join("\n");
-        format!("{prefix}\n{md}\n\n{rest}")
+        format!("{prefix}{md}\n\n{rest}")
     };
     if let Some(parent) = file.parent() {
         std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
     }
-    std::fs::write(&file, merged).map_err(|e| e.to_string())
-}
-
-fn git(dir: &Path, args: &[&str]) -> Result<(), String> {
-    let st = std::process::Command::new("git")
-        .arg("-C")
-        .arg(dir)
-        .args(args)
-        .status()
-        .map_err(|e| e.to_string())?;
-    if st.success() {
-        Ok(())
-    } else {
-        Err(format!("git {args:?} failed"))
-    }
+    std::fs::write(&file, merged).map_err(|e| e.to_string())?;
+    Ok(!existed)
 }
 
 /// owner/repo from `origin` remote or config override.
@@ -479,4 +770,47 @@ pub fn serve() -> i32 {
         let _ = out.flush();
     }
     0
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+
+    fn unit(path: &str, md: &str) -> Value {
+        json!({
+            "spec": { "name": "u", "path": path },
+            "changelog_markdown": md,
+        })
+    }
+
+    #[test]
+    fn changelog_splice_has_single_blank_after_title() {
+        let d = tempfile::tempdir().unwrap();
+        let f = d.path().join("CHANGELOG.md");
+        std::fs::write(&f, "# Changelog\n\n## 0.1.0\n\nold entry\n").unwrap();
+        let created = write_changelog(d.path(), &unit(".", "## 0.2.0\n\nnew entry\n")).unwrap();
+        assert!(!created, "file existed — not a create");
+        let s = std::fs::read_to_string(&f).unwrap();
+        assert!(s.starts_with("# Changelog\n\n## 0.2.0"), "{s:?}");
+        assert!(!s.contains("# Changelog\n\n\n"), "double blank: {s:?}");
+        assert!(s.contains("## 0.1.0"), "old entry kept: {s:?}");
+    }
+
+    #[test]
+    fn changelog_new_file_reports_created() {
+        let d = tempfile::tempdir().unwrap();
+        let created = write_changelog(d.path(), &unit("crates/u", "## 1.0.0\n\nnotes\n")).unwrap();
+        assert!(created);
+        let s = std::fs::read_to_string(d.path().join("crates/u/CHANGELOG.md")).unwrap();
+        assert_eq!(s, "# Changelog\n\n## 1.0.0\n\nnotes\n");
+    }
+
+    #[test]
+    fn changelog_empty_markdown_writes_nothing() {
+        let d = tempfile::tempdir().unwrap();
+        let created = write_changelog(d.path(), &unit(".", "")).unwrap();
+        assert!(!created);
+        assert!(!d.path().join("CHANGELOG.md").exists());
+    }
 }

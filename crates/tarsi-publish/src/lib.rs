@@ -44,6 +44,10 @@ pub struct PublishJob {
     /// Files to attach (release assets). Empty = notes-only
     /// release. Targets that don't support assets ignore this.
     pub assets: Vec<PublishAsset>,
+    /// Commit the release tag points at (already pushed). Forges
+    /// that create tags on release send it as `target_commitish`
+    /// so they never guess a commit; `None` on dry-runs.
+    pub commitish: Option<String>,
     /// When true, impls validate + report but perform no remote
     /// writes. Dry-run is the safe default on integration surfaces.
     pub dry_run: bool,

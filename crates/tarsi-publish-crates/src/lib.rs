@@ -121,6 +121,7 @@ mod tests {
             tag: "u-v1.0.0".into(),
             notes: String::new(),
             assets: Vec::new(),
+            commitish: None,
             dry_run: true,
         };
         let r = p.publish(&job).unwrap();

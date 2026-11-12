@@ -102,13 +102,18 @@ impl GhReleasePublisher {
     /// POST a new release; returns the created release JSON.
     fn create_release(&self, token: &str, job: &PublishJob) -> Result<ReleaseJson, PublishError> {
         let url = format!("{}/repos/{}/releases", self.api_base, self.repo);
-        let body = serde_json::json!({
+        let mut body = serde_json::json!({
             "tag_name": job.tag,
             "name": format!("{} {}", job.unit, job.version),
             "body": job.notes,
             "draft": false,
             "prerelease": false,
         });
+        // Pin the commit the tag resolves to — without this GitHub
+        // creates a missing tag at the default-branch HEAD.
+        if let Some(c) = &job.commitish {
+            body["target_commitish"] = serde_json::json!(c);
+        }
         let mut req = ureq::post(&url);
         for (k, v) in self.auth(token) {
             req = req.header(k, &v);
@@ -431,6 +436,7 @@ mod tests {
             tag: "u-v1.2.3".into(),
             notes: "notes".into(),
             assets,
+            commitish: None,
             dry_run,
         }
     }
