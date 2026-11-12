@@ -1,3 +1,18 @@
+# Tarsi
+
+The org **release plane** (project ADR-0005): changelog → semver
+bump → tag → publish, exposed as `tarsi-serve` ndjson ops
+(`manifest`/`profiles`/`plan`/`changelog`/`notes`/`check`/`schema`/
+`bump`/`tag`/`publish`/`release`) — there is no `tarsi` CLI.
+Repo config is `tarsi.toml`; org release defaults ride `type: tarsi`
+profile packs (`libraries/9aia-release`) distributed by tamias;
+peregrin's `libraries/release` campaign drives the same ops. Each
+repo's `scripts/release.sh` is a thin shim over `tarsi-serve`
+(PL-014 E1); the release *model* stays tag-only + `tamias publish`
+per project ADR-0004 (crates.io is tamias-only). The canonical
+agent surface is `.agents/skills/tarsi/SKILL.md` — read it before
+driving a release; `release`-family ops are dry-run by default.
+
 <!-- myco:agent-awareness -->
 
 ## Agent awareness
