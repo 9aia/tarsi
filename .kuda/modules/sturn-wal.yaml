@@ -1,0 +1,40 @@
+name: sturn-wal
+path: refs/sturn/wal/default
+purpose: sturn coordination WAL — claims, writes, snaps, review events in refs/sturn/*
+api: []
+deps: []
+notes: ''
+verify:
+- refs/sturn/wal/default
+- refs/sturn/wal/devin-e5
+- refs/sturn/wal/devin-pl014-e1
+- refs/sturn/wal/devin-tarsi-dist
+- refs/sturn/wal/devin-tarsi-driver
+- refs/sturn/wal/main
+- refs/sturn/wal/tarsi
+- refs/sturn/wal/tarsi-fix
+- refs/sturn/wal/tarsi-serve-fix
+provenance:
+  files:
+  - refs/sturn/wal/default
+  - refs/sturn/wal/devin-e5
+  - refs/sturn/wal/devin-pl014-e1
+  - refs/sturn/wal/devin-tarsi-dist
+  - refs/sturn/wal/devin-tarsi-driver
+  - refs/sturn/wal/main
+  - refs/sturn/wal/tarsi
+  - refs/sturn/wal/tarsi-fix
+  - refs/sturn/wal/tarsi-serve-fix
+  hashes:
+  - a2ca7b2d2d1ed35cf182cf9b206dbd30b57c02fd
+  - c244c7d5e2641a60d17f5606a0536e660b8f99f0
+  - 3dbbc77fc67f5020f30193a6cf4b4c31e833bc98
+  - 3e8b98732480a740379d6374d8d99cd07e013bb0
+  - 15c5624417b70fce5c8390ec0be2588ea00ceae4
+  - a8ddb58b6449c06e605c04c4ea2b5fd67e9369c4
+  - 3f261956a3c4e6e7f4394fc049c53803fc42f0bf
+  - daeff29c4a015d4744cd2109f66eb1ffe37eb113
+  - b819dca51ef0b854af93c2eeb69c3fc915bac820
+  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
+  generated_at: '1794533324'
+  generator: kuda-template/0.1.4

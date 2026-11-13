@@ -1,0 +1,114 @@
+name: tarsi-manifest
+path: crates/tarsi-manifest/Cargo.toml
+purpose: Cargo manifest scanning — workspace members → tarsi_core::ReleaseUnitSpec, version reads/writes.
+api:
+- name: ManifestError
+  kind: type
+  file: crates/tarsi-manifest/src/lib.rs
+  line: 17
+  module: tarsi-manifest
+- name: MemberInfo
+  kind: type
+  file: crates/tarsi-manifest/src/lib.rs
+  line: 88
+  module: tarsi-manifest
+- name: apply_config
+  kind: function
+  file: crates/tarsi-manifest/src/lib.rs
+  line: 244
+  module: tarsi-manifest
+- name: cargo_workspace_units
+  kind: function
+  file: crates/tarsi-manifest/src/lib.rs
+  line: 188
+  module: tarsi-manifest
+- name: err_io
+  kind: function
+  file: crates/tarsi-manifest/src/lib.rs
+  line: 34
+  module: tarsi-manifest
+- name: expand_members
+  kind: function
+  file: crates/tarsi-manifest/src/lib.rs
+  line: 58
+  module: tarsi-manifest
+- name: fixture
+  kind: function
+  file: crates/tarsi-manifest/src/lib.rs
+  line: 342
+  module: tarsi-manifest
+- name: member_globs
+  kind: function
+  file: crates/tarsi-manifest/src/lib.rs
+  line: 41
+  module: tarsi-manifest
+- name: read_member
+  kind: function
+  file: crates/tarsi-manifest/src/lib.rs
+  line: 96
+  module: tarsi-manifest
+- name: read_toml
+  kind: function
+  file: crates/tarsi-manifest/src/lib.rs
+  line: 28
+  module: tarsi-manifest
+- name: tarsi-manifest
+  kind: module
+  file: crates/tarsi-manifest/Cargo.toml
+  line: 1
+  module: tarsi-manifest
+- name: tests
+  kind: module
+  file: crates/tarsi-manifest/src/lib.rs
+  line: 339
+  module: tarsi-manifest
+- name: workspace_members_become_specs
+  kind: function
+  file: crates/tarsi-manifest/src/lib.rs
+  line: 381
+  module: tarsi-manifest
+- name: write_unit_version
+  kind: function
+  file: crates/tarsi-manifest/src/lib.rs
+  line: 315
+  module: tarsi-manifest
+- name: write_version
+  kind: function
+  file: crates/tarsi-manifest/src/lib.rs
+  line: 251
+  module: tarsi-manifest
+- name: write_version_round_trip
+  kind: function
+  file: crates/tarsi-manifest/src/lib.rs
+  line: 395
+  module: tarsi-manifest
+- name: write_workspace_version
+  kind: function
+  file: crates/tarsi-manifest/src/lib.rs
+  line: 283
+  module: tarsi-manifest
+deps:
+- semver
+- serde
+- serde_json
+- tarsi-core
+- thiserror
+- toml
+- toml_edit
+- tempfile
+- semver
+- tarsi-core
+notes: ''
+verify:
+- crates/tarsi-manifest/Cargo.toml
+- crates/tarsi-manifest/src/lib.rs
+provenance:
+  files:
+  - crates/tarsi-manifest/Cargo.toml
+  - crates/tarsi-manifest/src/lib.rs
+  hashes:
+  - 3448d8125eb74b5caf809507d52b58d2a661dcac
+  - 0d6fb1c6c51780fc0f1f57dc1a308be585a42d6e
+  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
+  generated_at: '1794533324'
+  generator: kuda-template/0.1.4

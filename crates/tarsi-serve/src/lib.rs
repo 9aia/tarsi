@@ -27,6 +27,8 @@ use tarsi_core::commit::Commit;
 use tarsi_core::{plan_release, Config, PublishTarget, ReleasePlan, ReleaseUnitSpec};
 use tarsi_publish::{PublishJob, Publisher};
 
+mod sync_refs;
+
 #[derive(Debug, Deserialize)]
 pub struct Request {
     pub op: String,
@@ -266,9 +268,9 @@ fn op_schema() -> Value {
         ),
         (
             "bump",
-            "granular step: write changelogs + bump manifests + scoped commit (the release commit). Echoes `units` for the next step",
+            "granular step: write changelogs + bump manifests + `[release.sync_refs]` ref rewrites + scoped commit (the release commit). Echoes `units` for the next step",
             "{dir, profile?, range?, units?, dry_run?}",
-            "{ok, dry_run, plan?, bump{commit, units[], steps_run[]}}",
+            "{ok, dry_run, plan?, bump{commit, units[], steps_run[]}, sync_refs{status, old, new, changes[]}}",
         ),
         (
             "tag",
@@ -286,7 +288,7 @@ fn op_schema() -> Value {
             "release",
             "composed pipeline: plan → bump → tag → push → publish. Same ordering guarantees as the granular chain; rolls back on failure",
             "{dir, profile?, range?, dry_run?}",
-            "{ok, dry_run, plan, steps_run[], publish[], rolled_back?}",
+            "{ok, dry_run, plan, steps_run[], publish[], sync_refs?, rolled_back?}",
         ),
         (
             "schema",
@@ -312,6 +314,7 @@ fn op_schema() -> Value {
             "mutating ops (`bump`, `tag`, `publish`, `release`) default `dry_run: true` — pass `dry_run: false` to mutate",
             "`units` accepts plan-unit JSON echoed by `plan`/`check`/`bump` — chain granular steps without re-planning",
             "granular order: `bump` → `tag` (push:true) → `publish`; `release` composes the same stages atomically",
+            "`[release.sync_refs]` rules rewrite pack/doc version refs into the bump commit before tagging — skipped on mixed-version plans, idempotent",
         ],
         "ops": ops,
     })
@@ -473,8 +476,9 @@ fn op_bump(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
                 "units": releasing.clone(),
                 "steps_run": [],
             },
+            "sync_refs": sync_refs_report(dir, params, &releasing, true),
             "units": releasing,
-            "note": "dry-run — pass dry_run:false to write changelogs, bump manifests, and commit",
+            "note": "dry-run — pass dry_run:false to write changelogs, bump manifests, sync refs, and commit",
         });
     }
     let mut steps_run: Vec<Value> = Vec::new();
@@ -515,7 +519,35 @@ fn op_bump(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
         }
     }
     steps_run.push(json!("bump-manifests"));
-    if let Err(e) = stage_release_paths(vcs, dir, &releasing, changelog_rel) {
+    // `[release.sync_refs]` — rewrite pack/doc version refs before
+    // the release commit so the tagged tree is self-consistent
+    // (T-039; replaces the per-repo release.sh pre-step). Synced
+    // files stage into the same commit.
+    let mut synced_files: Vec<String> = Vec::new();
+    let sync_report = if cfg.release.sync_refs.rules.is_empty() {
+        json!({ "status": "disabled" })
+    } else {
+        match sync_refs::run(dir, &cfg.release.sync_refs, &releasing, false) {
+            Ok(o) => {
+                synced_files = o.changed_files;
+                o.report
+            }
+            Err(e) => {
+                return bump_error(
+                    &plan,
+                    &releasing,
+                    &created_files,
+                    &steps_run,
+                    "sync-refs",
+                    e,
+                )
+            }
+        }
+    };
+    if !cfg.release.sync_refs.rules.is_empty() {
+        steps_run.push(json!("sync-refs"));
+    }
+    if let Err(e) = stage_release_paths(vcs, dir, &releasing, &synced_files, changelog_rel) {
         return bump_error(
             &plan,
             &releasing,
@@ -550,6 +582,7 @@ fn op_bump(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
             "steps_run": steps_run,
             "created_files": created_files.iter().map(|f| f.display().to_string()).collect::<Vec<_>>(),
         },
+        "sync_refs": sync_report,
         // Top-level echo too — every granular op returns `units`
         // so `params.units` chains uniformly.
         "units": releasing,
@@ -744,6 +777,25 @@ fn op_publish(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
         v["note"] = json!("publish is not rolled back by this op — tags/commits already pushed stay; clean up forges manually or re-run after fixing");
     }
     v
+}
+
+/// Dry-run preview of the `[release.sync_refs]` stage — same
+/// report the real run embeds, computed without writing. Config
+/// or sync errors surface *inside* the report (`status:"error"`)
+/// rather than failing the dry-run; the real run re-checks and
+/// fails loudly at the step.
+fn sync_refs_report(dir: &Path, params: &Value, releasing: &[Value], dry_run: bool) -> Value {
+    let cfg = load_config(dir, params).unwrap_or_default();
+    match sync_refs::run(dir, &cfg.release.sync_refs, releasing, dry_run) {
+        Ok(o) => {
+            let mut v = o.report;
+            if !o.changed_files.is_empty() {
+                v["changed_files"] = json!(o.changed_files);
+            }
+            v
+        }
+        Err(e) => json!({ "status": "error", "error": e }),
+    }
 }
 
 /// Config for `dir` — `params.profile` selects a `type: tarsi`
@@ -968,6 +1020,7 @@ fn execute_release(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
             "plan": plan_v["plan"],
             "steps_run": steps_run,
             "publish": publish_reports,
+            "sync_refs": sync_refs_report(dir, params, &releasing, true),
         });
         if failed > 0 {
             v["error"] = json!(format!("{failed} publish target(s) failed"));
@@ -980,25 +1033,21 @@ fn execute_release(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
         ..ReleaseState::default()
     };
 
-    if let Err(e) = mutate_release(
-        vcs,
-        dir,
-        &cfg.release.changelog_path,
-        &releasing,
-        &mut st,
-        &mut steps_run,
-    ) {
-        let rolled_back = rollback(vcs, dir, &st);
-        return json!({
-            "ok": false,
-            "error": e,
-            "dry_run": false,
-            "plan": plan_v["plan"],
-            "steps_run": steps_run,
-            "publish": [],
-            "rolled_back": rolled_back,
-        });
-    }
+    let sync_report = match mutate_release(vcs, dir, &cfg, &releasing, &mut st, &mut steps_run) {
+        Ok(report) => report,
+        Err(e) => {
+            let rolled_back = rollback(vcs, dir, &st);
+            return json!({
+                "ok": false,
+                "error": e,
+                "dry_run": false,
+                "plan": plan_v["plan"],
+                "steps_run": steps_run,
+                "publish": [],
+                "rolled_back": rolled_back,
+            });
+        }
+    };
 
     // Everything is on the remote now — publish against it. The
     // bump sha is the tag target; ghreleases sends it as
@@ -1041,21 +1090,24 @@ fn execute_release(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
         "plan": plan_v["plan"],
         "steps_run": steps_run,
         "publish": publish_reports,
+        "sync_refs": sync_report,
     })
 }
 
-/// The mutation phase: changelogs → manifests → scoped stage →
-/// commit → tags → **push commit+tags** → (publish happens after,
-/// in [`execute_release`]). Errors are `"step: detail"` strings;
-/// `st` tracks progress for [`rollback`].
+/// The mutation phase: changelogs → manifests → `[release.sync_refs]`
+/// rewrites → scoped stage → commit → tags → **push commit+tags** →
+/// (publish happens after, in [`execute_release`]). Errors are
+/// `"step: detail"` strings; `st` tracks progress for
+/// [`rollback`]. Returns the sync-refs report for the result.
 fn mutate_release(
     vcs: &dyn Vcs,
     dir: &Path,
-    changelog_rel: &str,
+    cfg: &Config,
     releasing: &[Value],
     st: &mut ReleaseState,
     steps_run: &mut Vec<Value>,
-) -> Result<(), String> {
+) -> Result<Value, String> {
+    let changelog_rel = cfg.release.changelog_path.as_str();
     for u in releasing {
         if write_changelog(dir, u, changelog_rel)? {
             st.created_files.push(changelog_path(dir, u, changelog_rel));
@@ -1071,7 +1123,19 @@ fn mutate_release(
         }
     }
     steps_run.push(json!("bump-manifests"));
-    stage_release_paths(vcs, dir, releasing, changelog_rel)?;
+    // `[release.sync_refs]` — pack/doc version refs rewrite into
+    // the release commit so the tagged tree is self-consistent.
+    let mut synced_files: Vec<String> = Vec::new();
+    let sync_report = if cfg.release.sync_refs.rules.is_empty() {
+        json!({ "status": "disabled" })
+    } else {
+        let out = sync_refs::run(dir, &cfg.release.sync_refs, releasing, false)
+            .map_err(|e| format!("sync-refs: {e}"))?;
+        synced_files = out.changed_files;
+        steps_run.push(json!("sync-refs"));
+        out.report
+    };
+    stage_release_paths(vcs, dir, releasing, &synced_files, changelog_rel)?;
     vcs.commit(dir, "chore(release): bump versions", None, true)
         .map_err(|e| format!("commit-bump: {e}"))?;
     st.committed = true;
@@ -1095,22 +1159,25 @@ fn mutate_release(
         st.tags_pushed.push(t.clone());
     }
     steps_run.push(json!("push"));
-    Ok(())
+    Ok(sync_report)
 }
 
 /// Stage only the files tarsi touched — the configured changelog
 /// (`release.changelog_path`, unit-path-relative) + `Cargo.toml`
-/// per releasing unit, plus the workspace-root
-/// `Cargo.toml`/`Cargo.lock` and `tarsi.*` config candidates.
-/// Never `git add -A`: unrelated dirty files must not ride the
-/// release commit.
+/// per releasing unit, the workspace-root
+/// `Cargo.toml`/`Cargo.lock`/`tarsi.*` config candidates, plus any
+/// `extra` repo-relative paths (e.g. `[release.sync_refs]`-synced
+/// files). Never `git add -A`: unrelated dirty files must not
+/// ride the release commit.
 fn stage_release_paths(
     vcs: &dyn Vcs,
     dir: &Path,
     releasing: &[Value],
+    extra: &[String],
     changelog_rel: &str,
 ) -> Result<(), String> {
     let mut paths = std::collections::BTreeSet::new();
+    paths.extend(extra.iter().cloned());
     for u in releasing {
         let p = u["spec"]["path"].as_str().unwrap_or(".");
         let p = if p.is_empty() { "." } else { p };

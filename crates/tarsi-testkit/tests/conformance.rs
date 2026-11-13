@@ -51,6 +51,18 @@ fn serve_granular_ops_conform_on_git() {
 }
 
 #[test]
+fn serve_sync_refs_conforms_on_git() {
+    let fx = repo::single_unit_repo();
+    serve::assert_sync_refs_conformance(&GitVcs, fx.path());
+}
+
+#[test]
+fn serve_sync_refs_skips_mixed_versions_on_git() {
+    let fx = repo::workspace_repo();
+    serve::assert_sync_refs_skips_mixed_versions(&GitVcs, fx.path());
+}
+
+#[test]
 fn single_unit_repo_plans_one_release() {
     let fx = repo::single_unit_repo();
     let r = serve::ok(

@@ -609,6 +609,147 @@ pub fn assert_check_detects_drift(vcs: &dyn Vcs, dir: &Path) {
     assert!(bbb_ok, "bbb checks unaffected by aaa drift: {checks:?}");
 }
 
+/// `tarsi.toml` for the sync-refs conformance asserts —
+/// [`repo::NO_PUBLISH_TOML`] plus `[release.sync_refs]` rules in
+/// the shape org repos use: an anchored manifest `version:` line
+/// and a global `name@ver` doc ref.
+#[must_use]
+pub fn sync_refs_toml() -> String {
+    format!(
+        "{}\n[release.sync_refs]\nrules = [\n  {{ files = [\"libraries/app/tamias.yaml\"], find = \"(?m)^version: \\\"{{old}}\\\"\", replace = \"version: \\\"{{new}}\\\"\" }},\n  {{ files = [\"README.md\"], find = \"app@{{old}}\", replace = \"app@{{new}}\" }},\n]\n",
+        repo::NO_PUBLISH_TOML
+    )
+}
+
+/// `[release.sync_refs]` end-to-end on a fresh
+/// [`repo::single_unit_repo`]: writes the pack manifest + README
+/// ref files, commits them, writes [`sync_refs_toml`], then
+/// asserts
+///
+/// - `bump` dry-run reports `sync_refs.status == "dry-run"` with
+///   the would-change files, writing nothing;
+/// - `release` (`dry_run:false`) reports `status == "applied"`,
+///   carries `sync-refs` in `steps_run` between `bump-manifests`
+///   and `commit-bump`, rewrites both files to the new version,
+///   and — the load-bearing part — the synced files are *inside*
+///   the bump commit the tags point at.
+///
+/// # Panics
+/// On contract violation.
+pub fn assert_sync_refs_conformance(vcs: &dyn Vcs, dir: &Path) {
+    repo::write(
+        dir,
+        "libraries/app/tamias.yaml",
+        "name: app\nversion: \"0.1.0\"\ntype: files\n",
+    );
+    repo::write(
+        dir,
+        "README.md",
+        "# app\n\ninstall: tamias install app@0.1.0\nsee app@0.1.0 docs\n",
+    );
+    repo::commit_all(dir, "chore: add pack manifest + readme refs");
+    repo::write(dir, "tarsi.toml", &sync_refs_toml());
+
+    // Dry-run `bump` previews the stage without touching files.
+    let b = ok(vcs, "bump", dir_params(dir));
+    assert_eq!(b["dry_run"], true, "{b}");
+    assert_eq!(
+        b["sync_refs"]["status"], "dry-run",
+        "dry-run bump previews sync_refs: {b}"
+    );
+    assert_eq!(b["sync_refs"]["old"], "0.1.0", "{b}");
+    assert_eq!(b["sync_refs"]["new"], "0.2.0", "{b}");
+    let preview_files: Vec<&str> = b["sync_refs"]["changed_files"]
+        .as_array()
+        .expect("changed_files")
+        .iter()
+        .filter_map(Value::as_str)
+        .collect();
+    assert!(
+        preview_files.contains(&"README.md")
+            && preview_files.contains(&"libraries/app/tamias.yaml"),
+        "preview names both files: {b}"
+    );
+    assert!(
+        std::fs::read_to_string(dir.join("README.md"))
+            .expect("read README")
+            .contains("app@0.1.0"),
+        "dry-run writes nothing"
+    );
+
+    // Real `release`: refs land inside the bump commit.
+    let mut params = dir_params(dir);
+    params["dry_run"] = json!(false);
+    let r = ok(vcs, "release", params);
+    assert_eq!(r["ok"], true, "release failed: {r}");
+    let steps: Vec<&str> = r["steps_run"]
+        .as_array()
+        .expect("steps_run array")
+        .iter()
+        .map(|s| s.as_str().unwrap_or(""))
+        .collect();
+    assert_eq!(
+        steps,
+        vec![
+            "write-changelogs",
+            "bump-manifests",
+            "sync-refs",
+            "commit-bump",
+            "tag",
+            "push"
+        ],
+        "sync-refs rides inside the bump stage: {r}"
+    );
+    assert_eq!(r["sync_refs"]["status"], "applied", "sync_refs report: {r}");
+    assert_eq!(r["sync_refs"]["new"], "0.2.0", "{r}");
+
+    let tamias =
+        std::fs::read_to_string(dir.join("libraries/app/tamias.yaml")).expect("read tamias.yaml");
+    assert!(tamias.contains("version: \"0.2.0\""), "{tamias}");
+    assert!(!tamias.contains("0.1.0"), "{tamias}");
+    let readme = std::fs::read_to_string(dir.join("README.md")).expect("read README");
+    assert!(readme.contains("app@0.2.0"), "{readme}");
+    assert!(!readme.contains("app@0.1.0"), "{readme}");
+
+    // The bump commit (HEAD — tags don't move it) contains the
+    // synced files: the tagged tree is self-consistent.
+    let committed = repo::git(dir, &["show", "--name-only", "--format=", "HEAD"]);
+    for f in ["libraries/app/tamias.yaml", "README.md"] {
+        assert!(
+            committed.lines().any(|l| l == f),
+            "bump commit must include {f}: {committed}"
+        );
+    }
+}
+
+/// Mixed-version guard: on the two-unit [`repo::workspace_repo`]
+/// fixture the releasing units plan *different* new versions
+/// (0.2.0 vs 0.1.1), so sync_refs must skip — the shim's
+/// `len(vs)==1` guard, now a reported reason. Release proceeds.
+///
+/// # Panics
+/// On contract violation.
+pub fn assert_sync_refs_skips_mixed_versions(vcs: &dyn Vcs, dir: &Path) {
+    repo::write(dir, "tarsi.toml", &sync_refs_toml());
+    let mut params = dir_params(dir);
+    params["dry_run"] = json!(false);
+    let r = ok(vcs, "release", params);
+    assert_eq!(r["ok"], true, "release still succeeds: {r}");
+    assert!(
+        r["steps_run"]
+            .as_array()
+            .is_some_and(|s| s.iter().any(|x| x == "sync-refs")),
+        "sync-refs step ran and reported the skip: {r}"
+    );
+    assert_eq!(r["sync_refs"]["status"], "skipped", "{r}");
+    assert!(
+        r["sync_refs"]["reason"]
+            .as_str()
+            .is_some_and(|s| s.contains("mixed-version")),
+        "skip reason names the guard: {r}"
+    );
+}
+
 /// The granular tier — call after writing
 /// [`repo::NO_PUBLISH_TOML`] to `<dir>/tarsi.toml` on a fresh
 /// [`repo::workspace_repo`].

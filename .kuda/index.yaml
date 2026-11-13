@@ -1,0 +1,56 @@
+name: tarsi
+root: /home/luis/GitHub/9aia/workspace/repos/tarsi
+purpose: '> Generic release tool for the 9aia fleet — changelog → semver bump'
+modules:
+- docs
+- project
+- sturn-wal
+- tarsi
+- tarsi-config
+- tarsi-core
+- tarsi-driver
+- tarsi-manifest
+- tarsi-publish
+- tarsi-publish-crates
+- tarsi-publish-dryrun
+- tarsi-publish-ghreleases
+- tarsi-serve
+- tarsi-testkit
+- tarsi-xtask
+commands:
+- cargo check
+- cargo test --workspace
+tree_digest: 959921819eea5e9e97b49accc0dc65e6438002cc
+files_total: 75
+provenance:
+  files:
+  - Cargo.toml
+  - README.md
+  - crates/tarsi-config/Cargo.toml
+  - crates/tarsi-core/Cargo.toml
+  - crates/tarsi-driver/Cargo.toml
+  - crates/tarsi-manifest/Cargo.toml
+  - crates/tarsi-publish/Cargo.toml
+  - crates/tarsi-publish-crates/Cargo.toml
+  - crates/tarsi-publish-dryrun/Cargo.toml
+  - crates/tarsi-publish-ghreleases/Cargo.toml
+  - crates/tarsi-serve/Cargo.toml
+  - crates/tarsi-testkit/Cargo.toml
+  - xtask/Cargo.toml
+  hashes:
+  - 09310237332a8af39b2647be9c99db48de844d07
+  - 6b8dae9530e0c15e5a1b409a47e6945e34cabaaa
+  - 8e8ff78162a387458fe32dc8c89a0c3723f7e443
+  - 7bb345bac1bc466818261032e7f17f2d3bbf1d53
+  - a65afb5383e18143bc8c3201aebdbb4b8f60743b
+  - 3448d8125eb74b5caf809507d52b58d2a661dcac
+  - 6b1d9af4efd6bfa3eb3cdced34025a40840bf33c
+  - 08174e6b47e286cb2a3a5d18e48ee53f123a4353
+  - d1d1ecb6393519bdc92a149f813856bda9fb18dd
+  - da059826147a75ce8377d7fc194b9fb9fd0961b3
+  - a07e7e1df345e0dc0daff69efffbe0aaa912b688
+  - bc35d4a5f9467fb3e205175fc9cb68033bd2fe33
+  - b4826db0eb269fecdf17497e997604dad96536e4
+  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
+  generated_at: '1794533324'
+  generator: kuda/0.1.0

@@ -1,0 +1,60 @@
+name: tarsi-publish
+path: crates/tarsi-publish/Cargo.toml
+purpose: Publish port — per-forge Publisher impls (crates.io, GitHub Releases, dry-run).
+api:
+- name: PublishAsset
+  kind: type
+  file: crates/tarsi-publish/src/lib.rs
+  line: 16
+  module: tarsi-publish
+- name: PublishError
+  kind: type
+  file: crates/tarsi-publish/src/lib.rs
+  line: 68
+  module: tarsi-publish
+- name: PublishJob
+  kind: type
+  file: crates/tarsi-publish/src/lib.rs
+  line: 33
+  module: tarsi-publish
+- name: PublishReport
+  kind: type
+  file: crates/tarsi-publish/src/lib.rs
+  line: 58
+  module: tarsi-publish
+- name: Publisher
+  kind: trait
+  file: crates/tarsi-publish/src/lib.rs
+  line: 78
+  module: tarsi-publish
+- name: publishers_for
+  kind: function
+  file: crates/tarsi-publish/src/lib.rs
+  line: 87
+  module: tarsi-publish
+- name: tarsi-publish
+  kind: module
+  file: crates/tarsi-publish/Cargo.toml
+  line: 1
+  module: tarsi-publish
+deps:
+- serde
+- serde_json
+- tarsi-core
+- thiserror
+- tarsi-core
+- thiserror
+notes: ''
+verify:
+- crates/tarsi-publish/Cargo.toml
+- crates/tarsi-publish/src/lib.rs
+provenance:
+  files:
+  - crates/tarsi-publish/Cargo.toml
+  - crates/tarsi-publish/src/lib.rs
+  hashes:
+  - 6b1d9af4efd6bfa3eb3cdced34025a40840bf33c
+  - 50e68074762895ccfd49eb21727475e52c3240bb
+  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
+  generated_at: '1794533324'
+  generator: kuda-template/0.1.4

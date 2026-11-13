@@ -1,0 +1,259 @@
+name: tarsi-serve
+path: crates/tarsi-serve/Cargo.toml
+purpose: tarsi service surface — ndjson ops (plan/changelog/notes/check/schema + granular bump/tag/publish + release) over tarsi-core + lasius-vcs.
+api:
+- name: ENV_LOCK
+  kind: const
+  file: crates/tarsi-serve/tests/profile_e2e.rs
+  line: 16
+  module: tarsi-serve
+- name: EnvGuard
+  kind: type
+  file: crates/tarsi-serve/tests/profile_e2e.rs
+  line: 18
+  module: tarsi-serve
+- name: NO_PUBLISH
+  kind: const
+  file: crates/tarsi-serve/tests/release_e2e.rs
+  line: 120
+  module: tarsi-serve
+- name: ReleaseState
+  kind: type
+  file: crates/tarsi-serve/src/lib.rs
+  line: 945
+  module: tarsi-serve
+- name: Request
+  kind: type
+  file: crates/tarsi-serve/src/lib.rs
+  line: 33
+  module: tarsi-serve
+- name: Response
+  kind: type
+  file: crates/tarsi-serve/src/lib.rs
+  line: 40
+  module: tarsi-serve
+- name: SyncOutcome
+  kind: type
+  file: crates/tarsi-serve/src/sync_refs.rs
+  line: 36
+  module: tarsi-serve
+- name: anchored_line_pattern
+  kind: function
+  file: crates/tarsi-serve/src/sync_refs.rs
+  line: 342
+  module: tarsi-serve
+- name: bad_regex_is_an_error
+  kind: function
+  file: crates/tarsi-serve/src/sync_refs.rs
+  line: 377
+  module: tarsi-serve
+- name: build_plan
+  kind: function
+  file: crates/tarsi-serve/src/lib.rs
+  line: 152
+  module: tarsi-serve
+- name: bump_error
+  kind: function
+  file: crates/tarsi-serve/src/lib.rs
+  line: 425
+  module: tarsi-serve
+- name: changelog_configured_path_is_unit_relative
+  kind: function
+  file: crates/tarsi-serve/src/lib.rs
+  line: 1629
+  module: tarsi-serve
+- name: changelog_empty_markdown_writes_nothing
+  kind: function
+  file: crates/tarsi-serve/src/lib.rs
+  line: 1621
+  module: tarsi-serve
+- name: changelog_new_file_reports_created
+  kind: function
+  file: crates/tarsi-serve/src/lib.rs
+  line: 1607
+  module: tarsi-serve
+- name: changelog_path
+  kind: function
+  file: crates/tarsi-serve/src/lib.rs
+  line: 1388
+  module: tarsi-serve
+- name: changelog_splice_appends_after_lone_unreleased
+  kind: function
+  file: crates/tarsi-serve/src/lib.rs
+  line: 1591
+  module: tarsi-serve
+- name: changelog_splice_has_single_blank_after_title
+  kind: function
+  file: crates/tarsi-serve/src/lib.rs
+  line: 1545
+  module: tarsi-serve
+- name: changelog_splice_keeps_unreleased_and_preamble_on_top
+  kind: function
+  file: crates/tarsi-serve/src/lib.rs
+  line: 1564
+  module: tarsi-serve
+- name: compile_find
+  kind: function
+  file: crates/tarsi-serve/src/sync_refs.rs
+  line: 81
+  module: tarsi-serve
+- name: dispatch
+  kind: function
+  file: crates/tarsi-serve/src/lib.rs
+  line: 67
+  module: tarsi-serve
+- name: drop
+  kind: function
+  file: crates/tarsi-serve/tests/profile_e2e.rs
+  line: 41
+  module: tarsi-serve
+- name: dry_run_param
+  kind: function
+  file: crates/tarsi-serve/src/lib.rs
+  line: 185
+  module: tarsi-serve
+- name: dry_run_reports_without_writing
+  kind: function
+  file: crates/tarsi-serve/src/sync_refs.rs
+  line: 325
+  module: tarsi-serve
+- name: empty_rules_disabled
+  kind: function
+  file: crates/tarsi-serve/src/sync_refs.rs
+  line: 261
+  module: tarsi-serve
+- name: err
+  kind: function
+  file: crates/tarsi-serve/src/lib.rs
+  line: 56
+  module: tarsi-serve
+- name: execute_release
+  kind: function
+  file: crates/tarsi-serve/src/lib.rs
+  line: 978
+  module: tarsi-serve
+- name: expand_files
+  kind: function
+  file: crates/tarsi-serve/src/sync_refs.rs
+  line: 100
+  module: tarsi-serve
+- name: expand_replace
+  kind: function
+  file: crates/tarsi-serve/src/sync_refs.rs
+  line: 91
+  module: tarsi-serve
+- name: fixture
+  kind: function
+  file: crates/tarsi-serve/tests/plan_e2e.rs
+  line: 34
+  module: tarsi-serve
+- name: fixture
+  kind: function
+  file: crates/tarsi-serve/tests/profile_e2e.rs
+  line: 66
+  module: tarsi-serve
+- name: fixture
+  kind: function
+  file: crates/tarsi-serve/tests/release_e2e.rs
+  line: 59
+  module: tarsi-serve
+- name: gather_commits
+  kind: function
+  file: crates/tarsi-serve/src/lib.rs
+  line: 839
+  module: tarsi-serve
+- name: git
+  kind: function
+  file: crates/tarsi-serve/tests/plan_e2e.rs
+  line: 12
+  module: tarsi-serve
+- name: git
+  kind: function
+  file: crates/tarsi-serve/tests/profile_e2e.rs
+  line: 51
+  module: tarsi-serve
+- name: git
+  kind: function
+  file: crates/tarsi-serve/tests/release_e2e.rs
+  line: 15
+  module: tarsi-serve
+- name: git_try
+  kind: function
+  file: crates/tarsi-serve/tests/release_e2e.rs
+  line: 36
+  module: tarsi-serve
+- name: latest_tag
+  kind: function
+  file: crates/tarsi-serve/src/lib.rs
+  line: 877
+  module: tarsi-serve
+- name: load_config
+  kind: function
+  file: crates/tarsi-serve/src/lib.rs
+  line: 807
+  module: tarsi-serve
+- name: ls_remote
+  kind: function
+  file: crates/tarsi-serve/tests/release_e2e.rs
+  line: 100
+  module: tarsi-serve
+- name: main
+  kind: function
+  file: crates/tarsi-serve/src/main.rs
+  line: 7
+  module: tarsi-serve
+api_omitted: 52
+deps:
+- glob
+- hypha-serve-cli
+- lasius-vcs
+- lasius-vcs-git
+- regex
+- semver
+- serde
+- serde_json
+- tarsi-config
+- tarsi-core
+- tarsi-manifest
+- tarsi-publish
+- tarsi-publish-crates
+- tarsi-publish-dryrun
+- tarsi-publish-ghreleases
+- thiserror
+- tempfile
+- lasius_vcs
+- lasius_vcs_git
+- serde_json
+- regex
+- serde
+- tarsi-core
+- tarsi-publish
+notes: ''
+verify:
+- crates/tarsi-serve/Cargo.toml
+- crates/tarsi-serve/src/lib.rs
+- crates/tarsi-serve/src/main.rs
+- crates/tarsi-serve/src/sync_refs.rs
+- crates/tarsi-serve/tests/plan_e2e.rs
+- crates/tarsi-serve/tests/profile_e2e.rs
+- crates/tarsi-serve/tests/release_e2e.rs
+provenance:
+  files:
+  - crates/tarsi-serve/Cargo.toml
+  - crates/tarsi-serve/src/lib.rs
+  - crates/tarsi-serve/src/main.rs
+  - crates/tarsi-serve/src/sync_refs.rs
+  - crates/tarsi-serve/tests/plan_e2e.rs
+  - crates/tarsi-serve/tests/profile_e2e.rs
+  - crates/tarsi-serve/tests/release_e2e.rs
+  hashes:
+  - a07e7e1df345e0dc0daff69efffbe0aaa912b688
+  - b379cd892fe1b77579723cb68094922a620296f9
+  - b743a445f835cb91e5500badcfccabd1c4217675
+  - 6c1f874fa8f6f585365eb631e432c8147122ae8f
+  - c7250f357726d6030e8d9f14e7ffdee7125b55f6
+  - 7a7d451a1257ef820eeb4d1c99937f3e9c64602d
+  - 9c7503a9b662c02477645d4d983ece6d8087f9c9
+  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
+  generated_at: '1794533324'
+  generator: kuda-template/0.1.4

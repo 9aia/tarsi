@@ -52,6 +52,13 @@ pub struct ReleaseConfig {
     /// Per-unit overrides keyed by unit name.
     #[serde(default)]
     pub unit_overrides: BTreeMap<String, UnitOverride>,
+    /// Pack-ref/doc version sync — rewrite stale `name@old` /
+    /// manifest `version:` refs in repo files *before* the release
+    /// commit lands, so the tagged tree is self-consistent (T-039;
+    /// replaces the per-repo `scripts/release.sh` pre-step). Empty
+    /// `rules` = disabled — repos opt in.
+    #[serde(default)]
+    pub sync_refs: SyncRefsConfig,
 }
 
 impl Default for ReleaseConfig {
@@ -64,6 +71,7 @@ impl Default for ReleaseConfig {
             default_bump: None,
             diff_exclude: Vec::new(),
             unit_overrides: BTreeMap::new(),
+            sync_refs: SyncRefsConfig::default(),
         }
     }
 }
@@ -76,6 +84,43 @@ fn default_changelog_path() -> String {
 }
 fn default_styleguide() -> String {
     "keep-a-changelog".to_string()
+}
+
+/// `[release.sync_refs]` — the pack-ref sync stage config. Runs
+/// inside `bump`/`release` after manifests are bumped and before
+/// the release commit, so synced refs ride the tagged tree.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SyncRefsConfig {
+    /// Rewrite rules, applied in order. Empty = the stage is
+    /// disabled entirely (no files touched, no step reported).
+    #[serde(default)]
+    pub rules: Vec<SyncRefRule>,
+}
+
+/// One sync rewrite: every regex match of `find` in each matched
+/// file is replaced by the literal `replace`.
+///
+/// `{old}`/`{new}` placeholders expand to the releasing units'
+/// shared current/new versions — `{old}`/`{new}` inside `find`
+/// are regex-escaped before compilation (so `.` stays literal),
+/// inside `replace` they expand literally. Patterns are not
+/// auto-bounded — `app@{old}` still matches the `app@1.2.3`
+/// prefix of `app@1.2.30`, exactly like the old `sed` pre-steps;
+/// add `\b` (or similar) when a boundary is needed. Line anchors
+/// need the regex multi-line flag: `(?m)^version: "{old}"`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SyncRefRule {
+    /// Repo-root-relative globs of files to rewrite
+    /// (`"libraries/myco/tamias.yaml"`, `"README.md"`,
+    /// `".agents/skills/myco/SKILL.md"`). Non-matching globs are
+    /// skipped — a repo can carry rules for files it doesn't have.
+    #[serde(default)]
+    pub files: Vec<String>,
+    /// Regex matching the stale ref. Required.
+    pub find: String,
+    /// Literal replacement text. Required — an empty string would
+    /// silently delete refs, so serde rejects a missing key.
+    pub replace: String,
 }
 
 /// Per-unit config overrides.
@@ -237,6 +282,28 @@ assets = ["dist/{unit}-{version}-*"]
             vec!["dist/{unit}-{version}-*".to_string()]
         );
         assert!(cfg.publish.crates.enabled);
+    }
+
+    #[test]
+    fn sync_refs_round_trip() {
+        let text = r#"
+[release.sync_refs]
+rules = [
+  { files = ["libraries/app/tamias.yaml"], find = "(?m)^version: \"{old}\"", replace = "version: \"{new}\"" },
+  { files = ["README.md", ".agents/skills/app/SKILL.md"], find = "app@{old}", replace = "app@{new}" },
+]
+"#;
+        let cfg: Config = toml::from_str(text).unwrap();
+        let rules = &cfg.release.sync_refs.rules;
+        assert_eq!(rules.len(), 2);
+        assert_eq!(rules[0].files, vec!["libraries/app/tamias.yaml"]);
+        assert_eq!(rules[1].replace, "app@{new}");
+        // Missing find/replace is a hard config error.
+        assert!(
+            toml::from_str::<Config>("[release.sync_refs]\nrules = [{ files = [\"x\"] }]").is_err()
+        );
+        // Empty rules = disabled.
+        assert!(Config::default().release.sync_refs.rules.is_empty());
     }
 
     #[test]

@@ -72,7 +72,17 @@ A plain `tarsi_core::Config` document (TOML or YAML). Key sections:
   `tag_format` (default `{unit}-v{version}` — the org convention),
   `changelog_path`, `styleguide`, `diff_exclude` (path globs kept
   out of commit attribution), `unit_overrides.<name>`
-  (`bump`/`tag_format`/`publish`/`skip`).
+  (`bump`/`tag_format`/`publish`/`skip`), `sync_refs` (pack/doc
+  version-ref rewrites — see below).
+- `[release.sync_refs]` — `rules[]` of `{files, find, replace}`:
+  `files` are repo-root globs, `find` a regex, `replace` literal;
+  `{old}`/`{new}` expand to the releasing units' shared
+  current/new version. Runs inside `bump`/`release` before the
+  release commit so synced refs (pack `tamias.yaml` versions,
+  `name@ver` README/SKILL refs) land in the tagged tree — the
+  stage that replaced every repo's `release.sh` plan+sed pre-step.
+  Skips on mixed-version plans, idempotent, dry-run reports
+  `status:"dry-run"` + `changed_files`. Empty `rules` = off.
 - `[publish.crates]` / `[publish.ghreleases]` — `enabled`,
   `token_env` (secret **name**, never a value), `repo`,
   `assets` globs (`{unit}`/`{version}` expand per unit).

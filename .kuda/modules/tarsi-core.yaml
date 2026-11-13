@@ -1,0 +1,250 @@
+name: tarsi-core
+path: crates/tarsi-core/Cargo.toml
+purpose: Pure release-domain model — plans, units, semver bumps, commit classification, changelog. No I/O.
+api:
+- name: Bump
+  kind: type
+  file: crates/tarsi-core/src/bump.rs
+  line: 11
+  module: tarsi-core
+- name: Changelog
+  kind: type
+  file: crates/tarsi-core/src/changelog.rs
+  line: 66
+  module: tarsi-core
+- name: ChangelogEntry
+  kind: type
+  file: crates/tarsi-core/src/changelog.rs
+  line: 41
+  module: tarsi-core
+- name: Commit
+  kind: type
+  file: crates/tarsi-core/src/commit.rs
+  line: 63
+  module: tarsi-core
+- name: CommitKind
+  kind: type
+  file: crates/tarsi-core/src/commit.rs
+  line: 11
+  module: tarsi-core
+- name: Config
+  kind: type
+  file: crates/tarsi-core/src/config.rs
+  line: 15
+  module: tarsi-core
+- name: ConventionalCommit
+  kind: type
+  file: crates/tarsi-core/src/commit.rs
+  line: 50
+  module: tarsi-core
+- name: CratesPublish
+  kind: type
+  file: crates/tarsi-core/src/config.rs
+  line: 152
+  module: tarsi-core
+- name: DEFAULT_TAG_FORMAT
+  kind: const
+  file: crates/tarsi-core/src/unit.rs
+  line: 60
+  module: tarsi-core
+- name: GhReleasePublish
+  kind: type
+  file: crates/tarsi-core/src/config.rs
+  line: 178
+  module: tarsi-core
+- name: PlanError
+  kind: type
+  file: crates/tarsi-core/src/plan.rs
+  line: 116
+  module: tarsi-core
+- name: PublishConfig
+  kind: type
+  file: crates/tarsi-core/src/config.rs
+  line: 142
+  module: tarsi-core
+- name: PublishTarget
+  kind: type
+  file: crates/tarsi-core/src/unit.rs
+  line: 15
+  module: tarsi-core
+- name: ReleaseConfig
+  kind: type
+  file: crates/tarsi-core/src/config.rs
+  line: 30
+  module: tarsi-core
+- name: ReleasePlan
+  kind: type
+  file: crates/tarsi-core/src/plan.rs
+  line: 65
+  module: tarsi-core
+- name: ReleaseStep
+  kind: type
+  file: crates/tarsi-core/src/plan.rs
+  line: 45
+  module: tarsi-core
+- name: ReleaseUnitSpec
+  kind: type
+  file: crates/tarsi-core/src/unit.rs
+  line: 25
+  module: tarsi-core
+- name: Section
+  kind: type
+  file: crates/tarsi-core/src/changelog.rs
+  line: 14
+  module: tarsi-core
+- name: SyncRefRule
+  kind: type
+  file: crates/tarsi-core/src/config.rs
+  line: 112
+  module: tarsi-core
+- name: SyncRefsConfig
+  kind: type
+  file: crates/tarsi-core/src/config.rs
+  line: 93
+  module: tarsi-core
+- name: UnitMap
+  kind: type
+  file: crates/tarsi-core/src/unit.rs
+  line: 92
+  module: tarsi-core
+- name: UnitOverride
+  kind: type
+  file: crates/tarsi-core/src/config.rs
+  line: 128
+  module: tarsi-core
+- name: UnitPlan
+  kind: type
+  file: crates/tarsi-core/src/plan.rs
+  line: 18
+  module: tarsi-core
+- name: UnitsSpec
+  kind: type
+  file: crates/tarsi-core/src/unit.rs
+  line: 80
+  module: tarsi-core
+- name: apply
+  kind: function
+  file: crates/tarsi-core/src/bump.rs
+  line: 29
+  module: tarsi-core
+- name: apply_overrides
+  kind: function
+  file: crates/tarsi-core/src/config.rs
+  line: 221
+  module: tarsi-core
+- name: apply_resets_lower_components
+  kind: function
+  file: crates/tarsi-core/src/bump.rs
+  line: 62
+  module: tarsi-core
+- name: apply_strips_pre_and_build
+  kind: function
+  file: crates/tarsi-core/src/bump.rs
+  line: 71
+  module: tarsi-core
+- name: attributes_and_infers_bumps
+  kind: function
+  file: crates/tarsi-core/src/plan.rs
+  line: 322
+  module: tarsi-core
+- name: body_footer_marks_breaking
+  kind: function
+  file: crates/tarsi-core/src/commit.rs
+  line: 154
+  module: tarsi-core
+- name: bump
+  kind: module
+  file: crates/tarsi-core/src/lib.rs
+  line: 7
+  module: tarsi-core
+- name: bump_for
+  kind: function
+  file: crates/tarsi-core/src/plan.rs
+  line: 225
+  module: tarsi-core
+- name: changelog
+  kind: module
+  file: crates/tarsi-core/src/lib.rs
+  line: 8
+  module: tarsi-core
+- name: chore_only_range_is_none_bump
+  kind: function
+  file: crates/tarsi-core/src/plan.rs
+  line: 357
+  module: tarsi-core
+- name: commit
+  kind: module
+  file: crates/tarsi-core/src/lib.rs
+  line: 9
+  module: tarsi-core
+- name: commit
+  kind: function
+  file: crates/tarsi-core/src/plan.rs
+  line: 312
+  module: tarsi-core
+- name: commit_touches
+  kind: function
+  file: crates/tarsi-core/src/plan.rs
+  line: 210
+  module: tarsi-core
+- name: config
+  kind: module
+  file: crates/tarsi-core/src/lib.rs
+  line: 10
+  module: tarsi-core
+- name: conventional
+  kind: function
+  file: crates/tarsi-core/src/commit.rs
+  line: 79
+  module: tarsi-core
+- name: default
+  kind: function
+  file: crates/tarsi-core/src/config.rs
+  line: 65
+  module: tarsi-core
+api_omitted: 48
+deps:
+- semver
+- serde
+- thiserror
+- toml
+- serde
+- semver
+- bump
+- changelog
+- commit
+- config
+- plan
+- unit
+notes: ''
+verify:
+- crates/tarsi-core/Cargo.toml
+- crates/tarsi-core/src/bump.rs
+- crates/tarsi-core/src/changelog.rs
+- crates/tarsi-core/src/commit.rs
+- crates/tarsi-core/src/config.rs
+- crates/tarsi-core/src/lib.rs
+- crates/tarsi-core/src/plan.rs
+- crates/tarsi-core/src/unit.rs
+provenance:
+  files:
+  - crates/tarsi-core/Cargo.toml
+  - crates/tarsi-core/src/bump.rs
+  - crates/tarsi-core/src/changelog.rs
+  - crates/tarsi-core/src/commit.rs
+  - crates/tarsi-core/src/config.rs
+  - crates/tarsi-core/src/lib.rs
+  - crates/tarsi-core/src/plan.rs
+  - crates/tarsi-core/src/unit.rs
+  hashes:
+  - 7bb345bac1bc466818261032e7f17f2d3bbf1d53
+  - 487743d90e534df93d0f98cc5ba7dee7ba38b4d7
+  - aa40c97cb1589d609265ae13cac48413937a83a1
+  - 95d0664ccd594427a924f3311abb262b0973b25b
+  - 381aaa4e6f000662e62713c1bf69363899207bf9
+  - ba769ae9a225fe878cf3ad5fca35f0bfc97958d5
+  - cd5704c4ad62e75240421d5e557c4b85c58097e8
+  - 4833e193d20b16ebd48feec85a974eee087bdb53
+  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
+  generated_at: '1794533324'
+  generator: kuda-template/0.1.4

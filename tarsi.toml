@@ -11,6 +11,15 @@ diff_exclude = ["docs/**", "project/**", "*.md", ".github/**"]
 [release.unit_overrides.tarsi-xtask]
 skip = true
 
+# Pack-ref sync (T-039): the `tarsi` pack manifest version is
+# rewritten to the new version inside the release commit, so the
+# tagged tree is self-consistent — replaces the release.sh
+# plan+sed pre-step.
+[release.sync_refs]
+rules = [
+  { files = ["libraries/tarsi/tamias.yaml"], find = "(?m)^version: \"{old}\"", replace = "version: \"{new}\"" },
+]
+
 [publish.crates]
 enabled = false   # not on crates.io yet
 
