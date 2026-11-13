@@ -31,13 +31,68 @@ profile = "9aia-release"   # optional — selector, not a table
 | `units` | spec | cargo workspace members | explicit units (`UnitsSpec::Explicit { units }`) |
 | `tag_format` | string | `{unit}-v{version}` | tag template; `{unit}`, `{version}` expand |
 | `changelog_path` | string | `CHANGELOG.md` | changelog file spliced per unit |
-| `styleguide` | string | `keep-a-changelog` | rendered-section layout |
-| `default_bump` | bump | — | fallback when inference finds nothing |
-| `diff_exclude` | `[string]` | `[]` | path globs excluded from commit attribution |
+| `strategy` | string \| table | `conventional` | release strategy — builtin name or inline rules table (below) |
+| `default_bump` | bump | — | fallback bump when inference finds nothing (folded into the strategy's `fallback`) |
+| `diff_exclude` | `[string]` | `[]` | path globs stripped from commits before attribution; a commit left with no paths is dropped |
 | `unit_overrides` | table | `{}` | per-unit overrides by unit name |
 | `sync_refs` | table | `{rules:[]}` | pack/doc version-ref rewrites before the release commit |
+| `styleguide` | string | `keep-a-changelog` | **deprecated** — superseded by `strategy.changelog`; still parsed, ignored |
 
 `bump` values: `"major"` | `"minor"` | `"patch"` | `"none"`.
+
+### `[release] strategy`
+
+The release *policy* as data (P-030): bump inference and changelog
+sectioning. Either a builtin name or an inline table — absent means
+`conventional`, the pre-strategy behavior.
+
+```toml
+strategy = "conventional"            # builtin name, OR inline:
+
+[release.strategy.bump]
+fallback = "patch"                   # bump when no rule matches
+
+[[release.strategy.bump.rules]]
+type = "feat"                        # raw conventional type token; "*"/absent = any
+scope = "core-*"                     # optional: exact or trailing-* glob
+breaking = true                      # optional: pin the !/BREAKING CHANGE flag
+not_type = ["fix"]                   # optional: type tokens that veto the match
+bump = "minor"                       # major|minor|patch|none
+
+[release.strategy.changelog]
+[[release.strategy.changelog.sections]]
+key = "added"                        # stable section id
+heading = "Added"                    # rendered as `### Added`
+[[release.strategy.changelog.sections.rules]]
+type = "feat"                        # same matcher fields, no `bump`
+```
+
+Semantics:
+
+- **Bump rules are max-match** — a commit contributes the highest
+  `bump` across its matching rules; a unit folds max across its
+  commits (semantic-release commit-analyzer's "highest release
+  type wins" — rule order can't be gamed). `fallback` applies when
+  inference finds nothing; `release.default_bump` fills it when the
+  strategy doesn't set one.
+- **Changelog sections are first-match** — a commit lands in the
+  first section (table order) with a matching rule; table order is
+  also render order. Commits matching nothing are dropped.
+- Matchers run on the commit's **raw type token** — `deps`,
+  `i18n`, and other non-`CommitKind` types are nameable.
+- Each absent `strategy.*` sub-table defaults to the `conventional`
+  rules, so `[release.strategy.bump]` alone keeps the conventional
+  changelog.
+- Builtin names: `conventional` (default — byte-identical to the
+  pre-P-030 hardcoded policy) and `semantic-release-angular` (the
+  commit-analyzer angular preset as data).
+- The resolved strategy echoes on `plan` results as
+  `plan.strategy {name, resolved}` (`name` = the builtin name or
+  `"custom"`).
+
+What can't be data stays code: changelog render formats beyond
+section/heading/order, non-semver versioning, non-conventional
+commit parsing, anything needing execution (P-030 boundary).
 
 ### `[release.unit_overrides.<name>]`
 

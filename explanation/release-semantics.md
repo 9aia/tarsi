@@ -15,19 +15,34 @@ mutate unless asked.
 
 ## Bump inference
 
-Conventional commits, attributed to units by path prefix:
+Conventional commits, attributed to units by path prefix. The
+inference itself is a **strategy** (P-030) — data-driven rules in
+`tarsi.toml`'s `[release] strategy`, defaulting to `conventional`:
 
 | commit | bump |
 | --- | --- |
-| `feat` / `perf` | minor |
-| `fix` | patch |
+| `feat` | minor |
+| `fix` / `perf` | patch |
 | `!` / `BREAKING CHANGE:` | major |
 | `chore` / `docs` / `test` / … | none — no release |
 
+Bump rules fold **max-match** (a commit contributes the highest
+matching `bump`; the unit folds max across commits) against the
+commit's **raw type token** — arbitrary types like `deps` are
+nameable. Changelog sectioning is the same mechanism: ordered
+`sections[]`, first match wins, table order = render order.
+`semantic-release-angular` ships semantic-release's commit-analyzer
+angular preset as data; custom tables cover anything else short of
+non-semver versioning or plugin execution (the documented P-030
+boundary).
+
 `spec.bump` (unit override or explicit unit spec) wins over
-inference; `release.default_bump` is the repo-wide fallback when
+inference; the strategy's `fallback` — filled by
+`release.default_bump` when unset — is the repo-wide fallback when
 inference finds nothing. Commits with empty path lists match every
-unit — conservative attribution.
+unit — conservative attribution. `release.diff_exclude` strips
+matching paths before attribution (a commit left with no paths is
+dropped).
 
 ## Per-unit tags, per-unit ranges
 

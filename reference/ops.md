@@ -54,10 +54,16 @@ Params: `dir?`, `profile?`, `range?`. Pure — computes, writes nothing.
       }
     ],
     "unattributed": [{"sha":"…","subject":"…"}],
-    "steps": ["write-changelogs","bump-manifests","commit-bump","tag","push","publish"]
+    "steps": ["write-changelogs","bump-manifests","commit-bump","tag","push","publish"],
+    "strategy": {"name":"conventional","resolved":{…rules…}}
   }
 }
 ```
+
+`strategy` echoes the release strategy resolved from
+`[release] strategy` (P-030) — `name` is the builtin name or
+`"custom"` for inline tables; `resolved` is the full rule set that
+produced the bumps/changelogs.
 
 ### `changelog`
 

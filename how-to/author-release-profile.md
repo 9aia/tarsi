@@ -35,7 +35,7 @@ reference:
 
 ```toml
 [release]
-styleguide = "keep-a-changelog"
+strategy = "conventional"   # P-030: builtin name or inline rules table
 changelog_path = "CHANGELOG.md"
 diff_exclude = ["docs/**", "project/**", "*.md", ".github/**"]
 tag_format = "{unit}-v{version}"

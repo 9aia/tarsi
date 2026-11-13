@@ -26,7 +26,7 @@ Objects merge key-wise; repo keys win.
 
 ```toml
 [release]
-styleguide = "keep-a-changelog"
+strategy = "conventional"
 changelog_path = "CHANGELOG.md"
 diff_exclude = ["docs/**", "project/**", "*.md", ".github/**"]
 
@@ -44,9 +44,9 @@ enabled = false
 | `units` | cargo workspace members | explicit unit list, or a units spec |
 | `tag_format` | `{unit}-v{version}` | tag template; `{unit}`/`{version}` expand |
 | `changelog_path` | `CHANGELOG.md` | changelog file spliced per unit |
-| `styleguide` | `keep-a-changelog` | section layout of rendered markdown |
+| `strategy` | `conventional` | release strategy — builtin name or inline rules table |
 | `default_bump` | none | fallback bump when inference finds nothing |
-| `diff_exclude` | `[]` | path globs kept out of commit→unit attribution |
+| `diff_exclude` | `[]` | path globs stripped from commits before attribution (a commit left with no paths is dropped) |
 | `unit_overrides` | `{}` | per-unit overrides, keyed by unit name |
 | `sync_refs` | `{rules:[]}` | rewrite pack/doc version refs into the release commit |
 
@@ -77,6 +77,39 @@ onto the resolved spec; per-unit values always beat repo-level defaults.
 `diff_exclude` matters more than it looks: docs and config churn would
 otherwise attribute commits to units and trigger spurious releases. The
 org profile excludes `docs/**`, `project/**`, `*.md`, `.github/**`.
+Matching paths are stripped from each commit before attribution; a
+commit left with no paths is dropped entirely.
+
+### Release strategy
+
+`strategy` is the release *policy* as data — bump inference and
+changelog sectioning (P-030). Name a builtin or write an inline
+table; absent means `conventional`:
+
+```toml
+strategy = "semantic-release-angular"   # builtin preset
+
+# …or fully custom:
+[release.strategy.bump]
+fallback = "patch"
+[[release.strategy.bump.rules]]
+type = "feat"          # raw type token — "deps"/"i18n" work too
+bump = "major"
+
+[release.strategy.changelog]
+[[release.strategy.changelog.sections]]
+key = "features"
+heading = "Features"
+[[release.strategy.changelog.sections.rules]]
+type = "feat"
+```
+
+Bump rules fold **max-match** (highest `bump` wins per commit, then
+per unit); changelog sections are **first-match** in table order,
+which is also render order. `default_bump` fills `strategy.bump.
+fallback` when the strategy doesn't set one. Full schema in
+[reference/config](/reference/config#release-strategy); the resolved
+strategy echoes on `plan` results as `plan.strategy`.
 
 ### Syncing version refs (`sync_refs`)
 
