@@ -84,8 +84,9 @@ Semantics:
   rules, so `[release.strategy.bump]` alone keeps the conventional
   changelog.
 - Builtin names: `conventional` (default — byte-identical to the
-  pre-P-030 hardcoded policy) and `semantic-release-angular` (the
-  commit-analyzer angular preset as data).
+  pre-P-030 hardcoded policy), `semantic-release-angular` (the
+  commit-analyzer angular preset as data), and `keep-a-changelog`
+  (the keepachangelog.com section layout — see below).
 - The resolved strategy echoes on `plan` results as
   `plan.strategy {name, resolved}` (`name` = the builtin name or
   `"custom"`).
@@ -93,6 +94,33 @@ Semantics:
 What can't be data stays code: changelog render formats beyond
 section/heading/order, non-semver versioning, non-conventional
 commit parsing, anything needing execution (P-030 boundary).
+
+#### `keep-a-changelog`
+
+Keep a Changelog (keepachangelog.com) is a *changelog layout*, not
+a bump policy — the builtin keeps `conventional`'s bump rules
+verbatim and swaps only the section table for the six canonical
+sections, in keepachangelog.com order:
+
+| section | commits |
+| --- | --- |
+| `### Added` | `feat` |
+| `### Changed` | `refactor`, plus breaking commits of types with no section of their own (`chore!`, `deps!`, unknown `!` types) |
+| `### Deprecated` | `deprecate`, `deprecation` |
+| `### Removed` | `revert`, `remove` |
+| `### Fixed` | `fix`, `perf` |
+| `### Security` | `security` |
+
+Breaking commits of section-owning types stay in their own
+section (`fix!`→Fixed, `security!`→Security, …) — Changed's
+catch-all vetoes them via `not_type`. Types outside the table
+(`chore`, `docs`, `test`, `deps`, `release`, …) still count for
+bump inference but are dropped from the changelog. KaC-named
+types (`deprecate`, `revert`, `remove`, `security`) are
+changelog-only here — they don't move the version unless
+`default_bump` fills the fallback; a repo that wants e.g.
+`revert`→patch takes the same table inline with one extra bump
+rule.
 
 ### `[release.unit_overrides.<name>]`
 

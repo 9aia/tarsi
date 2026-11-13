@@ -88,6 +88,7 @@ table; absent means `conventional`:
 
 ```toml
 strategy = "semantic-release-angular"   # builtin preset
+strategy = "keep-a-changelog"            # KaC sections, same bump rules
 
 # …or fully custom:
 [release.strategy.bump]
@@ -107,8 +108,14 @@ type = "feat"
 Bump rules fold **max-match** (highest `bump` wins per commit, then
 per unit); changelog sections are **first-match** in table order,
 which is also render order. `default_bump` fills `strategy.bump.
-fallback` when the strategy doesn't set one. Full schema in
-[reference/config](/reference/config#release-strategy); the resolved
+fallback` when the strategy doesn't set one. Builtins:
+`conventional` (default), `semantic-release-angular` (the
+commit-analyzer angular preset), and `keep-a-changelog` (the
+keepachangelog.com section layout over the conventional bump
+rules — `### Added`/`Changed`/`Deprecated`/`Removed`/`Fixed`/
+`Security`; full mapping in
+[reference/config](/reference/config#keep-a-changelog)). Full schema
+in [reference/config](/reference/config#release-strategy); the resolved
 strategy echoes on `plan` results as `plan.strategy`.
 
 ### Syncing version refs (`sync_refs`)

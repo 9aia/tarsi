@@ -32,7 +32,11 @@ commit's **raw type token** — arbitrary types like `deps` are
 nameable. Changelog sectioning is the same mechanism: ordered
 `sections[]`, first match wins, table order = render order.
 `semantic-release-angular` ships semantic-release's commit-analyzer
-angular preset as data; custom tables cover anything else short of
+angular preset as data; `keep-a-changelog` keeps the same bump rules
+but renders the six canonical keepachangelog.com sections
+(`### Added`/`Changed`/`Deprecated`/`Removed`/`Fixed`/`Security`) —
+KaC is a changelog layout, not a bump policy. Custom tables cover
+anything else short of
 non-semver versioning or plugin execution (the documented P-030
 boundary).
 
