@@ -48,6 +48,7 @@ enabled = false
 | `default_bump` | none | fallback bump when inference finds nothing |
 | `diff_exclude` | `[]` | path globs kept out of commit→unit attribution |
 | `unit_overrides` | `{}` | per-unit overrides, keyed by unit name |
+| `sync_refs` | `{rules:[]}` | rewrite pack/doc version refs into the release commit |
 
 ### Units
 
@@ -76,6 +77,33 @@ onto the resolved spec; per-unit values always beat repo-level defaults.
 `diff_exclude` matters more than it looks: docs and config churn would
 otherwise attribute commits to units and trigger spurious releases. The
 org profile excludes `docs/**`, `project/**`, `*.md`, `.github/**`.
+
+### Syncing version refs (`sync_refs`)
+
+Repos that ship a tamias pack usually keep `name@version` refs in
+docs and the pack manifest's `version:` in lockstep with releases.
+`[release.sync_refs]` does that rewrite inside the pipeline — before
+the release commit, so refs land in the tagged tree:
+
+```toml
+[release.sync_refs]
+rules = [
+  { files = ["libraries/myco/tamias.yaml"],
+    find = "(?m)^version: \"{old}\"",
+    replace = "version: \"{new}\"" },
+  { files = ["README.md", ".agents/skills/myco/SKILL.md"],
+    find = "myco@{old}",
+    replace = "myco@{new}" },
+]
+```
+
+`{old}`/`{new}` are the releasing units' shared old/new version.
+Rules skip (with a reported reason) on mixed-version plans, are
+idempotent, and show up as `status:"dry-run"` + `changed_files` in a
+`bump`/`release` dry-run. Full semantics in
+[reference/config](/reference/config#release-sync_refs). With rules
+configured, `scripts/release.sh` shrinks to a bare
+`tarsi-serve release --dir . --yes`.
 
 ## `[publish.*]` — where releases go
 

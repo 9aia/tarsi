@@ -94,10 +94,21 @@ Real result (`dry_run:false`):
   "ok": true,
   "dry_run": false,
   "plan": {…},
-  "steps_run": ["write-changelogs","bump-manifests","commit-bump","tag","push"],
-  "publish": [ {"target":"github-release","ok":true,…} ]
+  "steps_run": ["write-changelogs","bump-manifests","sync-refs","commit-bump","tag","push"],
+  "publish": [ {"target":"github-release","ok":true,…} ],
+  "sync_refs": {"status":"applied","old":"0.1.0","new":"0.2.0","changes":[…]}
 }
 ```
+
+`sync_refs` reports the `[release.sync_refs]` stage (pack/doc
+version-ref rewrites folded into the bump commit — see
+[config](/reference/config#release-sync_refs)): `status` is
+`disabled` (no rules), `skipped` (+`reason`, e.g. mixed-version
+plan), `dry-run`, or `applied`; `changes[]` lists per-rule
+file/replacement counts and `changed_files` the touched paths.
+Dry-run results carry the same shape with `status:"dry-run"`. The
+`"sync-refs"` `steps_run` entry appears only when rules are
+configured.
 
 Failure shapes:
 
