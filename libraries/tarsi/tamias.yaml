@@ -18,7 +18,7 @@
 # `tamias-driver-tarsi` content driver (PL-0014 D3) is a different
 # artifact — `type: tarsi` profile packs — not this command pack.
 name: tarsi
-version: "0.1.0"
+version: "0.2.0"
 type: files
 description: >-
   Generic release tool — changelog → semver bump → tag → publish.
