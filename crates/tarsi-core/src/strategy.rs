@@ -48,7 +48,7 @@ use crate::commit::ConventionalCommit;
 #[serde(untagged)]
 pub enum StrategyRef {
     /// Builtin strategy name: `"conventional"`,
-    /// `"semantic-release-angular"`.
+    /// `"semantic-release-angular"`, `"keep-a-changelog"`.
     Named(String),
     /// Inline strategy table (`[release.strategy.bump]` /
     /// `[release.strategy.changelog]`). Each sub-table defaults to
@@ -259,8 +259,9 @@ impl Strategy {
         match name {
             "conventional" => Ok(Self::conventional()),
             "semantic-release-angular" => Ok(Self::semantic_release_angular()),
+            "keep-a-changelog" => Ok(Self::keep_a_changelog()),
             other => Err(format!(
-                "unknown release strategy {other:?} — builtins: conventional, semantic-release-angular"
+                "unknown release strategy {other:?} — builtins: conventional, semantic-release-angular, keep-a-changelog"
             )),
         }
     }
@@ -370,6 +371,106 @@ impl Strategy {
         }
     }
 
+    /// [Keep a Changelog](https://keepachangelog.com) section
+    /// format as a strategy (P-030). KaC is a *changelog layout*,
+    /// not a bump policy — so this keeps [`Strategy::conventional`]'s
+    /// bump rules verbatim (`feat`→minor, `fix`/`perf`→patch,
+    /// breaking→major, everything else→none) and swaps only the
+    /// section table for the six canonical KaC sections in
+    /// keepachangelog.com order:
+    ///
+    /// | section | commits |
+    /// | --- | --- |
+    /// | `### Added` | `feat` |
+    /// | `### Changed` | `refactor`, plus breaking commits of types with no section of their own (`chore!`, `deps!`, unknown `!` types — the `not_type` veto keeps `feat!`/`fix!`/`perf!`/`deprecate!`/`revert!`/`remove!`/`security!` in their own sections) |
+    /// | `### Deprecated` | `deprecate`, `deprecation` |
+    /// | `### Removed` | `revert`, `remove` |
+    /// | `### Fixed` | `fix`, `perf` |
+    /// | `### Security` | `security` |
+    ///
+    /// Types outside the table (`chore`, `docs`, `test`, `deps`,
+    /// `release`, …) still count for bump inference but are
+    /// dropped from the changelog — same "commits matching no
+    /// section are dropped" rule as every strategy. Bump-driving
+    /// types KaC doesn't name (`deprecate`, `revert`, `remove`,
+    /// `security`) are changelog-only here: they don't move the
+    /// version unless `default_bump`/`fallback` says so. Repos
+    /// that want `revert`→patch can take the same table inline
+    /// with one extra `bump` rule.
+    #[must_use]
+    pub fn keep_a_changelog() -> Self {
+        Self {
+            bump: Self::conventional().bump,
+            changelog: ChangelogRules {
+                sections: vec![
+                    section(
+                        "added",
+                        "Added",
+                        vec![section_rule(Some("feat"), None, None, &[])],
+                    ),
+                    section(
+                        "changed",
+                        "Changed",
+                        vec![
+                            section_rule(Some("refactor"), None, None, &[]),
+                            // Breaking commits of kinds without a
+                            // KaC section of their own → Changed.
+                            // The not_type veto keeps every type
+                            // that owns a section (`feat!`→Added is
+                            // already won by precedence; the rest
+                            // must not be stolen here) routing to
+                            // its own heading.
+                            section_rule(
+                                None,
+                                None,
+                                Some(true),
+                                &[
+                                    "feat",
+                                    "fix",
+                                    "perf",
+                                    "deprecate",
+                                    "deprecation",
+                                    "revert",
+                                    "remove",
+                                    "security",
+                                ],
+                            ),
+                        ],
+                    ),
+                    section(
+                        "deprecated",
+                        "Deprecated",
+                        vec![
+                            section_rule(Some("deprecate"), None, None, &[]),
+                            section_rule(Some("deprecation"), None, None, &[]),
+                        ],
+                    ),
+                    section(
+                        "removed",
+                        "Removed",
+                        vec![
+                            section_rule(Some("revert"), None, None, &[]),
+                            section_rule(Some("remove"), None, None, &[]),
+                        ],
+                    ),
+                    section(
+                        "fixed",
+                        "Fixed",
+                        vec![
+                            section_rule(Some("fix"), None, None, &[]),
+                            section_rule(Some("perf"), None, None, &[]),
+                        ],
+                    ),
+                    section(
+                        "security",
+                        "Security",
+                        vec![section_rule(Some("security"), None, None, &[])],
+                    ),
+                ],
+            },
+        }
+    }
+
     /// The bump one commit contributes: **max** across matching
     /// rules (`Bump::None` when nothing matches). The unit-level
     /// fold and the `fallback` application live in `plan_release`.
@@ -451,6 +552,102 @@ mod tests {
         assert_eq!(key("chore!: x"), Some("changed"));
         assert_eq!(key("deps!: bump"), Some("changed"));
         assert_eq!(key("deps: bump"), None);
+    }
+
+    #[test]
+    fn keep_a_changelog_keeps_conventional_bump() {
+        let s = Strategy::keep_a_changelog();
+        // KaC is a changelog format — bump policy is conventional's.
+        assert_eq!(s.bump, Strategy::conventional().bump);
+        assert_eq!(s.bump_for(&cc("feat: x")), Bump::Minor);
+        assert_eq!(s.bump_for(&cc("feat!: x")), Bump::Major);
+        assert_eq!(s.bump_for(&cc("fix: x")), Bump::Patch);
+        assert_eq!(s.bump_for(&cc("perf: x")), Bump::Patch);
+        assert_eq!(s.bump_for(&cc("chore: x")), Bump::None);
+        // KaC-named types are changelog-only — they don't bump.
+        assert_eq!(s.bump_for(&cc("deprecate: x")), Bump::None);
+        assert_eq!(s.bump_for(&cc("revert: x")), Bump::None);
+        assert_eq!(s.bump_for(&cc("security: x")), Bump::None);
+    }
+
+    #[test]
+    fn keep_a_changelog_sections_follow_kac_order() {
+        let s = Strategy::keep_a_changelog();
+        let keys: Vec<&str> = s
+            .changelog
+            .sections
+            .iter()
+            .map(|s| s.key.as_str())
+            .collect();
+        assert_eq!(
+            keys,
+            [
+                "added",
+                "changed",
+                "deprecated",
+                "removed",
+                "fixed",
+                "security"
+            ]
+        );
+        let headings: Vec<&str> = s
+            .changelog
+            .sections
+            .iter()
+            .map(|s| s.heading.as_str())
+            .collect();
+        assert_eq!(
+            headings,
+            [
+                "Added",
+                "Changed",
+                "Deprecated",
+                "Removed",
+                "Fixed",
+                "Security"
+            ]
+        );
+    }
+
+    #[test]
+    fn keep_a_changelog_section_mapping() {
+        let s = Strategy::keep_a_changelog();
+        let key = |subj: &str| s.section_for(&cc(subj)).map(|s| s.key.as_str());
+        assert_eq!(key("feat: x"), Some("added"));
+        assert_eq!(key("feat!: x"), Some("added"));
+        assert_eq!(key("refactor: x"), Some("changed"));
+        assert_eq!(key("deprecate: x"), Some("deprecated"));
+        assert_eq!(key("deprecation: x"), Some("deprecated"));
+        assert_eq!(key("revert: x"), Some("removed"));
+        assert_eq!(key("remove: x"), Some("removed"));
+        assert_eq!(key("fix: x"), Some("fixed"));
+        assert_eq!(key("perf: x"), Some("fixed"));
+        assert_eq!(key("security: x"), Some("security"));
+        // Silent kinds stay out of the changelog but still bump.
+        assert_eq!(key("chore: x"), None);
+        assert_eq!(key("docs: x"), None);
+        assert_eq!(key("deps: bump"), None);
+        assert_eq!(key("release: bump versions"), None);
+    }
+
+    #[test]
+    fn keep_a_changelog_breaking_routes_to_owning_section() {
+        let s = Strategy::keep_a_changelog();
+        let key = |subj: &str| s.section_for(&cc(subj)).map(|s| s.key.as_str());
+        // Breaking on a section-owning type stays in that section —
+        // Changed's catch-all must not steal it.
+        assert_eq!(key("fix!: x"), Some("fixed"));
+        assert_eq!(key("perf!: x"), Some("fixed"));
+        assert_eq!(key("deprecate!: x"), Some("deprecated"));
+        assert_eq!(key("deprecation!: x"), Some("deprecated"));
+        assert_eq!(key("revert!: x"), Some("removed"));
+        assert_eq!(key("remove!: x"), Some("removed"));
+        assert_eq!(key("security!: x"), Some("security"));
+        // Breaking on a silent/unknown kind → Changed (KaC's
+        // "breaking changes" bucket).
+        assert_eq!(key("chore!: x"), Some("changed"));
+        assert_eq!(key("deps!: bump"), Some("changed"));
+        assert_eq!(key("whatever!: x"), Some("changed"));
     }
 
     #[test]

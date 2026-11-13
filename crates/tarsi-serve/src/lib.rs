@@ -379,7 +379,7 @@ fn op_schema() -> Value {
             "`units` accepts plan-unit JSON echoed by `plan`/`check`/`bump` — chain granular steps without re-planning",
             "granular order: `bump` → `tag` (push:true) → `publish`; `release` composes the same stages atomically",
             "`[release.sync_refs]` rules rewrite pack/doc version refs into the bump commit before tagging — skipped on mixed-version plans, idempotent",
-            "`[release] strategy` selects bump/changelog rules — builtin name (`conventional`, `semantic-release-angular`) or inline `[release.strategy.*]` table; absent = `conventional`; `default_bump` is the strategy fallback, `diff_exclude` filters commits pre-attribution; `styleguide` is deprecated (superseded by `strategy.changelog`)",
+            "`[release] strategy` selects bump/changelog rules — builtin name (`conventional`, `semantic-release-angular`, `keep-a-changelog`) or inline `[release.strategy.*]` table; absent = `conventional`; `default_bump` is the strategy fallback, `diff_exclude` filters commits pre-attribution; `styleguide` is deprecated (superseded by `strategy.changelog`)",
         ],
         "ops": ops,
     })

@@ -79,8 +79,14 @@ A plain `tarsi_core::Config` document (TOML or YAML). Key sections:
   `styleguide` is **deprecated** (superseded by
   `strategy.changelog`) — still parsed, ignored.
 - `[release] strategy` — builtin name (`"conventional"`,
-  `"semantic-release-angular"`) or an inline table. Absent =
-  `conventional`. Inline form:
+  `"semantic-release-angular"`, `"keep-a-changelog"`) or an inline
+  table. Absent = `conventional`. `keep-a-changelog` keeps the
+  conventional bump rules and swaps the changelog for the six
+  canonical keepachangelog.com sections (Added / Changed /
+  Deprecated / Removed / Fixed / Security): `feat`→Added,
+  `refactor`+breaking-silent-kinds→Changed, `deprecate`/
+  `deprecation`→Deprecated, `revert`/`remove`→Removed,
+  `fix`/`perf`→Fixed, `security`→Security. Inline form:
 
   ```toml
   [release.strategy.bump]
@@ -141,7 +147,9 @@ Default strategy `conventional`: `feat`→minor, `fix`/`perf`→patch,
 (`Bump::None`). Breaking commits of otherwise-silent kinds land in
 changelog `Changed`. Other strategies are data — see
 `[release] strategy` above (`semantic-release-angular` ships the
-commit-analyzer angular preset). Commits attribute to units by
+commit-analyzer angular preset; `keep-a-changelog` ships the
+keepachangelog.com section layout over the same bump rules).
+Commits attribute to units by
 path prefix; repo-root files land in `unattributed`. Per-unit
 bumps can disagree — with `version.workspace = true` the
 workspace version is last-writer-wins (documented ADR-0003

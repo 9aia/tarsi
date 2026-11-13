@@ -36,6 +36,9 @@
 //! - `custom-deps-strategy` — an inline rule table naming the
 //!   arbitrary raw type `deps` (unreachable via `CommitKind`)
 //!   plus a `fallback` bump for unmatched units.
+//! - `keep-a-changelog` — the KaC builtin: conventional bump
+//!   rules + the six canonical sections; exercises every section
+//!   plus the breaking-routes-to-owning-section veto.
 
 use semver::Version;
 use tarsi_core::bump::Bump;
@@ -692,6 +695,52 @@ pub fn cases() -> Vec<GoldenCase> {
                 unit("app", Bump::Minor, "0.2.0", "app-v0.2.0", &["### Dependencies", "bump serde"]),
                 unit("lib", Bump::Patch, "0.4.3", "lib-v0.4.3", &[]),
             ],
+            expect_unattributed: 0,
+        },
+        GoldenCase {
+            name: "keep-a-changelog",
+            specs: vec![spec("app", ".", "0.3.1", &[])],
+            strategy: Some(Strategy::keep_a_changelog()),
+            commits: vec![
+                commit("k1", "feat!: redesign api", &[]),
+                commit("k2", "fix: crash on empty", &[]),
+                commit("k3", "security: patch auth bypass", &[]),
+                commit("k4", "deprecate: old config keys", &[]),
+                commit("k5", "revert: bad deploy", &[]),
+                commit("k6", "refactor: split parser", &[]),
+                commit("k7", "perf: speed up parse", &[]),
+                commit("k8", "chore!: drop legacy flag", &[]),
+                commit("k9", "chore: tidy", &[]),
+                commit("k10", "feat: add search", &[]),
+            ],
+            // feat! → major wins the conventional fold. KaC
+            // sections: feat!→Added (precedence), chore!→Changed
+            // (breaking catch-all), fix!/perf→Fixed, deprecate→
+            // Deprecated, revert→Removed, security→Security,
+            // refactor→Changed; plain chore is dropped.
+            expect_units: vec![unit(
+                "app",
+                Bump::Major,
+                "1.0.0",
+                "app-v1.0.0",
+                &[
+                    "### Added",
+                    "### Changed",
+                    "### Deprecated",
+                    "### Removed",
+                    "### Fixed",
+                    "### Security",
+                    "redesign api",
+                    "add search",
+                    "split parser",
+                    "drop legacy flag",
+                    "old config keys",
+                    "bad deploy",
+                    "crash on empty",
+                    "speed up parse",
+                    "patch auth bypass",
+                ],
+            )],
             expect_unattributed: 0,
         },
     ]

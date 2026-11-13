@@ -767,7 +767,7 @@ dependencies = [
 
 [[package]]
 name = "tarsi-config"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "scarab-config",
  "scarab-config-file",
@@ -781,7 +781,7 @@ dependencies = [
 
 [[package]]
 name = "tarsi-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "semver",
  "serde",
@@ -791,7 +791,7 @@ dependencies = [
 
 [[package]]
 name = "tarsi-driver"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "pavo-driver-kit",
  "pavo-protocol",
@@ -805,7 +805,7 @@ dependencies = [
 
 [[package]]
 name = "tarsi-manifest"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "semver",
  "serde",
@@ -819,7 +819,7 @@ dependencies = [
 
 [[package]]
 name = "tarsi-publish"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -829,7 +829,7 @@ dependencies = [
 
 [[package]]
 name = "tarsi-publish-crates"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "tarsi-core",
  "tarsi-publish",
@@ -838,7 +838,7 @@ dependencies = [
 
 [[package]]
 name = "tarsi-publish-dryrun"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "tarsi-core",
  "tarsi-publish",
@@ -846,7 +846,7 @@ dependencies = [
 
 [[package]]
 name = "tarsi-publish-ghreleases"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "glob",
  "serde",
@@ -860,7 +860,7 @@ dependencies = [
 
 [[package]]
 name = "tarsi-serve"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "glob",
  "hypha-serve-cli",
@@ -883,7 +883,7 @@ dependencies = [
 
 [[package]]
 name = "tarsi-testkit"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "lasius-vcs",
  "lasius-vcs-git",
@@ -897,7 +897,7 @@ dependencies = [
 
 [[package]]
 name = "tarsi-xtask"
-version = "0.1.0"
+version = "0.2.0"
 
 [[package]]
 name = "tempfile"
