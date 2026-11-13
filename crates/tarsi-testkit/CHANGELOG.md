@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.4.0] - 2026-11-13
+
+### Added
+
+- **core:** keep-a-changelog release strategy (P-030) (`71352a4`)
+
+## [0.3.0] - 2026-11-13
+
+### Added
+
+- **core:** keep-a-changelog release strategy (P-030) (`71352a4`)
+
 ## [0.2.0] - 2026-11-13
 
 ### Added

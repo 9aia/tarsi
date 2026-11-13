@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.4.0] - 2026-11-13
+
+### Added
+
+- **publish:** cuora:// token_ref for publish tokens (T-041, T-042) (`9cd6643`)
+- **core:** keep-a-changelog release strategy (P-030) (`71352a4`)
+
+## [0.3.0] - 2026-11-13
+
+### Added
+
+- **publish:** cuora:// token_ref for publish tokens (T-041, T-042) (`9cd6643`)
+- **core:** keep-a-changelog release strategy (P-030) (`71352a4`)
+
 ## [0.2.0] - 2026-11-13
 
 ### Added
