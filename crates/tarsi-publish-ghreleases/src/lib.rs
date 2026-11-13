@@ -8,22 +8,34 @@
 //! (`GET /repos/{o}/{r}/releases/tags/{tag}`) and reused when it
 //! exists; an asset whose name is already attached is DELETEd and
 //! re-uploaded — replace semantics, latest build wins. Blocking
-//! `ureq` per the bupha-github convention; the token is read from
-//! the env var *named* in config (`token_env`) — the value never
+//! `ureq` per the bupha-github convention; the token comes from
+//! the [`TokenResolver`] — `token_ref` (a `cuora://` secret ref)
+//! first, then the env var named `token_env` — the value never
 //! appears in config, logs, or args.
 
 use std::path::Path;
+use std::sync::Arc;
 
 use tarsi_core::PublishTarget;
-use tarsi_publish::{PublishAsset, PublishError, PublishJob, PublishReport, Publisher};
+use tarsi_publish::{
+    CuoraTokenResolver, PublishAsset, PublishError, PublishJob, PublishReport, Publisher,
+    TokenResolver,
+};
 
 /// GitHub Releases publisher for `owner/repo`.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct GhReleasePublisher {
     /// `owner/repo` — resolved from git remote or config.
     pub repo: String,
-    /// Env var NAME holding the token (e.g. `GITHUB_TOKEN`).
+    /// Env var NAME holding the token (e.g. `GITHUB_TOKEN`) —
+    /// the fallback when `token_ref` is unset or misses.
     pub token_env: String,
+    /// Optional `cuora://<scope>/<name>` secret ref — resolved via
+    /// cuora at publish time; takes precedence over `token_env`.
+    pub token_ref: Option<String>,
+    /// Token resolver — defaults to [`CuoraTokenResolver`]; tests
+    /// inject a fake.
+    pub resolver: Arc<dyn TokenResolver>,
     /// API base — override for GHES/tests.
     pub api_base: String,
 }
@@ -52,17 +64,23 @@ impl GhReleasePublisher {
         Self {
             repo,
             token_env,
+            token_ref: None,
+            resolver: Arc::new(CuoraTokenResolver::new()),
             api_base: "https://api.github.com".to_string(),
         }
     }
 
     fn token(&self) -> Result<String, PublishError> {
-        std::env::var(&self.token_env).map_err(|_| {
-            PublishError::Msg(format!(
-                "{} is not set — resolve it via cuora/environment",
+        match self
+            .resolver
+            .resolve(&self.token_env, self.token_ref.as_deref())?
+        {
+            Some(t) => Ok(t),
+            None => Err(PublishError::Msg(format!(
+                "{} is not set and no token_ref resolved — set the env var or configure token_ref",
                 self.token_env
-            ))
-        })
+            ))),
+        }
     }
 
     fn auth(&self, token: &str) -> [(&'static str, String); 4] {
@@ -730,5 +748,85 @@ mod tests {
         assert_eq!(guess_content_type("a.zip"), "application/zip");
         assert_eq!(guess_content_type("a.json"), "application/json");
         assert_eq!(guess_content_type("a.bin"), "application/octet-stream");
+    }
+
+    /// Resolver seam — returns a fixed token regardless of env.
+    struct FakeResolver(Option<String>);
+
+    impl TokenResolver for FakeResolver {
+        fn resolve(
+            &self,
+            _token_env: &str,
+            _token_ref: Option<&str>,
+        ) -> Result<Option<String>, PublishError> {
+            Ok(self.0.clone())
+        }
+    }
+
+    #[test]
+    fn token_comes_from_resolver_when_env_is_unset() {
+        // Point token_env at a var that is certainly unset — the
+        // resolver supplies the token (token_ref path) and env
+        // must not be consulted. (A unique name avoids racing the
+        // env-mutating tests above in the same process.)
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let addr = listener.local_addr().unwrap();
+        let base = format!("http://{addr}");
+        let upload_base = format!("{base}/uploads/o/r/releases/42/assets");
+        let seen: Arc<Mutex<Vec<Seen>>> = Arc::new(Mutex::new(Vec::new()));
+        let sink = Arc::clone(&seen);
+        std::thread::spawn(move || {
+            for stream in listener.incoming() {
+                let Ok(mut stream) = stream else { break };
+                let Some((head, body)) = read_http_request(&mut stream) else {
+                    continue;
+                };
+                let request_line = head.lines().next().unwrap_or("").to_string();
+                let mut parts = request_line.split_whitespace();
+                let method = parts.next().unwrap_or("").to_string();
+                let target = parts.next().unwrap_or("").to_string();
+                let path = target.split('?').next().unwrap_or("").to_string();
+                sink.lock().unwrap().push(Seen {
+                    raw: format!("{head}\n{}", String::from_utf8_lossy(&body)),
+                    key: format!("{method} {path}"),
+                });
+                let (status, resp_body): (u16, Vec<u8>) = match (method.as_str(), path.as_str()) {
+                    ("GET", "/repos/o/r/releases/tags/u-v1.2.3") => (404, b"{}".to_vec()),
+                    ("POST", "/repos/o/r/releases") => {
+                        (201, release_json(42, &upload_base, serde_json::json!([])))
+                    }
+                    _ => (404, b"{}".to_vec()),
+                };
+                let reason = if status == 201 {
+                    "Created"
+                } else {
+                    "Not Found"
+                };
+                let resp = format!(
+                    "HTTP/1.1 {status} {reason}\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
+                    resp_body.len()
+                );
+                let _ = stream.write_all(resp.as_bytes());
+                let _ = stream.write_all(&resp_body);
+                let _ = stream.flush();
+            }
+        });
+
+        let mut p = publisher(&base);
+        p.token_env = "TARSI_TEST_UNSET_RESOLVER_TOKEN".into();
+        p.token_ref = Some("cuora://o/r/token".into());
+        p.resolver = Arc::new(FakeResolver(Some("ref-token".into())));
+        let report = p.publish(&job(false, vec![])).unwrap();
+        assert!(report.ok, "{}", report.detail);
+
+        let recorded = seen.lock().unwrap();
+        assert_eq!(recorded.len(), 2);
+        for s in recorded.iter() {
+            assert!(
+                s.raw.to_lowercase().contains("bearer ref-token"),
+                "missing auth header: {}",
+                s.raw
+            );
+        }
     }
 }

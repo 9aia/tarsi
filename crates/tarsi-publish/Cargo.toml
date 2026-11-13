@@ -11,6 +11,11 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tarsi-core = { path = "../tarsi-core" }
 thiserror = "2"
+hypha-secret = { git = "ssh://git@github.com/9aia/hypha.git", rev = "1e39f7f74490d9fb8f15db8841216dd3a7c00c46" }
+hypha-secret-cuora = { git = "ssh://git@github.com/9aia/hypha.git", rev = "1e39f7f74490d9fb8f15db8841216dd3a7c00c46" }
+
+[dev-dependencies]
+tempfile = "3"
 
 [lints]
 workspace = true

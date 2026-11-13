@@ -25,7 +25,8 @@ enabled = false   # not on crates.io yet
 
 [publish.ghreleases]
 enabled = false  # org doesn't use GH releases — capability stays for external consumers
-# token_env = "GITHUB_TOKEN"
+# token_env = "GITHUB_TOKEN"   # env-var fallback (default)
+# token_ref = "cuora://<scope>/<name>"  # cuora secret ref — wins over token_env
 # repo defaults to the origin remote (9aia/tarsi)
 # Release assets: repo-root-relative globs; {unit}/{version} expand
 # per unit. Uncomment once dist/ artifacts exist:

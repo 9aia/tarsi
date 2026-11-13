@@ -1,7 +1,8 @@
 //! The `tarsi.toml`/`tarsi.yml` config model — pure serde types.
 //! Loading/discovery lives in scarab-config (`FileSource`); this
 //! module only defines what the file *means*. Secret **names**
-//! appear here (`token_env`); values never do — cuora boundary.
+//! and `cuora://` refs appear here (`token_env`, `token_ref`);
+//! values never do — cuora boundary.
 
 use std::collections::BTreeMap;
 
@@ -178,6 +179,18 @@ pub struct CratesPublish {
     /// Max publish attempts per unit.
     #[serde(default = "default_attempts")]
     pub max_attempts: u32,
+    /// Env var NAME consulted for the crates.io token when
+    /// `token_ref` is unset or misses — cargo reads
+    /// `CARGO_REGISTRY_TOKEN`, and a resolved value is injected
+    /// into the publish child's environment under that name. The
+    /// value never appears in config, manifests, or logs.
+    #[serde(default = "default_crates_token_env")]
+    pub token_env: String,
+    /// Optional `cuora://<scope>/<name>` secret ref — resolved via
+    /// cuora at publish time and takes precedence over `token_env`.
+    /// The value never appears in config or logs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_ref: Option<String>,
 }
 
 impl Default for CratesPublish {
@@ -186,6 +199,8 @@ impl Default for CratesPublish {
             enabled: true,
             retry_429: true,
             max_attempts: default_attempts(),
+            token_env: default_crates_token_env(),
+            token_ref: None,
         }
     }
 }
@@ -206,6 +221,11 @@ pub struct GhReleasePublish {
     /// Repo override `owner/name`; default = git remote.
     #[serde(default)]
     pub repo: Option<String>,
+    /// Optional `cuora://<scope>/<name>` secret ref — resolved via
+    /// cuora at publish time and takes precedence over `token_env`.
+    /// The value never appears in config or logs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub token_ref: Option<String>,
     /// Repo-root-relative glob patterns for release assets —
     /// `{unit}` and `{version}` expand per releasing unit, e.g.
     /// `["dist/{unit}-{version}-*", "{unit}/checksums.txt"]`.
@@ -222,6 +242,7 @@ impl Default for GhReleasePublish {
             enabled: true,
             token_env: default_token_env(),
             repo: None,
+            token_ref: None,
             assets: Vec::new(),
         }
     }
@@ -229,6 +250,9 @@ impl Default for GhReleasePublish {
 
 fn default_token_env() -> String {
     "GITHUB_TOKEN".to_string()
+}
+fn default_crates_token_env() -> String {
+    "CARGO_REGISTRY_TOKEN".to_string()
 }
 fn default_true() -> bool {
     true
@@ -302,6 +326,35 @@ assets = ["dist/{unit}-{version}-*"]
             vec!["dist/{unit}-{version}-*".to_string()]
         );
         assert!(cfg.publish.crates.enabled);
+    }
+
+    #[test]
+    fn publish_token_fields() {
+        let text = r#"
+[publish.crates]
+token_env = "CARGO_REGISTRY_TOKEN"
+token_ref = "cuora://tamias/crates-token"
+
+[publish.ghreleases]
+token_ref = "cuora://org/GH_RELEASES_TOKEN"
+"#;
+        let cfg: Config = toml::from_str(text).unwrap();
+        assert_eq!(cfg.publish.crates.token_env, "CARGO_REGISTRY_TOKEN");
+        assert_eq!(
+            cfg.publish.crates.token_ref.as_deref(),
+            Some("cuora://tamias/crates-token")
+        );
+        assert_eq!(
+            cfg.publish.ghreleases.token_ref.as_deref(),
+            Some("cuora://org/GH_RELEASES_TOKEN")
+        );
+        // Defaults: crates reads CARGO_REGISTRY_TOKEN, ghreleases
+        // GITHUB_TOKEN; no refs unless configured.
+        let d = Config::default();
+        assert_eq!(d.publish.crates.token_env, "CARGO_REGISTRY_TOKEN");
+        assert_eq!(d.publish.ghreleases.token_env, "GITHUB_TOKEN");
+        assert!(d.publish.crates.token_ref.is_none());
+        assert!(d.publish.ghreleases.token_ref.is_none());
     }
 
     #[test]

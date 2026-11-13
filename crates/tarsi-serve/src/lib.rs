@@ -1413,22 +1413,23 @@ fn run_publishers(
                 serde_json::from_value::<PublishTarget>(target).unwrap_or(PublishTarget::CratesIo);
             let entry = match t {
                 PublishTarget::CratesIo if cfg.publish.crates.enabled => {
-                    tarsi_publish_crates::CratesPublisher::new(dir.to_path_buf())
-                        .publish(&job)
-                        .map(|r| json!(r))
-                        .map_err(|e| e.to_string())
+                    let mut p = tarsi_publish_crates::CratesPublisher::new(dir.to_path_buf());
+                    p.max_attempts = cfg.publish.crates.max_attempts;
+                    p.retry_429 = cfg.publish.crates.retry_429;
+                    p.token_env = cfg.publish.crates.token_env.clone();
+                    p.token_ref = cfg.publish.crates.token_ref.clone();
+                    p.publish(&job).map(|r| json!(r)).map_err(|e| e.to_string())
                 }
                 PublishTarget::GithubRelease if cfg.publish.ghreleases.enabled => {
                     if let Some(e) = &asset_err {
                         Err(e.clone())
                     } else {
-                        tarsi_publish_ghreleases::GhReleasePublisher::new(
+                        let mut p = tarsi_publish_ghreleases::GhReleasePublisher::new(
                             gh_repo.clone().unwrap_or_default(),
                             cfg.publish.ghreleases.token_env.clone(),
-                        )
-                        .publish(&job)
-                        .map(|r| json!(r))
-                        .map_err(|e| e.to_string())
+                        );
+                        p.token_ref = cfg.publish.ghreleases.token_ref.clone();
+                        p.publish(&job).map(|r| json!(r)).map_err(|e| e.to_string())
                     }
                 }
                 // `disabled: true` marks a skipped target — it must

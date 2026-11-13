@@ -220,6 +220,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6dbf3de79e51f3d586ab4cb9d5c3e2c14aa28ed23d180cf89b4df0454a69cc87"
 
 [[package]]
+name = "hypha-secret"
+version = "0.1.0"
+source = "git+ssh://git@github.com/9aia/hypha.git?rev=1e39f7f74490d9fb8f15db8841216dd3a7c00c46#1e39f7f74490d9fb8f15db8841216dd3a7c00c46"
+
+[[package]]
+name = "hypha-secret-cuora"
+version = "0.1.0"
+source = "git+ssh://git@github.com/9aia/hypha.git?rev=1e39f7f74490d9fb8f15db8841216dd3a7c00c46#1e39f7f74490d9fb8f15db8841216dd3a7c00c46"
+dependencies = [
+ "hypha-secret",
+ "serde_json",
+]
+
+[[package]]
 name = "hypha-serve-cli"
 version = "0.1.0"
 source = "git+ssh://git@github.com/9aia/hypha.git?rev=a74fd126c730e3e77d02c8a5cd4472fe04dcbeff#a74fd126c730e3e77d02c8a5cd4472fe04dcbeff"
@@ -821,9 +835,12 @@ dependencies = [
 name = "tarsi-publish"
 version = "0.2.0"
 dependencies = [
+ "hypha-secret",
+ "hypha-secret-cuora",
  "serde",
  "serde_json",
  "tarsi-core",
+ "tempfile",
  "thiserror",
 ]
 
@@ -833,6 +850,7 @@ version = "0.2.0"
 dependencies = [
  "tarsi-core",
  "tarsi-publish",
+ "tempfile",
  "thiserror",
 ]
 

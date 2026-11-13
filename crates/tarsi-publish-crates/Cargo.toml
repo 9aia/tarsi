@@ -11,5 +11,8 @@ tarsi-publish = { path = "../tarsi-publish" }
 tarsi-core = { path = "../tarsi-core" }
 thiserror = "2"
 
+[dev-dependencies]
+tempfile = "3"
+
 [lints]
 workspace = true

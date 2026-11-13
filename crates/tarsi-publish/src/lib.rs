@@ -1,8 +1,13 @@
 //! tarsi-publish — the publish port. One [`Publisher`] per forge
 //! target; `tarsi-serve`/drivers iterate [`tarsi_core::ReleasePlan`]
 //! units in order and dispatch by [`PublishTarget`]. All impls are
-//! sync; secrets arrive as env-var *names* resolved by the caller
-//! (cuora boundary — values never in config or logs).
+//! sync; secrets arrive as env-var *names* or `cuora://` refs
+//! resolved through [`token::TokenResolver`] — values never in
+//! config or logs (cuora boundary).
+
+pub mod token;
+
+pub use token::{CuoraTokenResolver, TokenResolver};
 
 use std::path::PathBuf;
 
