@@ -10,7 +10,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::bump::Bump;
 use crate::changelog::{Changelog, ChangelogEntry};
-use crate::commit::{Commit, CommitKind, ConventionalCommit};
+use crate::commit::{Commit, ConventionalCommit};
+use crate::strategy::Strategy;
 use crate::unit::ReleaseUnitSpec;
 
 /// One unit's resolved release decision.
@@ -124,8 +125,9 @@ pub enum PlanError {
     Empty,
 }
 
-/// Plan a release: attribute `commits` (newest-first, as the VCS
-/// port returns them) to `specs`, infer bumps, topo-sort.
+/// Plan a release under the `conventional` strategy — the
+/// pre-P-030 default. Equivalent to
+/// [`plan_release_with_strategy`] with [`Strategy::conventional`].
 ///
 /// `specs` may come from [`UnitsSpec::CargoWorkspace`] resolved by
 /// the caller, or be passed directly — this function is pure.
@@ -133,6 +135,22 @@ pub fn plan_release(
     specs: &[ReleaseUnitSpec],
     commits: &[Commit],
     date: Option<String>,
+) -> Result<ReleasePlan, PlanError> {
+    plan_release_with_strategy(specs, commits, date, &Strategy::conventional())
+}
+
+/// Plan a release under an explicit [`Strategy`] (P-030) — bump
+/// inference and changelog sectioning are data-driven; the
+/// `conventional` builtin reproduces the legacy hardcoded policy
+/// byte-identically.
+///
+/// `specs` may come from [`UnitsSpec::CargoWorkspace`] resolved by
+/// the caller, or be passed directly — this function is pure.
+pub fn plan_release_with_strategy(
+    specs: &[ReleaseUnitSpec],
+    commits: &[Commit],
+    date: Option<String>,
+    strategy: &Strategy,
 ) -> Result<ReleasePlan, PlanError> {
     if specs.is_empty() {
         return Err(PlanError::Empty);
@@ -157,24 +175,37 @@ pub fn plan_release(
             .filter(|c| commit_touches(c, &spec.path))
             .cloned()
             .collect();
-        let mut bump = spec.bump.unwrap_or(Bump::None);
+        // Inference fold: a commit contributes the max bump across
+        // its matching rules; the unit takes the max across commits.
+        let mut inferred = Bump::None;
         let mut conventional = Vec::new();
-        let mut changelog = Changelog {
-            version: String::new(),
-            date: date.clone(),
-            ..Changelog::default()
-        };
+        let mut changelog =
+            Changelog::for_strategy(&strategy.changelog.sections, String::new(), date.clone());
         for c in &mine {
             let Some(cc) = c.conventional() else {
                 continue;
             };
             conventional.push(cc.clone());
-            let cb = bump_for(&cc);
-            if spec.bump.is_none() {
-                bump = bump.max(cb);
+            inferred = inferred.max(strategy.bump_for(&cc));
+            if let Some(sec) = strategy.section_for(&cc) {
+                changelog.push(
+                    &sec.key,
+                    &sec.heading,
+                    ChangelogEntry::from_commit(&c.sha, &cc),
+                );
             }
-            changelog.push(cc.kind, ChangelogEntry::from_commit(&c.sha, &cc));
         }
+        // `spec.bump` (unit override) wins outright; otherwise the
+        // inferred bump, falling back to the strategy's `fallback`
+        // (`release.default_bump` is folded in by the caller) when
+        // inference finds nothing.
+        let bump = spec.bump.unwrap_or_else(|| {
+            if inferred.releases() {
+                inferred
+            } else {
+                strategy.bump.fallback.unwrap_or(Bump::None)
+            }
+        });
         let new_version = bump.apply(&spec.current_version);
         changelog.version = new_version.to_string();
         units.push(UnitPlan {
@@ -221,17 +252,10 @@ fn commit_touches(commit: &Commit, unit_path: &str) -> bool {
         .any(|p| p == prefix || p.starts_with(&format!("{prefix}/")))
 }
 
-/// Conventional kind → bump signal. `breaking` always wins.
-fn bump_for(cc: &ConventionalCommit) -> Bump {
-    if cc.breaking {
-        return Bump::Major;
-    }
-    match cc.kind {
-        CommitKind::Feat => Bump::Minor,
-        CommitKind::Fix | CommitKind::Perf => Bump::Patch,
-        _ => Bump::None,
-    }
-}
+// NOTE: resolving `UnitsSpec::CargoWorkspace` into concrete specs
+// (manifest scanning) is intentionally NOT here — core stays pure.
+// That resolution belongs to a manifest/`tarsi-config` layer that
+// feeds `plan_release` explicit `ReleaseUnitSpec`s.
 
 /// Kahn's algorithm over `depends_on`. Returns units in publish
 /// order — dependencies first.
@@ -285,11 +309,6 @@ fn topo_sort(units: &[UnitPlan]) -> Result<Vec<UnitPlan>, PlanError> {
     }
     Ok(out)
 }
-
-// NOTE: resolving `UnitsSpec::CargoWorkspace` into concrete specs
-// (manifest scanning) is intentionally NOT here — core stays pure.
-// That resolution belongs to a manifest/`tarsi-config` layer that
-// feeds `plan_release` explicit `ReleaseUnitSpec`s.
 
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]

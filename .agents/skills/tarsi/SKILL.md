@@ -36,7 +36,7 @@ Ops (all JSON in/out — no `--json` flag exists or is needed):
 | -- | ------ | ------- |
 | `manifest` | — | op directory |
 | `profiles` | — | installed `type: tarsi` release profiles |
-| `plan` | `dir`, `profile?`, `range?` | units in topo order: bump, new_version, tag, changelog_markdown, publish_targets |
+| `plan` | `dir`, `profile?`, `range?` | units in topo order: bump, new_version, tag, changelog_markdown, publish_targets; `strategy{name,resolved}` echoes the release strategy |
 | `changelog` | same | per-unit `{unit, version, tag, markdown}` for releasing units |
 | `notes` | same | concatenated release notes |
 | `check` | same | read-only validation: `checks[]` (tag-available, manifest-present, changelog-not-drifted, publish-*) + plan; `ok:false` on drift |
@@ -70,10 +70,42 @@ A plain `tarsi_core::Config` document (TOML or YAML). Key sections:
 
 - `[release]` — `units` (default: cargo workspace members),
   `tag_format` (default `{unit}-v{version}` — the org convention),
-  `changelog_path`, `styleguide`, `diff_exclude` (path globs kept
-  out of commit attribution), `unit_overrides.<name>`
-  (`bump`/`tag_format`/`publish`/`skip`), `sync_refs` (pack/doc
-  version-ref rewrites — see below).
+  `changelog_path`, `strategy` (release policy — see below),
+  `default_bump` (fallback bump when inference finds nothing),
+  `diff_exclude` (path globs stripped from commits before
+  attribution — a commit left with no paths is dropped),
+  `unit_overrides.<name>` (`bump`/`tag_format`/`publish`/`skip`),
+  `sync_refs` (pack/doc version-ref rewrites — see below).
+  `styleguide` is **deprecated** (superseded by
+  `strategy.changelog`) — still parsed, ignored.
+- `[release] strategy` — builtin name (`"conventional"`,
+  `"semantic-release-angular"`) or an inline table. Absent =
+  `conventional`. Inline form:
+
+  ```toml
+  [release.strategy.bump]
+  fallback = "patch"            # bump when no rule matches
+  [[release.strategy.bump.rules]]
+  type = "feat"                 # raw conventional type token ("*" = any)
+  scope = "core-*"              # optional: exact or trailing-* glob
+  breaking = true               # optional: pin the !/BREAKING flag
+  not_type = ["fix"]            # optional: type tokens that veto
+  bump = "minor"                # major|minor|patch|none — max-match fold
+
+  [release.strategy.changelog]
+  [[release.strategy.changelog.sections]]
+  key = "added"                 # stable id
+  heading = "Added"             # ### text
+  [[release.strategy.changelog.sections.rules]]
+  type = "feat"                 # first matching section wins;
+                                # table order = render order
+  ```
+
+  Rules match the commit's **raw type token** (`deps`, `i18n`,
+  … are nameable — not just the closed `CommitKind` set). Each
+  absent `strategy.*` sub-table defaults to the `conventional`
+  rules. The resolved strategy echoes on `plan` results as
+  `plan.strategy {name, resolved}`.
 - `[release.sync_refs]` — `rules[]` of `{files, find, replace}`:
   `files` are repo-root globs, `find` a regex, `replace` literal;
   `{old}`/`{new}` expand to the releasing units' shared
@@ -104,12 +136,16 @@ commit is the placement (profiles resolve versioned by
 
 ## Bump inference (conventional commits)
 
-`feat`/`perf` → minor, `fix` → patch, `!`/`BREAKING CHANGE` →
-major; chore/docs/test/etc. don't release (`Bump::None`). Commits
-attribute to units by path prefix; repo-root files land in
-`unattributed`. Per-unit bumps can disagree — with
-`version.workspace = true` the workspace version is last-writer-
-wins (documented ADR-0003 limitation).
+Default strategy `conventional`: `feat`→minor, `fix`/`perf`→patch,
+`!`/`BREAKING CHANGE`→major; chore/docs/test/etc. don't release
+(`Bump::None`). Breaking commits of otherwise-silent kinds land in
+changelog `Changed`. Other strategies are data — see
+`[release] strategy` above (`semantic-release-angular` ships the
+commit-analyzer angular preset). Commits attribute to units by
+path prefix; repo-root files land in `unattributed`. Per-unit
+bumps can disagree — with `version.workspace = true` the
+workspace version is last-writer-wins (documented ADR-0003
+limitation).
 
 ## Testing / dogfooding
 

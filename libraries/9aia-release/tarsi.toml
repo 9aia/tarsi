@@ -6,11 +6,13 @@
 # repo-specific overrides belong in the repo's own tarsi.toml.
 #
 # Mirrors the org's `scripts/release.sh` reality + ADR-0003/0004:
-# per-unit tags `{unit}-v{semver}`, keep-a-changelog sections,
+# per-unit tags `{unit}-v{semver}`, the `conventional` release
+# strategy (keep-a-changelog sections, feat/fix/perf bump rules —
+# P-030; pinned explicitly though it is the default),
 # workspace-member release units, dep-ordered publishes.
 
 [release]
-styleguide = "keep-a-changelog"
+strategy = "conventional"
 changelog_path = "CHANGELOG.md"
 # Repo-docs noise never attributes commits to release units.
 diff_exclude = ["docs/**", "project/**", "*.md", ".github/**"]

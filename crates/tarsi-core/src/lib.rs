@@ -9,11 +9,17 @@ pub mod changelog;
 pub mod commit;
 pub mod config;
 pub mod plan;
+pub mod strategy;
 pub mod unit;
 
 pub use bump::Bump;
-pub use changelog::{Changelog, ChangelogEntry, Section};
+pub use changelog::{Changelog, ChangelogEntry, ChangelogSection};
 pub use commit::{parse_conventional, Commit, CommitKind, ConventionalCommit};
 pub use config::Config;
-pub use plan::{plan_release, PlanError, ReleasePlan, ReleaseStep, UnitPlan};
+pub use plan::{
+    plan_release, plan_release_with_strategy, PlanError, ReleasePlan, ReleaseStep, UnitPlan,
+};
+pub use strategy::{
+    BumpRule, BumpRules, ChangelogRules, SectionRule, SectionSpec, Strategy, StrategyRef,
+};
 pub use unit::{PublishTarget, ReleaseUnitSpec};

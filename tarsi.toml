@@ -4,7 +4,7 @@
 # overrides minimal until per-unit workspace versions are supported.
 
 [release]
-styleguide = "keep-a-changelog"
+strategy = "conventional"
 changelog_path = "CHANGELOG.md"
 diff_exclude = ["docs/**", "project/**", "*.md", ".github/**"]
 

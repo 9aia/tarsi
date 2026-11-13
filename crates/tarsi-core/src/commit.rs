@@ -49,6 +49,11 @@ impl CommitKind {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConventionalCommit {
     pub kind: CommitKind,
+    /// The exact type token from the subject (`feat`, `deps`,
+    /// `i18n`, …) — strategy rules match on this, not the closed
+    /// [`CommitKind`] enum, so arbitrary conventional types are
+    /// nameable in config (P-030).
+    pub raw_type: String,
     pub scope: Option<String>,
     /// `!` after type/scope, or a `BREAKING CHANGE:`/`BREAKING-CHANGE:`
     /// footer — callers fold footer detection into `breaking` when
@@ -115,6 +120,7 @@ pub fn parse_conventional(subject: &str) -> Option<ConventionalCommit> {
     }
     Some(ConventionalCommit {
         kind: CommitKind::parse(kind_s),
+        raw_type: kind_s.to_string(),
         scope,
         breaking: bang,
         description,

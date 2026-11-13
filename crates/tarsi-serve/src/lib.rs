@@ -24,7 +24,8 @@ use lasius_vcs_git::GitVcs;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tarsi_core::commit::Commit;
-use tarsi_core::{plan_release, Config, PublishTarget, ReleasePlan, ReleaseUnitSpec};
+use tarsi_core::strategy::{Strategy, StrategyRef};
+use tarsi_core::{plan_release_with_strategy, Config, PublishTarget, ReleasePlan, ReleaseUnitSpec};
 use tarsi_publish::{PublishJob, Publisher};
 
 mod sync_refs;
@@ -148,15 +149,78 @@ pub fn dispatch(vcs: &dyn Vcs, req: &Request) -> Response {
 }
 
 /// Load config + specs + commits → plan, serialized with rendered
-/// changelog markdown per unit.
+/// changelog markdown per unit. The release [`Strategy`] resolves
+/// here (P-030) — `[release] strategy` (builtin name or inline
+/// table), `default_bump` folded in as the fallback, and
+/// `diff_exclude` applied as a pre-attribution commit filter — so
+/// every op (`plan`/`changelog`/`notes`/`check`/`bump`/`tag`/
+/// `publish`/`release`) inherits the same policy. The effective
+/// strategy is echoed on the plan for consumers.
 fn build_plan(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Result<Value, String> {
     let cfg = load_config(dir, params)?;
     let specs = resolve_specs(dir, &cfg)?;
     let commits = gather_commits(vcs, dir, &specs, params)?;
+    let commits = apply_diff_exclude(commits, &cfg.release.diff_exclude)?;
+    let (strategy, strategy_name) = resolve_strategy(&cfg)?;
     let date = today();
-    let plan = plan_release(&specs, &commits, Some(date)).map_err(|e| e.to_string())?;
-    let plan_json = plan_to_json(&plan, &cfg);
+    let plan = plan_release_with_strategy(&specs, &commits, Some(date), &strategy)
+        .map_err(|e| e.to_string())?;
+    let mut plan_json = plan_to_json(&plan, &cfg);
+    plan_json["strategy"] = json!({
+        "name": strategy_name,
+        "resolved": strategy,
+    });
     Ok(json!({ "specs": specs, "plan": plan_json }))
+}
+
+/// Resolve the effective [`Strategy`] for `cfg`: `[release]
+/// strategy` names a builtin or carries an inline table (absent =
+/// `conventional`); `release.default_bump` fills the fallback when
+/// the strategy doesn't set one. Returns `(strategy, display
+/// name)` — the name echoes into the plan (`"custom"` for inline
+/// tables).
+fn resolve_strategy(cfg: &Config) -> Result<(Strategy, String), String> {
+    let (name, mut strategy) = match &cfg.release.strategy {
+        Some(r) => {
+            let name = match r {
+                StrategyRef::Named(n) => n.clone(),
+                StrategyRef::Inline(_) => "custom".to_string(),
+            };
+            let s = r.resolve().map_err(|e| format!("release.strategy: {e}"))?;
+            (name, s)
+        }
+        None => ("conventional".to_string(), Strategy::conventional()),
+    };
+    if strategy.bump.fallback.is_none() {
+        strategy.bump.fallback = cfg.release.default_bump;
+    }
+    Ok((strategy, name))
+}
+
+/// `[release] diff_exclude` — path globs stripped from each
+/// commit's `paths` before attribution (P-030). A commit left
+/// with zero paths is dropped entirely — an emptied path list
+/// would otherwise mean "unknown granularity → matches every
+/// unit". Commits with originally-empty `paths` pass through
+/// untouched (nothing to filter).
+fn apply_diff_exclude(commits: Vec<Commit>, patterns: &[String]) -> Result<Vec<Commit>, String> {
+    if patterns.is_empty() {
+        return Ok(commits);
+    }
+    let pats = patterns
+        .iter()
+        .map(|p| glob::Pattern::new(p).map_err(|e| format!("diff_exclude: bad glob {p:?}: {e}")))
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(commits
+        .into_iter()
+        .filter_map(|mut c| {
+            if c.paths.is_empty() {
+                return Some(c);
+            }
+            c.paths.retain(|p| !pats.iter().any(|pat| pat.matches(p)));
+            (!c.paths.is_empty()).then_some(c)
+        })
+        .collect())
 }
 
 /// Result-value → [`Response`]: ops report failures inside the
@@ -244,9 +308,9 @@ fn op_schema() -> Value {
         ),
         (
             "plan",
-            "release plan: units in topo order with bump, new_version, tag, changelog_markdown, publish_targets",
+            "release plan: units in topo order with bump, new_version, tag, changelog_markdown, publish_targets; `strategy` echoes the resolved release strategy (name + rules)",
             "{dir, profile?, range?, units?}",
-            "{specs, plan{units[], unattributed[], steps[]}}",
+            "{specs, plan{units[], unattributed[], steps[], strategy{name, resolved}}}",
         ),
         (
             "changelog",
@@ -315,6 +379,7 @@ fn op_schema() -> Value {
             "`units` accepts plan-unit JSON echoed by `plan`/`check`/`bump` — chain granular steps without re-planning",
             "granular order: `bump` → `tag` (push:true) → `publish`; `release` composes the same stages atomically",
             "`[release.sync_refs]` rules rewrite pack/doc version refs into the bump commit before tagging — skipped on mixed-version plans, idempotent",
+            "`[release] strategy` selects bump/changelog rules — builtin name (`conventional`, `semantic-release-angular`) or inline `[release.strategy.*]` table; absent = `conventional`; `default_bump` is the strategy fallback, `diff_exclude` filters commits pre-attribution; `styleguide` is deprecated (superseded by `strategy.changelog`)",
         ],
         "ops": ops,
     })

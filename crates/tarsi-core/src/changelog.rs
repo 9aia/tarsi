@@ -1,39 +1,24 @@
-//! Keep-a-changelog model: fixed section order, entries grouped
-//! under sections, markdown rendering for splicing into
-//! `CHANGELOG.md`.
-
-use std::collections::BTreeMap;
+//! Changelog model: strategy-ordered sections, entries grouped
+//! under them, markdown rendering for splicing into
+//! `CHANGELOG.md`. Section identity/order/headings come from the
+//! release [`Strategy`](crate::strategy::Strategy) — P-030 made
+//! the keep-a-changelog section map data, so this module no longer
+//! hardcodes `Section` kinds; the `conventional` builtin
+//! reproduces the old map byte-identically.
 
 use serde::{Deserialize, Serialize};
 
-use crate::commit::{CommitKind, ConventionalCommit};
+use crate::commit::ConventionalCommit;
 
-/// The keep-a-changelog sections, in render order.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-#[serde(rename_all = "PascalCase")]
-pub enum Section {
-    Added,
-    Changed,
-    Deprecated,
-    Removed,
-    Fixed,
-    Security,
-}
-
-impl Section {
-    /// Canonical heading text (`## [Unreleased]` style headings are
-    /// emitted by the renderer, not stored here).
-    #[must_use]
-    pub fn heading(self) -> &'static str {
-        match self {
-            Self::Added => "Added",
-            Self::Changed => "Changed",
-            Self::Deprecated => "Deprecated",
-            Self::Removed => "Removed",
-            Self::Fixed => "Fixed",
-            Self::Security => "Security",
-        }
-    }
+/// One rendered section: stable `key` (the strategy's section
+/// identity), display `heading` (`### ` text), and its entries.
+/// Sections render in `Changelog.sections` order — the strategy's
+/// table order.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ChangelogSection {
+    pub key: String,
+    pub heading: String,
+    pub entries: Vec<ChangelogEntry>,
 }
 
 /// One changelog line's worth of data.
@@ -59,9 +44,11 @@ impl ChangelogEntry {
     }
 }
 
-/// Sections → entries for one release. `BTreeMap` keyed by `Section`
-/// keeps canonical order (the enum's `Ord` matches declaration
-/// order).
+/// Sections → entries for one release. `sections` is an ordered
+/// `Vec` — order is the strategy's render order (the old
+/// `BTreeMap<Section, _>` relied on the enum's declaration order;
+/// string keys can't carry that, so the strategy's table order is
+/// stored explicitly).
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Changelog {
     /// Rendered under `## [version] - date`; empty version =
@@ -69,20 +56,49 @@ pub struct Changelog {
     pub version: String,
     /// ISO date; `None` = omit the date suffix.
     pub date: Option<String>,
-    pub sections: BTreeMap<Section, Vec<ChangelogEntry>>,
+    /// Ordered sections — pre-seeded from the strategy's section
+    /// table so render order is stable regardless of which
+    /// section a commit lands in first.
+    pub sections: Vec<ChangelogSection>,
 }
 
 impl Changelog {
-    /// Insert an entry into its mapped section. Returns `false`
-    /// when the commit kind isn't changelog-worthy (docs/chore/
-    /// test/style/ci/build/revert with no breaking flag) — the
-    /// entry is dropped.
-    pub fn push(&mut self, kind: CommitKind, entry: ChangelogEntry) -> bool {
-        let Some(section) = section_for(kind, entry.breaking) else {
-            return false;
-        };
-        self.sections.entry(section).or_default().push(entry);
-        true
+    /// An empty changelog with the strategy's sections pre-seeded
+    /// in render order — every section exists (empty) so `push`
+    /// appends in place and `render` emits table order.
+    #[must_use]
+    pub fn for_strategy(
+        sections: &[crate::strategy::SectionSpec],
+        version: String,
+        date: Option<String>,
+    ) -> Self {
+        Self {
+            version,
+            date,
+            sections: sections
+                .iter()
+                .map(|s| ChangelogSection {
+                    key: s.key.clone(),
+                    heading: s.heading.clone(),
+                    entries: Vec::new(),
+                })
+                .collect(),
+        }
+    }
+
+    /// Append `entry` to section `key`. The section is created at
+    /// the end (with `heading` as its `### ` text) when absent —
+    /// callers that pre-seed via [`Changelog::for_strategy`] never
+    /// hit that path.
+    pub fn push(&mut self, key: &str, heading: &str, entry: ChangelogEntry) {
+        match self.sections.iter_mut().find(|s| s.key == key) {
+            Some(s) => s.entries.push(entry),
+            None => self.sections.push(ChangelogSection {
+                key: key.to_string(),
+                heading: heading.to_string(),
+                entries: vec![entry],
+            }),
+        }
     }
 
     /// Render to keep-a-changelog markdown:
@@ -108,14 +124,14 @@ impl Changelog {
         out.push_str("## ");
         out.push_str(&heading);
         out.push('\n');
-        for (section, entries) in &self.sections {
-            if entries.is_empty() {
+        for section in &self.sections {
+            if section.entries.is_empty() {
                 continue;
             }
             out.push_str("\n### ");
-            out.push_str(section.heading());
+            out.push_str(&section.heading);
             out.push_str("\n\n");
-            for e in entries {
+            for e in &section.entries {
                 out.push_str("- ");
                 if e.breaking {
                     out.push_str("**BREAKING** ");
@@ -134,31 +150,6 @@ impl Changelog {
     }
 }
 
-/// Map commit kind → changelog section. `None` = not
-/// changelog-worthy. Breaking changes on otherwise-silent kinds
-/// land in `Changed`.
-fn section_for(kind: CommitKind, breaking: bool) -> Option<Section> {
-    match kind {
-        CommitKind::Feat => Some(Section::Added),
-        CommitKind::Fix | CommitKind::Perf => Some(Section::Fixed),
-        CommitKind::Refactor => Some(Section::Changed),
-        CommitKind::Docs
-        | CommitKind::Style
-        | CommitKind::Test
-        | CommitKind::Build
-        | CommitKind::Ci
-        | CommitKind::Chore
-        | CommitKind::Revert
-        | CommitKind::Other => {
-            if breaking {
-                Some(Section::Changed)
-            } else {
-                None
-            }
-        }
-    }
-}
-
 fn short_sha(sha: &str) -> &str {
     sha.get(..7).unwrap_or(sha)
 }
@@ -168,21 +159,25 @@ fn short_sha(sha: &str) -> &str {
 mod tests {
     use super::*;
     use crate::commit::parse_conventional;
+    use crate::strategy::Strategy;
 
     #[test]
-    fn sections_render_in_canonical_order() {
-        let mut cl = Changelog {
-            version: "1.0.0".into(),
-            date: Some("2026-11-10".into()),
-            ..Changelog::default()
-        };
-        for (subject, kind_expected) in [
-            ("fix: crash on empty input", CommitKind::Fix),
-            ("feat: new thing", CommitKind::Feat),
-        ] {
+    fn sections_render_in_strategy_order() {
+        let strategy = Strategy::conventional();
+        let mut cl = Changelog::for_strategy(
+            &strategy.changelog.sections,
+            "1.0.0".into(),
+            Some("2026-11-10".into()),
+        );
+        // Push Fixed before Added — render order must still be
+        // the strategy's table order (Added before Fixed… via
+        // Changed between them; only non-empty sections render).
+        for subject in ["fix: crash on empty input", "feat: new thing"] {
             let cc = parse_conventional(subject).unwrap();
+            let sec = strategy.section_for(&cc).unwrap();
             cl.push(
-                kind_expected,
+                &sec.key,
+                &sec.heading,
                 ChangelogEntry::from_commit("abcdef1234567890", &cc),
             );
         }
@@ -195,17 +190,22 @@ mod tests {
     }
 
     #[test]
-    fn non_conventional_and_chore_are_dropped() {
+    fn empty_sections_are_skipped_and_unknown_keys_append() {
         let mut cl = Changelog::default();
-        assert!(!cl.push(
-            CommitKind::Chore,
+        cl.push(
+            "custom",
+            "Custom Heading",
             ChangelogEntry {
                 sha: "x".into(),
                 scope: None,
-                description: "bump deps".into(),
+                description: "thing".into(),
                 breaking: false,
-            }
-        ));
-        assert!(cl.sections.is_empty());
+            },
+        );
+        let out = cl.render();
+        assert!(out.contains("### Custom Heading"));
+        assert!(out.contains("- thing"));
+        // Empty sections never render headings.
+        assert!(!out.contains("### Added"));
     }
 }

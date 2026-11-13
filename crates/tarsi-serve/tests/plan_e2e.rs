@@ -173,3 +173,82 @@ fn release_dry_run_reports_configured_assets() {
         .expect("ghreleases report for bbb");
     assert!(!gh_bbb["detail"].as_str().unwrap().contains("assets:"));
 }
+
+#[test]
+fn plan_honors_named_release_strategy() {
+    let d = fixture();
+    write(
+        d.path(),
+        "tarsi.toml",
+        "[release]\nstrategy = \"semantic-release-angular\"\n",
+    );
+    let req = Request {
+        op: "plan".into(),
+        params: json!({ "dir": d.path().to_string_lossy() }),
+    };
+    let resp = dispatch(&GitVcs, &req);
+    assert!(resp.ok, "{:?}", resp.error);
+    let r = resp.result.unwrap();
+    // The resolved strategy echoes on the plan.
+    assert_eq!(r["plan"]["strategy"]["name"], "semantic-release-angular");
+    let units = r["plan"]["units"].as_array().unwrap();
+    let bbb = units
+        .iter()
+        .find(|u| u["spec"]["name"] == "bbb")
+        .expect("bbb unit");
+    // angular's section headings differ from keep-a-changelog's.
+    let md = bbb["changelog_markdown"].as_str().unwrap();
+    assert!(md.contains("### Bug Fixes"), "{md}");
+    assert!(!md.contains("### Fixed"), "{md}");
+}
+
+#[test]
+fn plan_honors_inline_strategy_default_bump_and_diff_exclude() {
+    let d = fixture();
+    // A docs-only commit that would land in `unattributed` without
+    // diff_exclude; `*.md`/`docs/**` drop it pre-attribution.
+    write(d.path(), "docs/guide.md", "# guide\n");
+    git(d.path(), &["add", "-A"]);
+    git(d.path(), &["commit", "-qm", "fix: docs typo"]);
+    write(
+        d.path(),
+        "tarsi.toml",
+        r#"
+[release]
+default_bump = "patch"
+diff_exclude = ["docs/**", "*.md"]
+
+[release.strategy.bump]
+[[release.strategy.bump.rules]]
+type = "feat"
+bump = "major"
+"#,
+    );
+    let req = Request {
+        op: "plan".into(),
+        params: json!({ "dir": d.path().to_string_lossy() }),
+    };
+    let resp = dispatch(&GitVcs, &req);
+    assert!(resp.ok, "{:?}", resp.error);
+    let r = resp.result.unwrap();
+    assert_eq!(r["plan"]["strategy"]["name"], "custom");
+    let units = r["plan"]["units"].as_array().unwrap();
+    let aaa = units
+        .iter()
+        .find(|u| u["spec"]["name"] == "aaa")
+        .expect("aaa unit");
+    // Custom rule: feat → major (conventional would say minor).
+    assert_eq!(aaa["bump"], "major");
+    assert_eq!(aaa["new_version"], "1.0.0");
+    let bbb = units
+        .iter()
+        .find(|u| u["spec"]["name"] == "bbb")
+        .expect("bbb unit");
+    // fix matches no custom rule → inferred none → default_bump
+    // fallback → patch.
+    assert_eq!(bbb["bump"], "patch");
+    assert_eq!(bbb["new_version"], "0.1.1");
+    // The docs-only commit was filtered pre-attribution — nothing
+    // unattributed.
+    assert_eq!(r["plan"]["unattributed"].as_array().unwrap().len(), 0);
+}

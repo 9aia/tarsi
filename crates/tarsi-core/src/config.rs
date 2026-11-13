@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use crate::bump::Bump;
+use crate::strategy::StrategyRef;
 use crate::unit::{PublishTarget, ReleaseUnitSpec, UnitsSpec};
 
 /// Top-level config — `tarsi.toml` or `tarsi.yaml`.
@@ -40,13 +41,31 @@ pub struct ReleaseConfig {
     #[serde(default = "default_changelog_path")]
     pub changelog_path: String,
     /// keep-a-changelog | conventional-commit-grouped | …
+    ///
+    /// **Deprecated (P-030)** — superseded by
+    /// [`ReleaseConfig::strategy`]'s `changelog` section table.
+    /// Still parsed for backward compat; has no effect on
+    /// planning (it never did — the field was always descriptive).
     #[serde(default = "default_styleguide")]
     pub styleguide: String,
-    /// Repo-wide default bump when inference finds nothing.
+    /// Release strategy (P-030): a builtin name
+    /// (`"conventional"`, `"semantic-release-angular"`) or an
+    /// inline rules table (`[release.strategy.bump]` /
+    /// `[release.strategy.changelog]`). Absent = `conventional`,
+    /// the pre-strategy behavior. Resolved inside `tarsi-serve`'s
+    /// plan path so every op inherits it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub strategy: Option<StrategyRef>,
+    /// Repo-wide default bump when inference finds nothing —
+    /// honored as the strategy's `fallback` (P-030 wired the
+    /// previously-dead field; an explicit `strategy.bump.fallback`
+    /// wins).
     #[serde(default)]
     pub default_bump: Option<Bump>,
     /// Path globs excluded from commit→unit attribution
-    /// (e.g. `["docs/**", "*.md"]`).
+    /// (e.g. `["docs/**", "*.md"]`). Wired in P-030: matching
+    /// paths are stripped from each commit before attribution;
+    /// a commit left with no paths is dropped entirely.
     #[serde(default)]
     pub diff_exclude: Vec<String>,
     /// Per-unit overrides keyed by unit name.
@@ -68,6 +87,7 @@ impl Default for ReleaseConfig {
             tag_format: default_tag_format(),
             changelog_path: default_changelog_path(),
             styleguide: default_styleguide(),
+            strategy: None,
             default_bump: None,
             diff_exclude: Vec::new(),
             unit_overrides: BTreeMap::new(),
