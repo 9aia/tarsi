@@ -29,6 +29,11 @@ drives `tarsi-serve release --yes`.
 Dev shortcut without tamias: `cargo xtask install` puts a release
 `tarsi-serve` in `~/.local/bin`.
 
+Fleet rollout is opt-in per repo (ADR-0005): `scripts/fleet-check.sh`
+sweeps the sibling clones and reports which carry `tarsi.toml` + a
+`tarsi-serve` `release.sh` shim — run it from any checkout to see the
+current state.
+
 The legacy TypeScript implementation lives on the `legacy-ts` branch.
 
 ## Docs
