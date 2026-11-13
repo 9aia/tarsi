@@ -373,7 +373,7 @@ fn run_check(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
         // this plan wants to write — the release likely already
         // happened (or the range is wrong).
         let version = u["new_version"].as_str().unwrap_or_default();
-        let cl = changelog_path(dir, u);
+        let cl = changelog_path(dir, u, &cfg.release.changelog_path);
         let drifted = std::fs::read_to_string(&cl)
             .map(|s| s.contains(&format!("## [{version}]")))
             .unwrap_or(false);
@@ -479,9 +479,11 @@ fn op_bump(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
     }
     let mut steps_run: Vec<Value> = Vec::new();
     let mut created_files: Vec<PathBuf> = Vec::new();
+    let cfg = load_config(dir, params).unwrap_or_default();
+    let changelog_rel = cfg.release.changelog_path.as_str();
     for u in &releasing {
-        match write_changelog(dir, u) {
-            Ok(true) => created_files.push(changelog_path(dir, u)),
+        match write_changelog(dir, u, changelog_rel) {
+            Ok(true) => created_files.push(changelog_path(dir, u, changelog_rel)),
             Ok(false) => {}
             Err(e) => {
                 return bump_error(
@@ -513,7 +515,7 @@ fn op_bump(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
         }
     }
     steps_run.push(json!("bump-manifests"));
-    if let Err(e) = stage_release_paths(vcs, dir, &releasing) {
+    if let Err(e) = stage_release_paths(vcs, dir, &releasing, changelog_rel) {
         return bump_error(
             &plan,
             &releasing,
@@ -978,7 +980,14 @@ fn execute_release(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
         ..ReleaseState::default()
     };
 
-    if let Err(e) = mutate_release(vcs, dir, &releasing, &mut st, &mut steps_run) {
+    if let Err(e) = mutate_release(
+        vcs,
+        dir,
+        &cfg.release.changelog_path,
+        &releasing,
+        &mut st,
+        &mut steps_run,
+    ) {
         let rolled_back = rollback(vcs, dir, &st);
         return json!({
             "ok": false,
@@ -1042,13 +1051,14 @@ fn execute_release(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
 fn mutate_release(
     vcs: &dyn Vcs,
     dir: &Path,
+    changelog_rel: &str,
     releasing: &[Value],
     st: &mut ReleaseState,
     steps_run: &mut Vec<Value>,
 ) -> Result<(), String> {
     for u in releasing {
-        if write_changelog(dir, u)? {
-            st.created_files.push(changelog_path(dir, u));
+        if write_changelog(dir, u, changelog_rel)? {
+            st.created_files.push(changelog_path(dir, u, changelog_rel));
         }
     }
     steps_run.push(json!("write-changelogs"));
@@ -1061,7 +1071,7 @@ fn mutate_release(
         }
     }
     steps_run.push(json!("bump-manifests"));
-    stage_release_paths(vcs, dir, releasing)?;
+    stage_release_paths(vcs, dir, releasing, changelog_rel)?;
     vcs.commit(dir, "chore(release): bump versions", None, true)
         .map_err(|e| format!("commit-bump: {e}"))?;
     st.committed = true;
@@ -1088,17 +1098,23 @@ fn mutate_release(
     Ok(())
 }
 
-/// Stage only the files tarsi touched — `CHANGELOG.md` +
-/// `Cargo.toml` per releasing unit, plus the workspace-root
+/// Stage only the files tarsi touched — the configured changelog
+/// (`release.changelog_path`, unit-path-relative) + `Cargo.toml`
+/// per releasing unit, plus the workspace-root
 /// `Cargo.toml`/`Cargo.lock` and `tarsi.*` config candidates.
 /// Never `git add -A`: unrelated dirty files must not ride the
 /// release commit.
-fn stage_release_paths(vcs: &dyn Vcs, dir: &Path, releasing: &[Value]) -> Result<(), String> {
+fn stage_release_paths(
+    vcs: &dyn Vcs,
+    dir: &Path,
+    releasing: &[Value],
+    changelog_rel: &str,
+) -> Result<(), String> {
     let mut paths = std::collections::BTreeSet::new();
     for u in releasing {
         let p = u["spec"]["path"].as_str().unwrap_or(".");
         let p = if p.is_empty() { "." } else { p };
-        for f in ["CHANGELOG.md", "Cargo.toml"] {
+        for f in [changelog_rel, "Cargo.toml"] {
             paths.insert(format!("{p}/{f}"));
         }
     }
@@ -1299,17 +1315,20 @@ fn run_publishers(
     publish_reports
 }
 
-/// `<unit path>/CHANGELOG.md` for a plan unit.
-fn changelog_path(dir: &Path, unit: &Value) -> PathBuf {
+/// `<unit path>/<changelog_rel>` for a plan unit —
+/// `release.changelog_path` is the changelog file *within* each
+/// unit's directory (default `CHANGELOG.md`).
+fn changelog_path(dir: &Path, unit: &Value, changelog_rel: &str) -> PathBuf {
     let path = unit["spec"]["path"].as_str().unwrap_or(".");
-    dir.join(path).join("CHANGELOG.md")
+    dir.join(path).join(changelog_rel)
 }
 
-/// Write (or prepend into) a unit's `CHANGELOG.md`.
+/// Write (or prepend into) a unit's changelog — `changelog_rel`
+/// is `release.changelog_path`, unit-path-relative.
 /// Returns `Ok(true)` when the file was newly created — rollback
 /// uses that to remove files `reset --hard` can't reach.
-fn write_changelog(dir: &Path, unit: &Value) -> Result<bool, String> {
-    let file = changelog_path(dir, unit);
+fn write_changelog(dir: &Path, unit: &Value, changelog_rel: &str) -> Result<bool, String> {
+    let file = changelog_path(dir, unit, changelog_rel);
     let md = unit["changelog_markdown"].as_str().unwrap_or_default();
     if md.is_empty() {
         return Ok(false);
@@ -1460,7 +1479,12 @@ mod tests {
         let d = tempfile::tempdir().unwrap();
         let f = d.path().join("CHANGELOG.md");
         std::fs::write(&f, "# Changelog\n\n## 0.1.0\n\nold entry\n").unwrap();
-        let created = write_changelog(d.path(), &unit(".", "## 0.2.0\n\nnew entry\n")).unwrap();
+        let created = write_changelog(
+            d.path(),
+            &unit(".", "## 0.2.0\n\nnew entry\n"),
+            "CHANGELOG.md",
+        )
+        .unwrap();
         assert!(!created, "file existed — not a create");
         let s = std::fs::read_to_string(&f).unwrap();
         assert!(s.starts_with("# Changelog\n\n## 0.2.0"), "{s:?}");
@@ -1481,6 +1505,7 @@ mod tests {
         write_changelog(
             d.path(),
             &unit(".", "## [0.2.0] - 2026-02-01\n\nnew entry\n"),
+            "CHANGELOG.md",
         )
         .unwrap();
         let s = std::fs::read_to_string(&f).unwrap();
@@ -1500,7 +1525,12 @@ mod tests {
         let d = tempfile::tempdir().unwrap();
         let f = d.path().join("CHANGELOG.md");
         std::fs::write(&f, "# Changelog\n\n## [Unreleased]\n\n- pending\n").unwrap();
-        write_changelog(d.path(), &unit(".", "## [0.1.0]\n\nfirst\n")).unwrap();
+        write_changelog(
+            d.path(),
+            &unit(".", "## [0.1.0]\n\nfirst\n"),
+            "CHANGELOG.md",
+        )
+        .unwrap();
         let s = std::fs::read_to_string(&f).unwrap();
         assert!(s.find("## [Unreleased]") < s.find("## [0.1.0]"), "{s:?}");
         assert!(s.ends_with("first\n"), "single trailing newline: {s:?}");
@@ -1509,7 +1539,12 @@ mod tests {
     #[test]
     fn changelog_new_file_reports_created() {
         let d = tempfile::tempdir().unwrap();
-        let created = write_changelog(d.path(), &unit("crates/u", "## 1.0.0\n\nnotes\n")).unwrap();
+        let created = write_changelog(
+            d.path(),
+            &unit("crates/u", "## 1.0.0\n\nnotes\n"),
+            "CHANGELOG.md",
+        )
+        .unwrap();
         assert!(created);
         let s = std::fs::read_to_string(d.path().join("crates/u/CHANGELOG.md")).unwrap();
         assert_eq!(s, "# Changelog\n\n## 1.0.0\n\nnotes\n");
@@ -1518,8 +1553,30 @@ mod tests {
     #[test]
     fn changelog_empty_markdown_writes_nothing() {
         let d = tempfile::tempdir().unwrap();
-        let created = write_changelog(d.path(), &unit(".", "")).unwrap();
+        let created = write_changelog(d.path(), &unit(".", ""), "CHANGELOG.md").unwrap();
         assert!(!created);
         assert!(!d.path().join("CHANGELOG.md").exists());
+    }
+
+    #[test]
+    fn changelog_configured_path_is_unit_relative() {
+        // `release.changelog_path` overrides the file *inside* each
+        // unit dir — `docs/CHANGES.md` lands at
+        // `<unit path>/docs/CHANGES.md`, not the repo root.
+        let d = tempfile::tempdir().unwrap();
+        let created = write_changelog(
+            d.path(),
+            &unit("crates/u", "## 1.0.0\n\nnotes\n"),
+            "docs/CHANGES.md",
+        )
+        .unwrap();
+        assert!(created);
+        let f = d.path().join("crates/u/docs/CHANGES.md");
+        assert!(f.exists(), "{}", f.display());
+        assert!(!d.path().join("docs/CHANGES.md").exists());
+        assert_eq!(
+            changelog_path(d.path(), &unit("crates/u", ""), "docs/CHANGES.md"),
+            f
+        );
     }
 }

@@ -75,11 +75,15 @@ impl ReleasePlan {
     /// (not per unit) except publish steps which name their unit.
     #[must_use]
     pub fn steps(&self) -> Vec<ReleaseStep> {
+        // Push precedes publish — execution pushes the bump commit
+        // and tags *before* any forge call (GitHub Releases
+        // auto-create `refs/tags/<tag>` at remote HEAD otherwise).
         let mut steps = vec![
             ReleaseStep::WriteChangelogs,
             ReleaseStep::BumpManifests,
             ReleaseStep::CommitBump,
             ReleaseStep::Tag,
+            ReleaseStep::Push,
         ];
         for u in self.units.iter().filter(|u| u.releases()) {
             if u.spec
@@ -99,7 +103,6 @@ impl ReleasePlan {
                 break;
             }
         }
-        steps.push(ReleaseStep::Push);
         steps
     }
 
@@ -412,6 +415,12 @@ mod tests {
         assert!(matches!(steps[0], ReleaseStep::WriteChangelogs));
         assert!(steps.contains(&ReleaseStep::PublishCrates));
         assert!(!steps.contains(&ReleaseStep::PublishGithubReleases));
-        assert!(matches!(steps.last(), Some(ReleaseStep::Push)));
+        // Push before publish — matches execution order.
+        let push = steps.iter().position(|s| *s == ReleaseStep::Push).unwrap();
+        let publish = steps
+            .iter()
+            .position(|s| *s == ReleaseStep::PublishCrates)
+            .unwrap();
+        assert!(push < publish, "push must precede publish: {steps:?}");
     }
 }

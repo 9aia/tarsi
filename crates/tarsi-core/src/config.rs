@@ -34,7 +34,9 @@ pub struct ReleaseConfig {
     /// Default tag template for units that don't override it.
     #[serde(default = "default_tag_format")]
     pub tag_format: String,
-    /// Changelog file to splice (repo root relative).
+    /// Changelog file spliced per unit — resolved relative to each
+    /// unit's path (`crates/foo` + `CHANGES.md` →
+    /// `crates/foo/CHANGES.md`).
     #[serde(default = "default_changelog_path")]
     pub changelog_path: String,
     /// keep-a-changelog | conventional-commit-grouped | …
