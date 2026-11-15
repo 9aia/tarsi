@@ -147,10 +147,13 @@ pub struct SyncRefRule {
 /// Per-unit config overrides.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct UnitOverride {
+    /// Force this unit's bump (beats inference).
     #[serde(default)]
     pub bump: Option<Bump>,
+    /// Per-unit tag template.
     #[serde(default)]
     pub tag_format: Option<String>,
+    /// Restrict publish targets (`"crates-io"`, `"github-release"`).
     #[serde(default)]
     pub publish: Option<Vec<PublishTarget>>,
     /// Skip this unit entirely (e.g. a lib that versions with its
@@ -161,16 +164,21 @@ pub struct UnitOverride {
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PublishConfig {
+    /// crates.io publish target.
     #[serde(default)]
     pub crates: CratesPublish,
+    /// GitHub Releases publish target.
     #[serde(default)]
     pub ghreleases: GhReleasePublish,
+    /// Schema-level dry-run flag; the serve op's `dry_run` param is
+    /// what callers use.
     #[serde(default)]
     pub dry_run: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CratesPublish {
+    /// crates.io publishing on/off.
     #[serde(default = "default_true")]
     pub enabled: bool,
     /// Retry crates.io 429s with backoff (release.sh semantics).
@@ -211,6 +219,7 @@ fn default_attempts() -> u32 {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GhReleasePublish {
+    /// GitHub Releases on/off.
     #[serde(default = "default_true")]
     pub enabled: bool,
     /// Env var NAME holding the GitHub token — resolved via
