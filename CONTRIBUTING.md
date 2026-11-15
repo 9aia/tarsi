@@ -51,7 +51,7 @@ Here's a brief overview of the documents:
 Install the following tools:
 
 - [Git](https://git-scm.com/downloads)
-- [Bun 1.2.13 or higher](https://bun.sh/docs/installation)
+- [Bun 1.2 or higher](https://bun.sh/docs/installation)
 - ([Vscode](https://code.visualstudio.com/download) or any Vscode compatible editor) (recommended)
 
 ### Preparing the Local Repository
