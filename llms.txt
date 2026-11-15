@@ -8,7 +8,7 @@ Changelog → semver bump → tag → publish — one ops wire for humans, agent
 
 ### Tutorials
 
-- [Your first release](/tarsi/tutorials/first-release.md)
+- [Getting started](/tarsi/tutorials/getting-started.md)
 
 ### How-to
 

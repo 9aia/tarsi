@@ -1,7 +1,7 @@
 ---
-url: /tarsi/tutorials/first-release.md
+url: /tarsi/tutorials/getting-started.md
 ---
-# Your first release
+# Getting started
 
 This tutorial cuts a real release of a small repo using only
 `tarsi-serve` — install, wire check, plan, dry-run, release, verify.
@@ -144,6 +144,17 @@ tarsi-serve plan --dir .   # now: nothing to release
 
 The latest-tag-per-unit range means a second `plan` finds no new
 commits since the tags you just pushed.
+
+## What you now know
+
+* `tarsi-serve` is the whole surface: one-shot argv ops plus an
+  ndjson loop, dry-run by default.
+* `plan` is the review gate — per-unit bump, version, tag,
+  changelog, and the exact mutation sequence `release` would run.
+* `release --yes` mutates in order: changelogs → manifest bumps →
+  staged commit → tags → push → publish — with rollback reporting.
+* Re-running `plan` after a release finds nothing new: latest-tag-
+  per-unit ranges are the idempotency boundary.
 
 ## Next steps
 
