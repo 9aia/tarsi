@@ -12,6 +12,7 @@ export default defineConfig({
   ignoreDeadLinks: [/\/api\//],
   themeConfig: {
     nav: [
+      { text: "9aia", link: "https://9aia.com", target: "_blank" },
       { text: "Tutorials", link: "/tutorials/getting-started" },
       { text: "How-to", link: "/how-to/" },
       { text: "Explanation", link: "/explanation/" },
@@ -23,7 +24,6 @@ export default defineConfig({
           { text: "llms-full.txt", link: "https://9aia.com/tarsi/llms-full.txt", target: "_blank" },
         ],
       },
-      { text: "9aia", link: "https://9aia.com" },
     ],
     sidebar: [
       {
