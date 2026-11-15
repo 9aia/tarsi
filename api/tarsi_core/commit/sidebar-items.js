@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["CommitKind"],"fn":["parse_conventional"],"struct":["Commit","ConventionalCommit"]};

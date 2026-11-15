@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["capabilities_value","config_schema","deploy","dispatch","emit","health","hooks","install","load_config","logs","manifest_value","run_verb","serve","status","uninstall"],"mod":["data","views"],"struct":["DriverConfig","Invocation"],"type":["Env"]};

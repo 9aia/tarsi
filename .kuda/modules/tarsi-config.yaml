@@ -1,0 +1,238 @@
+name: tarsi-config
+path: crates/tarsi-config/Cargo.toml
+purpose: tarsi.toml/tarsi.yml loading — scarab-config file discovery over tarsi_core::Config, plus type:tarsi release-profile resolution.
+api:
+- name: CONFIG_EXTS
+  kind: const
+  file: crates/tarsi-config/src/profile.rs
+  line: 52
+  module: tarsi-config
+- name: Env
+  kind: type
+  file: crates/tarsi-config/src/profile.rs
+  line: 48
+  module: tarsi-config
+- name: HOME_LOCK
+  kind: const
+  file: crates/tarsi-config/src/lib.rs
+  line: 143
+  module: tarsi-config
+- name: HomeGuard
+  kind: type
+  file: crates/tarsi-config/src/lib.rs
+  line: 145
+  module: tarsi-config
+- name: ProfileInfo
+  kind: type
+  file: crates/tarsi-config/src/profile.rs
+  line: 56
+  module: tarsi-config
+- name: StoreEntry
+  kind: type
+  file: crates/tarsi-config/src/profile.rs
+  line: 72
+  module: tarsi-config
+- name: config_file_in
+  kind: function
+  file: crates/tarsi-config/src/profile.rs
+  line: 82
+  module: tarsi-config
+- name: description_in
+  kind: function
+  file: crates/tarsi-config/src/profile.rs
+  line: 104
+  module: tarsi-config
+- name: description_prefers_manifest
+  kind: function
+  file: crates/tarsi-config/src/profile.rs
+  line: 460
+  module: tarsi-config
+- name: dir_profiles
+  kind: function
+  file: crates/tarsi-config/src/profile.rs
+  line: 140
+  module: tarsi-config
+- name: drop
+  kind: function
+  file: crates/tarsi-config/src/lib.rs
+  line: 160
+  module: tarsi-config
+- name: env_of
+  kind: function
+  file: crates/tarsi-config/src/lib.rs
+  line: 108
+  module: tarsi-config
+- name: env_of
+  kind: function
+  file: crates/tarsi-config/src/profile.rs
+  line: 384
+  module: tarsi-config
+- name: env_profile_var_selects_profile
+  kind: function
+  file: crates/tarsi-config/src/lib.rs
+  line: 222
+  module: tarsi-config
+- name: env_var
+  kind: function
+  file: crates/tarsi-config/src/lib.rs
+  line: 26
+  module: tarsi-config
+- name: find_dir
+  kind: function
+  file: crates/tarsi-config/src/profile.rs
+  line: 314
+  module: tarsi-config
+- name: find_dir_env
+  kind: function
+  file: crates/tarsi-config/src/profile.rs
+  line: 370
+  module: tarsi-config
+- name: finds_profile_in_tamias_store_best_version
+  kind: function
+  file: crates/tarsi-config/src/profile.rs
+  line: 414
+  module: tarsi-config
+- name: finds_profile_under_tarsi_profiles_dir
+  kind: function
+  file: crates/tarsi-config/src/profile.rs
+  line: 398
+  module: tarsi-config
+- name: first_match
+  kind: function
+  file: crates/tarsi-config/src/lib.rs
+  line: 37
+  module: tarsi-config
+- name: label_rank
+  kind: function
+  file: crates/tarsi-config/src/profile.rs
+  line: 304
+  module: tarsi-config
+- name: list
+  kind: function
+  file: crates/tarsi-config/src/profile.rs
+  line: 344
+  module: tarsi-config
+- name: list_profiles
+  kind: function
+  file: crates/tarsi-config/src/profile.rs
+  line: 375
+  module: tarsi-config
+- name: load
+  kind: function
+  file: crates/tarsi-config/src/lib.rs
+  line: 79
+  module: tarsi-config
+- name: load_for
+  kind: function
+  file: crates/tarsi-config/src/lib.rs
+  line: 61
+  module: tarsi-config
+- name: load_in
+  kind: function
+  file: crates/tarsi-config/src/lib.rs
+  line: 86
+  module: tarsi-config
+- name: load_in_with_profile
+  kind: function
+  file: crates/tarsi-config/src/lib.rs
+  line: 93
+  module: tarsi-config
+- name: load_path
+  kind: function
+  file: crates/tarsi-config/src/lib.rs
+  line: 99
+  module: tarsi-config
+- name: loads_toml_from_dir
+  kind: function
+  file: crates/tarsi-config/src/lib.rs
+  line: 117
+  module: tarsi-config
+- name: missing_config_errors
+  kind: function
+  file: crates/tarsi-config/src/lib.rs
+  line: 131
+  module: tarsi-config
+- name: missing_named_profile_is_an_error
+  kind: function
+  file: crates/tarsi-config/src/lib.rs
+  line: 210
+  module: tarsi-config
+- name: name_matches
+  kind: function
+  file: crates/tarsi-config/src/profile.rs
+  line: 283
+  module: tarsi-config
+- name: parse_entry
+  kind: function
+  file: crates/tarsi-config/src/profile.rs
+  line: 263
+  module: tarsi-config
+- name: parse_value
+  kind: function
+  file: crates/tarsi-config/src/profile.rs
+  line: 91
+  module: tarsi-config
+- name: profile
+  kind: module
+  file: crates/tarsi-config/src/lib.rs
+  line: 22
+  module: tarsi-config
+- name: profile_layers_between_repo_and_user
+  kind: function
+  file: crates/tarsi-config/src/lib.rs
+  line: 169
+  module: tarsi-config
+- name: profile_name
+  kind: function
+  file: crates/tarsi-config/src/lib.rs
+  line: 43
+  module: tarsi-config
+- name: rejects_unsafe_names
+  kind: function
+  file: crates/tarsi-config/src/profile.rs
+  line: 448
+  module: tarsi-config
+- name: safe_name
+  kind: function
+  file: crates/tarsi-config/src/profile.rs
+  line: 127
+  module: tarsi-config
+- name: set
+  kind: function
+  file: crates/tarsi-config/src/lib.rs
+  line: 151
+  module: tarsi-config
+api_omitted: 7
+deps:
+- scarab-config
+- scarab-config-file
+- scarab-config-toml
+- scarab-config-yaml
+- semver
+- serde_json
+- tarsi-core
+- tempfile
+- scarab_config
+- scarab_config_toml
+- scarab_config_yaml
+- serde_json
+- scarab_config_file
+- tarsi-core
+- profile
+notes: ''
+verify:
+- crates/tarsi-config/Cargo.toml
+- crates/tarsi-config/src/lib.rs
+- crates/tarsi-config/src/profile.rs
+provenance:
+  files:
+  - crates/tarsi-config/Cargo.toml
+  - crates/tarsi-config/src/lib.rs
+  - crates/tarsi-config/src/profile.rs
+  hashes:
+  - 8e8ff78162a387458fe32dc8c89a0c3723f7e443
+  - 33a5fd1a740f0b571fa6591cb294295e3a6d7c1b
+  - a7d12bf93890bf53fe34d81787a4bc3839fbcf87
+  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
+  generated_at: '1794533324'
+  generator: kuda-template/0.1.4

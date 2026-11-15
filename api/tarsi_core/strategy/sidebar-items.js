@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["StrategyRef"],"struct":["BumpRule","BumpRules","ChangelogRules","SectionRule","SectionSpec","Strategy"]};

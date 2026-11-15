@@ -1,0 +1,74 @@
+name: tarsi-publish-crates
+path: crates/tarsi-publish-crates/Cargo.toml
+purpose: crates.io Publisher — dep-ordered cargo publish with 429 retry (release.sh semantics).
+api:
+- name: CratesPublisher
+  kind: type
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 16
+  module: tarsi-publish-crates
+- name: dry_run_never_spawns
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 115
+  module: tarsi-publish-crates
+- name: is_already_published
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 40
+  module: tarsi-publish-crates
+- name: is_rate_limited
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 36
+  module: tarsi-publish-crates
+- name: new
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 27
+  module: tarsi-publish-crates
+- name: publish
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 51
+  module: tarsi-publish-crates
+- name: rate_limit_detection
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 105
+  module: tarsi-publish-crates
+- name: target
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 47
+  module: tarsi-publish-crates
+- name: tarsi-publish-crates
+  kind: module
+  file: crates/tarsi-publish-crates/Cargo.toml
+  line: 1
+  module: tarsi-publish-crates
+- name: tests
+  kind: module
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 101
+  module: tarsi-publish-crates
+deps:
+- tarsi-core
+- tarsi-publish
+- thiserror
+- tarsi-core
+- tarsi-publish
+notes: ''
+verify:
+- crates/tarsi-publish-crates/Cargo.toml
+- crates/tarsi-publish-crates/src/lib.rs
+provenance:
+  files:
+  - crates/tarsi-publish-crates/Cargo.toml
+  - crates/tarsi-publish-crates/src/lib.rs
+  hashes:
+  - 08174e6b47e286cb2a3a5d18e48ee53f123a4353
+  - ca054dced85667d64969eed43731010feeb86c84
+  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
+  generated_at: '1794533324'
+  generator: kuda-template/0.1.4

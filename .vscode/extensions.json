@@ -1,0 +1,9 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "yzhang.markdown-all-in-one",
+    "eamodio.gitlens",
+    "GitHub.copilot"
+  ],
+  "unwantedRecommendations": []
+}

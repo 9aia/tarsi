@@ -1,0 +1,17 @@
+target/
+coverage/
+*.profraw
+.env
+
+# worktrees (orphan branches — created by `myco init` / repo tooling)
+project/
+docs/
+
+.kuda/index.sqlite
+.kuda/meta.json
+
+# tamias pack payload — built by `cargo xtask pack`
+/libraries/tarsi/tools/
+
+# tamias-driver-tarsi bundled-driver payload — built by `cargo xtask pack`
+/libraries/9aia-release/drivers/

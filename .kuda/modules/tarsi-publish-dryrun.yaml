@@ -1,0 +1,68 @@
+name: tarsi-publish-dryrun
+path: crates/tarsi-publish-dryrun/Cargo.toml
+purpose: Dry-run Publisher — validates and reports every target without remote writes.
+api:
+- name: DryRunPublisher
+  kind: type
+  file: crates/tarsi-publish-dryrun/src/lib.rs
+  line: 10
+  module: tarsi-publish-dryrun
+- name: TargetDryRun
+  kind: type
+  file: crates/tarsi-publish-dryrun/src/lib.rs
+  line: 49
+  module: tarsi-publish-dryrun
+- name: asset_suffix
+  kind: function
+  file: crates/tarsi-publish-dryrun/src/lib.rs
+  line: 72
+  module: tarsi-publish-dryrun
+- name: for_target
+  kind: function
+  file: crates/tarsi-publish-dryrun/src/lib.rs
+  line: 42
+  module: tarsi-publish-dryrun
+- name: publish
+  kind: function
+  file: crates/tarsi-publish-dryrun/src/lib.rs
+  line: 22
+  module: tarsi-publish-dryrun
+- name: publish
+  kind: function
+  file: crates/tarsi-publish-dryrun/src/lib.rs
+  line: 56
+  module: tarsi-publish-dryrun
+- name: target
+  kind: function
+  file: crates/tarsi-publish-dryrun/src/lib.rs
+  line: 13
+  module: tarsi-publish-dryrun
+- name: target
+  kind: function
+  file: crates/tarsi-publish-dryrun/src/lib.rs
+  line: 52
+  module: tarsi-publish-dryrun
+- name: tarsi-publish-dryrun
+  kind: module
+  file: crates/tarsi-publish-dryrun/Cargo.toml
+  line: 1
+  module: tarsi-publish-dryrun
+deps:
+- tarsi-core
+- tarsi-publish
+- tarsi-core
+- tarsi-publish
+notes: ''
+verify:
+- crates/tarsi-publish-dryrun/Cargo.toml
+- crates/tarsi-publish-dryrun/src/lib.rs
+provenance:
+  files:
+  - crates/tarsi-publish-dryrun/Cargo.toml
+  - crates/tarsi-publish-dryrun/src/lib.rs
+  hashes:
+  - d1d1ecb6393519bdc92a149f813856bda9fb18dd
+  - 6360c8bec0f27937f18cc75aa9b9fc76263fede5
+  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
+  generated_at: '1794533324'
+  generator: kuda-template/0.1.4

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["CARGO_TOKEN_ENV"],"struct":["CratesPublisher"]};

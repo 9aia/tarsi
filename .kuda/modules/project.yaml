@@ -1,0 +1,34 @@
+name: project
+path: project/BACKLOG.md
+purpose: myco work ledger — tasks, ADRs, issues, plans, handoffs
+api: []
+deps: []
+notes: ''
+verify:
+- project/BACKLOG.md
+- project/DONE.md
+- project/TODO.md
+- project/index.md
+- project/notes/CHANGELOG.md
+- project/notes/SUGGESTIONS.md
+- project/plans/pl-0001-strategy.md
+provenance:
+  files:
+  - project/BACKLOG.md
+  - project/DONE.md
+  - project/TODO.md
+  - project/index.md
+  - project/notes/CHANGELOG.md
+  - project/notes/SUGGESTIONS.md
+  - project/plans/pl-0001-strategy.md
+  hashes:
+  - 9065e6f6e33503b5f7a4a773acd637396048731c
+  - 7762bf896fc61575c180ade9394f9d2e20d8d7c9
+  - 6b7aa3609a3666979ed09c51f75e8ed3f7c8adf2
+  - 99ddc896c72e7d4904f4562a7086409332565df2
+  - ef04b5489052f3df2cad2e10c566e6272136e150
+  - c498a7007d6574ee754169d01fa68df6df12bde5
+  - bc343231aaf87867052209b2f18238dcc00584e1
+  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
+  generated_at: '1794533324'
+  generator: kuda-template/0.1.4

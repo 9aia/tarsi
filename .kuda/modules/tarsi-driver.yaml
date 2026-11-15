@@ -1,0 +1,247 @@
+name: tarsi-driver
+path: crates/tarsi-driver/Cargo.toml
+purpose: tamias-driver-tarsi — tamias content driver for type:tarsi release-profile packs
+api:
+- name: Args
+  kind: type
+  file: crates/tarsi-driver/src/main.rs
+  line: 42
+  module: tarsi-driver
+- name: CONFIG_EXTS
+  kind: const
+  file: crates/tarsi-driver/src/lib.rs
+  line: 107
+  module: tarsi-driver
+- name: DriverConfig
+  kind: type
+  file: crates/tarsi-driver/src/lib.rs
+  line: 133
+  module: tarsi-driver
+- name: Env
+  kind: type
+  file: crates/tarsi-driver/src/lib.rs
+  line: 95
+  module: tarsi-driver
+- name: Invocation
+  kind: type
+  file: crates/tarsi-driver/src/lib.rs
+  line: 111
+  module: tarsi-driver
+- name: MARKER
+  kind: const
+  file: crates/tarsi-driver/src/lib.rs
+  line: 103
+  module: tarsi-driver
+- name: PROFILE_COLS
+  kind: const
+  file: crates/tarsi-driver/src/views.rs
+  line: 81
+  module: tarsi-driver
+- name: UNIT_COLS
+  kind: const
+  file: crates/tarsi-driver/src/views.rs
+  line: 88
+  module: tarsi-driver
+- name: USAGE
+  kind: const
+  file: crates/tarsi-driver/src/main.rs
+  line: 38
+  module: tarsi-driver
+- name: WHO
+  kind: const
+  file: crates/tarsi-driver/src/lib.rs
+  line: 98
+  module: tarsi-driver
+- name: argv_for
+  kind: function
+  file: crates/tarsi-driver/src/data.rs
+  line: 34
+  module: tarsi-driver
+- name: bad_payload_fails_loudly
+  kind: function
+  file: crates/tarsi-driver/tests/verbs.rs
+  line: 184
+  module: tarsi-driver
+- name: bare_name
+  kind: function
+  file: crates/tarsi-driver/src/lib.rs
+  line: 403
+  module: tarsi-driver
+- name: candidate_json
+  kind: function
+  file: crates/tarsi-driver/src/lib.rs
+  line: 567
+  module: tarsi-driver
+- name: capabilities_and_schema_shapes
+  kind: function
+  file: crates/tarsi-driver/src/lib.rs
+  line: 1067
+  module: tarsi-driver
+- name: capabilities_answers_tamias_discovery
+  kind: function
+  file: crates/tarsi-driver/tests/verbs.rs
+  line: 40
+  module: tarsi-driver
+- name: capabilities_value
+  kind: function
+  file: crates/tarsi-driver/src/lib.rs
+  line: 145
+  module: tarsi-driver
+- name: changelog_data
+  kind: function
+  file: crates/tarsi-driver/src/views.rs
+  line: 317
+  module: tarsi-driver
+- name: changelog_payload
+  kind: function
+  file: crates/tarsi-driver/src/data.rs
+  line: 138
+  module: tarsi-driver
+- name: changelog_root
+  kind: function
+  file: crates/tarsi-driver/src/views.rs
+  line: 363
+  module: tarsi-driver
+- name: changelog_root_inlines_markdown
+  kind: function
+  file: crates/tarsi-driver/src/views.rs
+  line: 567
+  module: tarsi-driver
+- name: col
+  kind: function
+  file: crates/tarsi-driver/src/views.rs
+  line: 41
+  module: tarsi-driver
+- name: config_file_in
+  kind: function
+  file: crates/tarsi-driver/src/lib.rs
+  line: 260
+  module: tarsi-driver
+- name: config_load_rebases_and_expands
+  kind: function
+  file: crates/tarsi-driver/src/lib.rs
+  line: 1042
+  module: tarsi-driver
+- name: config_schema
+  kind: function
+  file: crates/tarsi-driver/src/lib.rs
+  line: 173
+  module: tarsi-driver
+- name: config_schema_is_draft_2020_12
+  kind: function
+  file: crates/tarsi-driver/tests/verbs.rs
+  line: 51
+  module: tarsi-driver
+- name: copy_inner
+  kind: function
+  file: crates/tarsi-driver/src/lib.rs
+  line: 471
+  module: tarsi-driver
+- name: copy_tree
+  kind: function
+  file: crates/tarsi-driver/src/lib.rs
+  line: 467
+  module: tarsi-driver
+- name: data
+  kind: module
+  file: crates/tarsi-driver/src/lib.rs
+  line: 83
+  module: tarsi-driver
+- name: deploy
+  kind: function
+  file: crates/tarsi-driver/src/lib.rs
+  line: 609
+  module: tarsi-driver
+- name: deploy_resyncs_profiles_dir_copy
+  kind: function
+  file: crates/tarsi-driver/src/lib.rs
+  line: 987
+  module: tarsi-driver
+- name: dispatch
+  kind: function
+  file: crates/tarsi-driver/src/lib.rs
+  line: 739
+  module: tarsi-driver
+- name: driver
+  kind: function
+  file: crates/tarsi-driver/tests/verbs.rs
+  line: 8
+  module: tarsi-driver
+- name: driver_passes_pavo_conformance
+  kind: function
+  file: crates/tarsi-driver/tests/conformance.rs
+  line: 19
+  module: tarsi-driver
+- name: emit
+  kind: function
+  file: crates/tarsi-driver/src/lib.rs
+  line: 715
+  module: tarsi-driver
+- name: env
+  kind: function
+  file: crates/tarsi-driver/src/main.rs
+  line: 81
+  module: tarsi-driver
+- name: env_of
+  kind: function
+  file: crates/tarsi-driver/src/lib.rs
+  line: 787
+  module: tarsi-driver
+- name: env_of
+  kind: function
+  file: crates/tarsi-driver/src/views.rs
+  line: 419
+  module: tarsi-driver
+- name: every_binding_is_a_known_query
+  kind: function
+  file: crates/tarsi-driver/src/views.rs
+  line: 458
+  module: tarsi-driver
+- name: expand_tilde
+  kind: function
+  file: crates/tarsi-driver/src/lib.rs
+  line: 247
+  module: tarsi-driver
+api_omitted: 79
+deps:
+- pavo-driver-kit
+- pavo-protocol
+- scarab-config
+- scarab-config-yaml
+- serde_json
+- tarsi-config
+- pavo-testkit
+- tempfile
+- serde_json
+- pavo_protocol
+- scarab_config
+- scarab_config_yaml
+notes: ''
+verify:
+- crates/tarsi-driver/Cargo.toml
+- crates/tarsi-driver/src/data.rs
+- crates/tarsi-driver/src/lib.rs
+- crates/tarsi-driver/src/main.rs
+- crates/tarsi-driver/src/views.rs
+- crates/tarsi-driver/tests/conformance.rs
+- crates/tarsi-driver/tests/verbs.rs
+provenance:
+  files:
+  - crates/tarsi-driver/Cargo.toml
+  - crates/tarsi-driver/src/data.rs
+  - crates/tarsi-driver/src/lib.rs
+  - crates/tarsi-driver/src/main.rs
+  - crates/tarsi-driver/src/views.rs
+  - crates/tarsi-driver/tests/conformance.rs
+  - crates/tarsi-driver/tests/verbs.rs
+  hashes:
+  - a65afb5383e18143bc8c3201aebdbb4b8f60743b
+  - fa887effe8b915f44f723146817548741f168594
+  - ec7be41c2f12c15e620f75c2a62811291c8bb50b
+  - a594f182ac2cef3170d14eb0baa745424850a9f6
+  - d5eb06b413ff54cbecbdc82dd678ba99da83e672
+  - 20dba9ed54ec0e8678d2e587ae37a41b83a9d0b1
+  - 1c3d66b63c16111f5723be995a4d0a703f4dcd56
+  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
+  generated_at: '1794533324'
+  generator: kuda-template/0.1.4

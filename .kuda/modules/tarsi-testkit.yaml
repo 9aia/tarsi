@@ -1,0 +1,252 @@
+name: tarsi-testkit
+path: crates/tarsi-testkit/Cargo.toml
+purpose: Conformance fixtures + golden corpus for tarsi ports/impls.
+api:
+- name: CHORE_ONLY_COMMITS
+  kind: const
+  file: crates/tarsi-testkit/src/fixtures.rs
+  line: 17
+  module: tarsi-testkit
+- name: Fixture
+  kind: type
+  file: crates/tarsi-testkit/src/repo.rs
+  line: 26
+  module: tarsi-testkit
+- name: GoldenCase
+  kind: type
+  file: crates/tarsi-testkit/src/golden.rs
+  line: 43
+  module: tarsi-testkit
+- name: NO_PUBLISH_TOML
+  kind: const
+  file: crates/tarsi-testkit/src/repo.rs
+  line: 21
+  module: tarsi-testkit
+- name: SYNTHETIC_COMMITS
+  kind: const
+  file: crates/tarsi-testkit/src/fixtures.rs
+  line: 8
+  module: tarsi-testkit
+- name: UnitExpect
+  kind: type
+  file: crates/tarsi-testkit/src/golden.rs
+  line: 32
+  module: tarsi-testkit
+- name: assert_bump_defaults_to_dry_run
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 415
+  module: tarsi-testkit
+- name: assert_changelog_notes_ops
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 218
+  module: tarsi-testkit
+- name: assert_check_detects_drift
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 582
+  module: tarsi-testkit
+- name: assert_check_op
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 131
+  module: tarsi-testkit
+- name: assert_conformance
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 291
+  module: tarsi-testkit
+- name: assert_granular_release_chain
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 474
+  module: tarsi-testkit
+- name: assert_granular_tier
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 759
+  module: tarsi-testkit
+- name: assert_manifest_op
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 71
+  module: tarsi-testkit
+- name: assert_plan_op
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 178
+  module: tarsi-testkit
+- name: assert_profiles_op
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 162
+  module: tarsi-testkit
+- name: assert_range_param
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 252
+  module: tarsi-testkit
+- name: assert_release_conformance
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 336
+  module: tarsi-testkit
+- name: assert_release_defaults_to_dry_run
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 308
+  module: tarsi-testkit
+- name: assert_release_tier
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 404
+  module: tarsi-testkit
+- name: assert_schema_op
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 98
+  module: tarsi-testkit
+- name: assert_sync_refs_conformance
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 639
+  module: tarsi-testkit
+- name: assert_sync_refs_skips_mixed_versions
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 732
+  module: tarsi-testkit
+- name: assert_tag_publish_dry_run_defaults
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 444
+  module: tarsi-testkit
+- name: assert_unknown_op_errors
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 277
+  module: tarsi-testkit
+- name: call
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 37
+  module: tarsi-testkit
+- name: cases
+  kind: function
+  file: crates/tarsi-testkit/src/golden.rs
+  line: 165
+  module: tarsi-testkit
+- name: check
+  kind: function
+  file: crates/tarsi-testkit/src/golden.rs
+  line: 67
+  module: tarsi-testkit
+- name: chore_only_commits
+  kind: function
+  file: crates/tarsi-testkit/src/fixtures.rs
+  line: 42
+  module: tarsi-testkit
+- name: commit_all
+  kind: function
+  file: crates/tarsi-testkit/src/repo.rs
+  line: 94
+  module: tarsi-testkit
+- name: dir_params
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 62
+  module: tarsi-testkit
+- name: fixtures
+  kind: module
+  file: crates/tarsi-testkit/src/lib.rs
+  line: 29
+  module: tarsi-testkit
+- name: git
+  kind: function
+  file: crates/tarsi-testkit/src/repo.rs
+  line: 49
+  module: tarsi-testkit
+- name: git_try
+  kind: function
+  file: crates/tarsi-testkit/src/repo.rs
+  line: 71
+  module: tarsi-testkit
+- name: golden
+  kind: module
+  file: crates/tarsi-testkit/src/lib.rs
+  line: 30
+  module: tarsi-testkit
+- name: golden_corpus_passes
+  kind: function
+  file: crates/tarsi-testkit/tests/conformance.rs
+  line: 13
+  module: tarsi-testkit
+- name: ls_remote
+  kind: function
+  file: crates/tarsi-testkit/src/repo.rs
+  line: 102
+  module: tarsi-testkit
+- name: ok
+  kind: function
+  file: crates/tarsi-testkit/src/serve.rs
+  line: 52
+  module: tarsi-testkit
+- name: parse_commits
+  kind: function
+  file: crates/tarsi-testkit/src/fixtures.rs
+  line: 30
+  module: tarsi-testkit
+- name: path
+  kind: function
+  file: crates/tarsi-testkit/src/repo.rs
+  line: 38
+  module: tarsi-testkit
+api_omitted: 18
+deps:
+- lasius-vcs
+- semver
+- serde
+- serde_json
+- tarsi-core
+- tarsi-serve
+- tempfile
+- lasius-vcs-git
+- lasius_vcs_git
+- serde_json
+- lasius_vcs
+- tarsi-serve
+- semver
+- tempfile
+- fixtures
+- golden
+- repo
+notes: ''
+verify:
+- crates/tarsi-testkit/Cargo.toml
+- crates/tarsi-testkit/src/fixtures.rs
+- crates/tarsi-testkit/src/golden.rs
+- crates/tarsi-testkit/src/lib.rs
+- crates/tarsi-testkit/src/repo.rs
+- crates/tarsi-testkit/src/serve.rs
+- crates/tarsi-testkit/tests/conformance.rs
+provenance:
+  files:
+  - crates/tarsi-testkit/Cargo.toml
+  - crates/tarsi-testkit/src/fixtures.rs
+  - crates/tarsi-testkit/src/golden.rs
+  - crates/tarsi-testkit/src/lib.rs
+  - crates/tarsi-testkit/src/repo.rs
+  - crates/tarsi-testkit/src/serve.rs
+  - crates/tarsi-testkit/tests/conformance.rs
+  hashes:
+  - bc35d4a5f9467fb3e205175fc9cb68033bd2fe33
+  - 88740f5ab062fc279dc806e59b5b2fc058464a45
+  - ec9b9cbdc2d392ee6804d4910ac8e7288bb35e79
+  - 4f85d55a0dff032e1efe05cb6e5f4f9f6d4f5b9f
+  - 745f93d489cc577c467104b08dcd6aab501d2db4
+  - 1a7c2da9cf54325145cd71d39e8470052717721a
+  - b2897b6481cdab5c0d00b0a0c663c891813b8014
+  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
+  generated_at: '1794533324'
+  generator: kuda-template/0.1.4

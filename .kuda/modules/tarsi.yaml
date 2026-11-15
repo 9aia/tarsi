@@ -1,0 +1,21 @@
+name: tarsi
+path: Cargo.toml
+purpose: '> Generic release tool for the 9aia fleet — changelog → semver bump'
+api:
+- name: tarsi
+  kind: module
+  file: Cargo.toml
+  line: 1
+  module: tarsi
+deps: []
+notes: ''
+verify:
+- Cargo.toml
+provenance:
+  files:
+  - Cargo.toml
+  hashes:
+  - 09310237332a8af39b2647be9c99db48de844d07
+  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
+  generated_at: '1794533324'
+  generator: kuda-template/0.1.4

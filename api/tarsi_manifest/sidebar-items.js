@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["ManifestError"],"fn":["apply_config","cargo_workspace_units","write_unit_version","write_version","write_workspace_version"]};

@@ -1,0 +1,69 @@
+name: tarsi-xtask
+path: xtask/Cargo.toml
+purpose: 'Repo chores: check / test / coverage / install / package / smoke / site'
+api:
+- name: have_cargo_sub
+  kind: function
+  file: xtask/src/main.rs
+  line: 27
+  module: tarsi-xtask
+- name: host_triple
+  kind: function
+  file: xtask/src/main.rs
+  line: 48
+  module: tarsi-xtask
+- name: main
+  kind: function
+  file: xtask/src/main.rs
+  line: 112
+  module: tarsi-xtask
+- name: pack
+  kind: function
+  file: xtask/src/main.rs
+  line: 82
+  module: tarsi-xtask
+- name: run
+  kind: function
+  file: xtask/src/main.rs
+  line: 18
+  module: tarsi-xtask
+- name: run_out
+  kind: function
+  file: xtask/src/main.rs
+  line: 38
+  module: tarsi-xtask
+- name: stage_release_bin
+  kind: function
+  file: xtask/src/main.rs
+  line: 59
+  module: tarsi-xtask
+- name: tarsi-xtask
+  kind: module
+  file: xtask/Cargo.toml
+  line: 1
+  module: tarsi-xtask
+- name: tests
+  kind: module
+  file: xtask/src/main.rs
+  line: 205
+  module: tarsi-xtask
+- name: workspace_manifest_parses
+  kind: function
+  file: xtask/src/main.rs
+  line: 207
+  module: tarsi-xtask
+deps: []
+notes: ''
+verify:
+- xtask/Cargo.toml
+- xtask/src/main.rs
+provenance:
+  files:
+  - xtask/Cargo.toml
+  - xtask/src/main.rs
+  hashes:
+  - b4826db0eb269fecdf17497e997604dad96536e4
+  - d8e618c492a1695cf279bf7fe52aa1507fac817d
+  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
+  generated_at: '1794533324'
+  generator: kuda-template/0.1.4

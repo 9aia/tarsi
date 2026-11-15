@@ -1,0 +1,1363 @@
+---
+url: /tarsi/tutorials/first-release.md
+---
+# Your first release
+
+This tutorial cuts a real release of a small repo using only
+`tarsi-serve`. It assumes `tarsi-serve` is on your PATH (see
+[Getting started](/getting-started)) and the repo uses conventional
+commits.
+
+## 1. Prepare the repo
+
+The repo needs a `tarsi.toml`. The minimal useful one:
+
+```toml
+# tarsi.toml
+[publish.crates]
+enabled = false
+
+[publish.ghreleases]
+enabled = false
+```
+
+Tag-only releases are the org convention (ADR-0004); without the
+`enabled = false` lines both publish targets default to on. Units
+default to cargo workspace members — for a non-cargo repo, declare
+them explicitly (see [Write a tarsi.toml](/how-to/write-tarsi-toml)).
+
+Make sure the history you want released is conventional:
+
+```bash
+git log --oneline
+# feat(api): add retries        → minor bump
+# fix(core): handle empty body  → patch bump
+# chore: tidy imports           → no release on its own
+```
+
+## 2. Plan
+
+```bash
+tarsi-serve plan --dir .
+```
+
+Read the result. Each unit in `plan.units` carries:
+
+* `spec` — resolved unit (name, path, tag format, publish targets)
+* `bump` — `major` / `minor` / `patch` / `none`
+* `new_version` — the version the bump would write
+* `tag` — e.g. `my-unit-v1.2.0`
+* `releases` — whether this unit actually releases
+* `changelog_markdown` — the rendered changelog section
+* `commits` — how many commits were attributed
+
+`plan.unattributed` lists commits that matched no unit's paths —
+repo-root files land there. `plan.steps` is the mutation sequence
+`release` would run.
+
+Nothing has been written. This is the review gate — always `plan`
+before `release`.
+
+## 3. Preview the notes
+
+```bash
+tarsi-serve changelog --dir .   # per-unit {unit, version, tag, markdown}
+tarsi-serve notes --dir .       # concatenated release notes
+```
+
+## 4. Dry-run the release
+
+```bash
+tarsi-serve release --dir .
+```
+
+`release` is **dry-run by default** — this executes the full plan and
+runs every publish target in dry-run mode, reporting what *would*
+happen, and writes nothing. Equivalently over ndjson:
+
+```json
+{"op":"release","params":{"dir":".","dry_run":true}}
+```
+
+## 5. Release for real
+
+Only after the plan looks right and a human approves:
+
+```bash
+tarsi-serve release --dir . --yes
+```
+
+`--yes` is `dry_run:false`. The mutation phase, in order:
+
+1. Write `CHANGELOG.md` sections per releasing unit (created files
+   are tracked for rollback).
+2. Bump versions in manifests via `toml_edit` (comments preserved).
+3. Stage only the touched files — `CHANGELOG.md`/`Cargo.toml` per unit
+   plus root manifests — never `git add -A`.
+4. Commit `chore(release): bump versions`.
+5. Tag each releasing unit (`{unit}-v{version}`).
+6. **Push branch + tags before publishing** — GitHub Releases
+   auto-creates tags at remote HEAD otherwise.
+7. Run publish targets (crates.io, GitHub Releases) against the
+   pushed commit.
+
+The result reports `steps_run`, per-target `publish` reports, and —
+on failure — `rolled_back` or a manual-cleanup note for partial
+publishes.
+
+## 6. Verify
+
+```bash
+git tag -l '*-v*' | tail
+git log --oneline -3
+tarsi-serve plan --dir .   # now: nothing to release
+```
+
+The latest-tag-per-unit range means a second `plan` finds no new
+commits since the tags you just pushed.
+
+## Next steps
+
+* Layer org conventions with a profile —
+  [Author a release profile pack](/how-to/author-release-profile)
+* Tune attribution and overrides —
+  [Write a tarsi.toml](/how-to/write-tarsi-toml)
+* Script it from an agent — [Drive tarsi-serve ops](/how-to/use-serve-ops)
+
+---
+
+---
+url: /tarsi/how-to/write-tarsi-toml.md
+---
+# Write a tarsi.toml
+
+`tarsi.toml` (or `tarsi.yaml`/`tarsi.yml` — YAML wins on ties) is the
+repo's release config. It is a plain [`tarsi_core::Config`](https://docs.rs)
+document — the full schema is in [reference/config](/reference/config);
+this page is the practical guide.
+
+## Discovery
+
+`tarsi-config` resolves config through scarab-config discovery:
+
+1. `$TARSI_CONFIG` — explicit file, the whole config (no layering)
+2. `./tarsi.{yaml,yml,toml}` in the repo being released
+3. `~/.config/tarsi/`
+
+When a [release profile](/how-to/author-release-profile) is active,
+loading becomes layered instead of first-match:
+
+```
+repo tarsi.*  >  profile tarsi.*  >  ~/.config/tarsi/  >  defaults
+```
+
+Objects merge key-wise; repo keys win.
+
+## The minimal file
+
+```toml
+[release]
+strategy = "conventional"
+changelog_path = "CHANGELOG.md"
+diff_exclude = ["docs/**", "project/**", "*.md", ".github/**"]
+
+[publish.crates]
+enabled = false
+
+[publish.ghreleases]
+enabled = false
+```
+
+## `[release]` — what gets released
+
+| key | default | meaning |
+| --- | --- | --- |
+| `units` | cargo workspace members | explicit unit list, or a units spec |
+| `tag_format` | `{unit}-v{version}` | tag template; `{unit}`/`{version}` expand |
+| `changelog_path` | `CHANGELOG.md` | changelog file spliced per unit |
+| `strategy` | `conventional` | release strategy — builtin name or inline rules table |
+| `default_bump` | none | fallback bump when inference finds nothing |
+| `diff_exclude` | `[]` | path globs stripped from commits before attribution (a commit left with no paths is dropped) |
+| `unit_overrides` | `{}` | per-unit overrides, keyed by unit name |
+| `sync_refs` | `{rules:[]}` | rewrite pack/doc version refs into the release commit |
+
+### Units
+
+Omit `units` entirely for cargo workspaces — every workspace member
+becomes a release unit resolved from its manifest. To declare units
+explicitly (non-cargo repos, filtered members), use the `units` spec —
+see `tarsi_core::unit::UnitsSpec` for the shape (`Explicit { units }`
+with per-unit `name`/`path`/`tag_format`/`publish`/`bump` fields).
+
+### Overrides
+
+```toml
+[release.unit_overrides.tarsi-xtask]
+skip = true
+
+[release.unit_overrides.my-lib]
+bump = "patch"          # force a bump regardless of inference
+tag_format = "lib-{version}"
+publish = ["crates-io"]  # restrict targets for this unit
+```
+
+`skip = true` drops the unit from planning entirely (e.g. a lib that
+versions with its parent). Override `bump`/`tag_format`/`publish` merge
+onto the resolved spec; per-unit values always beat repo-level defaults.
+
+`diff_exclude` matters more than it looks: docs and config churn would
+otherwise attribute commits to units and trigger spurious releases. The
+org profile excludes `docs/**`, `project/**`, `*.md`, `.github/**`.
+Matching paths are stripped from each commit before attribution; a
+commit left with no paths is dropped entirely.
+
+### Release strategy
+
+`strategy` is the release *policy* as data — bump inference and
+changelog sectioning (P-030). Name a builtin or write an inline
+table; absent means `conventional`:
+
+```toml
+strategy = "semantic-release-angular"   # builtin preset
+strategy = "keep-a-changelog"            # KaC sections, same bump rules
+
+# …or fully custom:
+[release.strategy.bump]
+fallback = "patch"
+[[release.strategy.bump.rules]]
+type = "feat"          # raw type token — "deps"/"i18n" work too
+bump = "major"
+
+[release.strategy.changelog]
+[[release.strategy.changelog.sections]]
+key = "features"
+heading = "Features"
+[[release.strategy.changelog.sections.rules]]
+type = "feat"
+```
+
+Bump rules fold **max-match** (highest `bump` wins per commit, then
+per unit); changelog sections are **first-match** in table order,
+which is also render order. `default_bump` fills `strategy.bump.
+fallback` when the strategy doesn't set one. Builtins:
+`conventional` (default), `semantic-release-angular` (the
+commit-analyzer angular preset), and `keep-a-changelog` (the
+keepachangelog.com section layout over the conventional bump
+rules — `### Added`/`Changed`/`Deprecated`/`Removed`/`Fixed`/
+`Security`; full mapping in
+[reference/config](/reference/config#keep-a-changelog)). Full schema
+in [reference/config](/reference/config#release-strategy); the resolved
+strategy echoes on `plan` results as `plan.strategy`.
+
+### Syncing version refs (`sync_refs`)
+
+Repos that ship a tamias pack usually keep `name@version` refs in
+docs and the pack manifest's `version:` in lockstep with releases.
+`[release.sync_refs]` does that rewrite inside the pipeline — before
+the release commit, so refs land in the tagged tree:
+
+```toml
+[release.sync_refs]
+rules = [
+  { files = ["libraries/myco/tamias.yaml"],
+    find = "(?m)^version: \"{old}\"",
+    replace = "version: \"{new}\"" },
+  { files = ["README.md", ".agents/skills/myco/SKILL.md"],
+    find = "myco@{old}",
+    replace = "myco@{new}" },
+]
+```
+
+`{old}`/`{new}` are the releasing units' shared old/new version.
+Rules skip (with a reported reason) on mixed-version plans, are
+idempotent, and show up as `status:"dry-run"` + `changed_files` in a
+`bump`/`release` dry-run. Full semantics in
+[reference/config](/reference/config#release-sync_refs). With rules
+configured, `scripts/release.sh` shrinks to a bare
+`tarsi-serve release --dir . --yes`.
+
+## `[publish.*]` — where releases go
+
+Both targets default to **enabled** — set `enabled = false` for
+tag-only repos (the org convention).
+
+```toml
+[publish.crates]
+enabled = true
+retry_429 = true        # backoff on crates.io rate limits
+max_attempts = 5
+
+[publish.ghreleases]
+enabled = true
+token_env = "GITHUB_TOKEN"   # env var NAME — never a value
+repo = "owner/name"          # optional; defaults to origin remote
+assets = ["dist/{unit}-{version}-*"]
+```
+
+* `token_env` is a secret **name** resolved via the environment/cuora
+  at publish time; values never appear in config or logs.
+* `assets` are repo-root-relative globs; `{unit}`/`{version}` expand
+  per releasing unit. Magic patterns matching nothing are skipped;
+  literal paths must exist.
+
+`[publish] dry_run = true` exists in the schema but the serve surface
+already dry-runs `release` by default — prefer `dry_run:false` at the
+op level.
+
+## Selecting a profile
+
+```toml
+profile = "9aia-release"
+```
+
+…or per-invocation, which beats both the config key and
+`$TARSI_PROFILE`:
+
+```bash
+tarsi-serve plan --dir . --set profile=9aia-release
+TARSI_PROFILE=9aia-release tarsi-serve plan --dir .
+```
+
+A named-but-missing profile is a hard error — releasing under silent
+defaults would surprise.
+
+## Workspace-version caveat
+
+Units whose manifests use `version.workspace = true` share one version
+file: the bump is last-writer-wins across releasing units. Keep
+workspaces in lockstep or give units explicit versions until per-unit
+workspace versions exist (org ledger ADR-0003, decision 4).
+
+---
+
+---
+url: /tarsi/how-to/author-release-profile.md
+---
+# Author a release profile pack
+
+Release profiles are tamias content packs of `type: tarsi` — the org's
+conventions (`9aia-release` in `libraries/9aia-release`) ship this way
+so every repo can layer them under its own `tarsi.toml`.
+
+## The `type: tarsi` manifest contract
+
+```yaml
+# tamias.yaml
+name: my-release-profile
+version: "0.1.0"
+type: tarsi
+description: >-
+  Human label for the profile — surfaced by the `profiles` op.
+```
+
+Payload contract (validated by `tamias-driver-tarsi` at install):
+
+* Payload root MUST carry `tarsi.{yaml,yml,toml}` — a plain
+  `tarsi_core::Config` document. **No `[profile]` table**: `profile =
+  "…"` is the *selector* key a consumer writes, not something the pack
+  carries.
+* Extra files may ride along (`styleguide.md`, commit maps, …);
+  consumers resolve them relative to the profile dir.
+* `description` in `tamias.yaml` is the profile's label; an optional
+  top-level `description` in `tarsi.toml` also works for dir-only
+  profiles.
+
+## The profile `tarsi.toml`
+
+Keep it to *conventions* — repo-specific overrides belong in the
+repo's own `tarsi.toml` (repo keys always win). `9aia-release` is the
+reference:
+
+```toml
+[release]
+strategy = "conventional"   # P-030: builtin name or inline rules table
+changelog_path = "CHANGELOG.md"
+diff_exclude = ["docs/**", "project/**", "*.md", ".github/**"]
+tag_format = "{unit}-v{version}"
+
+[publish.crates]
+enabled = false   # org: crates.io is tamias-only (ADR-0004)
+
+[publish.ghreleases]
+enabled = false   # org: tag-only releases
+```
+
+## How profiles resolve
+
+`tarsi-config` discovery order for a named profile:
+
+1. `--set profile=<name>` on the op (highest)
+2. `$TARSI_PROFILE`
+3. `profile = "<name>"` in the repo's config
+
+Profile *directories* are found in this order (`find_dir`):
+
+1. `$TARSI_PROFILES_DIR` / `~/.config/tarsi/profiles/<name>/` —
+   unversioned dir profiles (dev/pinned)
+2. The tamias store — every `<store>/name@label/` carrying a `tarsi.*`,
+   newest version label wins (the store commit *is* the placement —
+   the driver validates, it does not copy)
+
+Layering with a profile active:
+
+```
+repo tarsi.*  >  profile tarsi.*  >  ~/.config/tarsi/  >  defaults
+```
+
+## Ship it
+
+`tamias-driver-tarsi` (`crates/tarsi-driver`) is the content driver.
+`cargo xtask pack` stages a release build into
+`libraries/<pack>/drivers/bin/<triple>/`, and tamias registers
+bundled drivers *before* dispatching install — so:
+
+```bash
+cargo xtask pack
+tamias install --allow-drivers ./libraries/my-release-profile
+```
+
+self-provisions the driver and lands the profile in the store,
+versioned by label. Verify resolution:
+
+```bash
+tarsi-serve profiles                       # lists installed profiles
+tarsi-serve plan --dir . --set profile=my-release-profile
+```
+
+The driver's `status` verb reports which dir `find_dir` picks for a
+name and from which source; `uninstall` removes `profilesDir` copies
+(the store entry itself is dropped by tamias).
+
+## Gotchas
+
+* **Dir profiles shadow store versions.** `~/.config/tarsi/profiles/`
+  is searched first and carries no version — a stale copy there wins
+  over every store version, including ones `tamias remove` dropped.
+  The driver only writes there when `profilesDir` is configured
+  (opt-in escape hatch).
+* **Unsafe names rejected.** Profile names are validated
+  (`safe_name`) — stick to lowercase slug names like `9aia-release`.
+* **No silent fallback.** Naming a missing profile errors the op;
+  there is no "profile not found → defaults" path.
+
+---
+
+---
+url: /tarsi/how-to/use-serve-ops.md
+---
+# Drive tarsi-serve ops
+
+Every tarsi surface is an op on `tarsi-serve` — no CLI verbs, no
+`--json` flag. This page covers both transports.
+
+## One-shot mode
+
+```bash
+tarsi-serve <op> --dir <repo> [--set key=value]… [--yes|--dry-run]
+```
+
+`hypha-serve-cli` parses args into the op's `params`, dispatches, and
+prints the result JSON. Exit 0 on `ok:true`, 1 otherwise.
+
+```bash
+tarsi-serve manifest
+tarsi-serve profiles
+tarsi-serve plan --dir .
+tarsi-serve plan --dir . --set profile=9aia-release --set range=HEAD~5..HEAD
+tarsi-serve release --dir . --yes        # the only mutating call
+```
+
+Flag mapping:
+
+* `--set k=v` → `params[k] = "v"` (strings; repeat for multiple)
+* `--yes` → `params.dry_run = false`
+* `--dry-run` → `params.dry_run = true` (the default anyway)
+
+## ndjson service mode
+
+```bash
+tarsi-serve    # no args — loop on stdio
+```
+
+One request per line, one response per line:
+
+```json
+{"op":"manifest","params":{}}
+{"ok":true,"result":{"name":"tarsi-serve","version":"0.1.0","ops":[…]}}
+
+{"op":"release","params":{"dir":".","dry_run":true}}
+{"ok":true,"result":{"dry_run":true,"plan":{…},"publish":[…]}}
+```
+
+Errors come back as `{"ok":false,"error":"…"}` — including release
+failures, which also carry the partial `result` (plan, steps run,
+rollback report) for inspection.
+
+This is the wire peregrin campaigns and agents use; `tarsi-serve` is
+a composition root only — orchestration and UI live in the callers.
+
+## Params reference
+
+Common params (all ops accept `dir`, default `.`):
+
+| param | type | meaning |
+| --- | --- | --- |
+| `dir` | string | repo being released |
+| `profile` | string | `type: tarsi` profile name (beats `$TARSI_PROFILE` and config `profile`) |
+| `range` | string | explicit rev range e.g. `"HEAD~5..HEAD"` — overrides since-last-tag for **every** unit |
+| `dry_run` | bool | `release` only; **default `true`** — mutation needs `false` |
+
+## The safe sequence
+
+```text
+manifest → profiles → plan → changelog → notes → release(dry_run:true) → release(dry_run:false)
+```
+
+Rules of thumb:
+
+* **Always `plan` before `release`.** The plan is the review gate.
+* **`dry_run:false` is the `--yes` equivalent** — get explicit human
+  or campaign approval first; never run it against a repo you haven't
+  planned.
+* **`range` is a debugging tool**, not a release mechanism — it
+  applies one range to all units and bypasses per-unit tag ranges.
+* On failure, read `rolled_back` (clean undo) vs the manual-cleanup
+  note (a publish target succeeded before another failed — the tag
+  stays, live releases must not be orphaned).
+
+## Calling from code
+
+`tarsi-serve` is a lib too: `tarsi_serve::dispatch(&GitVcs, &Request)`
+takes an injected `lasius_vcs::Vcs`, which is how
+`tarsi-testkit`'s conformance suite exercises the ops against fixture
+repos without a process.
+
+---
+
+---
+url: /tarsi/explanation/release-semantics.md
+---
+# Release semantics
+
+The semantics below are load-bearing — they are pinned by
+**ADR-0003** in the org ledger (`9aia/project`,
+`project/adrs/0003-tarsi-release-semantics-plan-dry-run-bump-tag-manifest.md`).
+This page is the readable summary; the ADR is the contract.
+
+## Dry-run is the default
+
+`tarsi-serve release` mutates only with `dry_run: false` — the
+`--yes` equivalent. Orchestration callers (peregrin campaigns,
+agents) opt in explicitly; anything probing a repo gets plans,
+never writes. This mirrors the org rule that service surfaces never
+mutate unless asked.
+
+## Bump inference
+
+Conventional commits, attributed to units by path prefix. The
+inference itself is a **strategy** (P-030) — data-driven rules in
+`tarsi.toml`'s `[release] strategy`, defaulting to `conventional`:
+
+| commit | bump |
+| --- | --- |
+| `feat` | minor |
+| `fix` / `perf` | patch |
+| `!` / `BREAKING CHANGE:` | major |
+| `chore` / `docs` / `test` / … | none — no release |
+
+Bump rules fold **max-match** (a commit contributes the highest
+matching `bump`; the unit folds max across commits) against the
+commit's **raw type token** — arbitrary types like `deps` are
+nameable. Changelog sectioning is the same mechanism: ordered
+`sections[]`, first match wins, table order = render order.
+`semantic-release-angular` ships semantic-release's commit-analyzer
+angular preset as data; `keep-a-changelog` keeps the same bump rules
+but renders the six canonical keepachangelog.com sections
+(`### Added`/`Changed`/`Deprecated`/`Removed`/`Fixed`/`Security`) —
+KaC is a changelog layout, not a bump policy. Custom tables cover
+anything else short of
+non-semver versioning or plugin execution (the documented P-030
+boundary).
+
+`spec.bump` (unit override or explicit unit spec) wins over
+inference; the strategy's `fallback` — filled by
+`release.default_bump` when unset — is the repo-wide fallback when
+inference finds nothing. Commits with empty path lists match every
+unit — conservative attribution. `release.diff_exclude` strips
+matching paths before attribution (a commit left with no paths is
+dropped).
+
+## Per-unit tags, per-unit ranges
+
+Tag format is `{unit}-v{version}` per unit (`tamias-core-v0.4.2`),
+not repo-level `v{semver}`. Each unit's commit range is
+`{latest-tag-for-that-unit}..HEAD` — units release independently and
+only when their own paths changed. `params.range` overrides with one
+range for all units.
+
+## Manifest mutation
+
+Versions are written via `toml_edit` (`tarsi-manifest`) — formatting
+and comments survive. Units with `version.workspace = true` bump
+`[workspace.package].version` instead: **all releasing units in such
+a workspace share one bump** (last-writer-wins today; per-unit
+workspace versions are a known limitation).
+
+## Ordering and rollback
+
+The mutation phase is strictly ordered — changelogs → manifests →
+scoped `git add` (never `-A`) → `chore(release): bump versions`
+commit → per-unit tags → **push branch and tags** → publish. The
+push-before-publish order is load-bearing: GitHub Releases
+auto-creates `refs/tags/<tag>` at remote HEAD when the tag doesn't
+exist yet, which would pin the release to the pre-bump commit.
+
+Failure handling:
+
+* Any mutation failure → rollback undoes exactly what ran (remote
+  tags deleted, branch reset, local commit/tags removed, created
+  changelog files deleted) and the op reports `rolled_back`.
+* Publish failures roll back **only if nothing published** — once a
+  target succeeded, deleting the tag would orphan a live release, so
+  state is left and the report asks for manual cleanup.
+
+## The LLM boundary
+
+There is deliberately no `tarsi-llm`. Changelog polish composes with
+**sepia**: the *caller* (peregrin node, agent) may prompt a sepia
+session with the rendered changelog. Conventional-commit output is
+the only in-repo path — deterministic by construction (ADR-0003,
+decision 6).
+
+## Secrets
+
+Config carries env-var **names** (`token_env`, `CARGO_REGISTRY_TOKEN`
+via cuora secrets records) — never values. The cuora boundary holds
+end to end: names in manifests, values in the secrets broker.
+
+## VCS ownership
+
+Git history, tags, and push go through `lasius-vcs` +
+`lasius-vcs-git` (org plan P-019). `tarsi-core` is pure — it sees
+only `Commit` values; every VCS call lives in `tarsi-serve` (and
+`tarsi-testkit` fixtures). New publish targets are a new
+`tarsi-publish-*` crate plus a `PublishTarget` variant; serve
+dispatch stays a match arm.
+
+---
+
+---
+url: /tarsi/explanation/boundary.md
+---
+# Boundary with tamias and peregrin
+
+tarsi owns **release semantics** — changelog → bump → tag → publish.
+Its neighbors own the layers around it:
+
+| neighbor | owns | tarsi's relation |
+| --- | --- | --- |
+| **tamias** | content distribution — fetch, store, cache, dispense; `type:` content drivers | release *profiles* are `type: tarsi` packs; `tamias-driver-tarsi` validates/installs them; the `tarsi-serve` binary itself ships as a `type: files` pack (`libraries/tarsi`) |
+| **peregrin** | orchestration — campaigns, multi-machine workflows | `libraries/release` bundle drives `tarsi-serve release --yes`; campaigns call the same ndjson ops humans and agents use |
+| **lasius** | git & workspace expertise — `lasius-vcs` port | all history/tag/push goes through `lasius-vcs` + `lasius-vcs-git`; `tarsi-core` never touches git |
+| **sepia** | session lifecycle | optional changelog polish — the caller may prompt a sepia session with rendered notes; no in-repo LLM path |
+| **cuora** | secrets broker | `token_env` names resolve through env/cuora; values never enter config, manifests, or logs |
+| **scarab** | config/template expertise | `tarsi.toml` discovery/layering is `scarab-config`'s `FileSource`/`LayeredFileSource`; tarsi-config is only the wiring |
+| **hypha** | distributed substrate | `hypha-serve-cli` is the shared one-shot arg→params shim every `*-serve` bin uses |
+
+## What tarsi is not
+
+* **Not a CLI.** No `tarsi` binary, no verb tree — the surface is
+  ops. (The legacy TypeScript changelog CLI under the README's
+  bottom half is pre-rewrite reference only.)
+* **Not an orchestrator.** `tarsi-serve` composes ports and answers
+  ops; scheduling, approval flows, and UI live in peregrin/pavo.
+* **Not a publisher of record for the org.** Org repos release
+  tag-only; crates.io publishing is tamias-only and GitHub Releases
+  are unused (ADR-0004). The `tarsi-publish-*` crates exist for
+  external consumers who opt back in per-repo.
+* **Not a registry.** It reads git history and writes tags/manifests;
+  it does not host anything.
+
+## The dogfooding loop
+
+`tarsi`'s own `tarsi.toml` configures its release — units resolve
+from the cargo workspace, `tarsi-xtask` is skipped, both publish
+targets are off. Releasing tarsi itself is plan F of PL-014: a human
+or campaign decision, never an agent's.
+
+---
+
+---
+url: /tarsi/reference/ops.md
+---
+# Ops wire surface
+
+`tarsi-serve` speaks ndjson JSON-lines: one `{"op": …, "params": …}`
+per line on stdin, one `{"ok": …, "result"|"error"}` per line on
+stdout — the same protocol shape as `sepia serve` / `tamias-driver`
+verbs. `tarsi-serve manifest` returns this list authoritatively.
+
+> Stage-wise note: granular per-stage ops may land as the surface
+> grows. The six ops below are the current stable contract; check
+> `manifest` for the live list before scripting against anything
+> newer.
+
+## Ops
+
+### `manifest`
+
+No params. Returns the service manifest:
+
+```json
+{"name":"tarsi-serve","version":"0.1.0","ops":["manifest","profiles","plan","changelog","notes","release"]}
+```
+
+### `profiles`
+
+No params (ignores `dir`). Returns every installed `type: tarsi`
+release profile:
+
+```json
+{"profiles":[{"name":"9aia-release","version":"0.1.0","description":"…","source":"/path/to/dir"}]}
+```
+
+Discovery order: `$TARSI_PROFILES_DIR` / `~/.config/tarsi/profiles/`
+(dir profiles) then the tamias store (`name@label`, newest label
+wins). See [Author a release profile pack](/how-to/author-release-profile).
+
+### `plan`
+
+Params: `dir?`, `profile?`, `range?`. Pure — computes, writes nothing.
+
+```json
+{
+  "specs": [ …resolved ReleaseUnitSpec… ],
+  "plan": {
+    "units": [
+      {
+        "spec": { … },
+        "bump": "minor",
+        "new_version": "0.3.0",
+        "tag": "my-unit-v0.3.0",
+        "releases": true,
+        "changelog_markdown": "## [0.3.0] …",
+        "commits": 4,
+        "publish_targets": [{"target":"crates-io","enabled":false}]
+      }
+    ],
+    "unattributed": [{"sha":"…","subject":"…"}],
+    "steps": ["write-changelogs","bump-manifests","commit-bump","tag","push","publish"],
+    "strategy": {"name":"conventional","resolved":{…rules…}}
+  }
+}
+```
+
+`strategy` echoes the release strategy resolved from
+`[release] strategy` (P-030) — `name` is the builtin name or
+`"custom"` for inline tables; `resolved` is the full rule set that
+produced the bumps/changelogs.
+
+### `changelog`
+
+Same params as `plan`. Returns only the releasing units' rendered
+notes:
+
+```json
+{"changelogs":[{"unit":"my-unit","version":"0.3.0","tag":"my-unit-v0.3.0","markdown":"…"}]}
+```
+
+### `notes`
+
+Same params. Concatenated `changelog_markdown` of all releasing units
+in plan order:
+
+```json
+{"notes":"## [0.3.0] …\n## [1.1.0] …\n"}
+```
+
+### `release`
+
+Same params plus `dry_run` (**default `true`**). Executes the plan.
+
+Dry-run result:
+
+```json
+{"ok":true,"dry_run":true,"plan":{…},"steps_run":[],"publish":[{"target":…,"ok":…,"dry_run":true}…]}
+```
+
+Real result (`dry_run:false`):
+
+```json
+{
+  "ok": true,
+  "dry_run": false,
+  "plan": {…},
+  "steps_run": ["write-changelogs","bump-manifests","sync-refs","commit-bump","tag","push"],
+  "publish": [ {"target":"github-release","ok":true,…} ],
+  "sync_refs": {"status":"applied","old":"0.1.0","new":"0.2.0","changes":[…]}
+}
+```
+
+`sync_refs` reports the `[release.sync_refs]` stage (pack/doc
+version-ref rewrites folded into the bump commit — see
+[config](/reference/config#release-sync_refs)): `status` is
+`disabled` (no rules), `skipped` (+`reason`, e.g. mixed-version
+plan), `dry-run`, or `applied`; `changes[]` lists per-rule
+file/replacement counts and `changed_files` the touched paths.
+Dry-run results carry the same shape with `status:"dry-run"`. The
+`"sync-refs"` `steps_run` entry appears only when rules are
+configured.
+
+Failure shapes:
+
+* Plan/build error → op-level `{"ok":false,"error":"…"}`.
+* Mutation failure → `ok:false` result with `rolled_back` per-step
+  report (remote tag deletes, branch reset, local cleanup).
+* Publish failure with nothing published → rollback, same shape.
+* Publish failure after a success → `ok:false`, `rolled_back:
+  {"attempted":false,"reason":"…manual cleanup…"}` — state left in
+  place deliberately.
+
+`steps_run` is the mutation-phase ledger; `publish` reports carry
+per-target `ok`, `disabled`, and target-specific fields (e.g. gh
+release URL, crates.io warnings).
+
+## Common params
+
+| param | type | default | notes |
+| --- | --- | --- | --- |
+| `dir` | string | `"."` | repo root being released |
+| `profile` | string | — | profile name; precedence: param > `$TARSI_PROFILE` > config `profile` |
+| `range` | string | per-unit tag range | `"a..b"` rev range applied to **every** unit |
+| `dry_run` | bool | `true` | `release` only — `false` is the mutation opt-in |
+
+## One-shot mapping
+
+`hypha-serve-cli` translates argv to params:
+
+```bash
+tarsi-serve release --dir . --set profile=9aia-release --yes
+# ≡ {"op":"release","params":{"dir":".","profile":"9aia-release","dry_run":false}}
+```
+
+`--set k=v` values are strings; `--yes`/`--dry-run` set `dry_run`.
+
+---
+
+---
+url: /tarsi/reference/config.md
+---
+# tarsi.toml schema
+
+The config document is `tarsi_core::Config` — TOML or YAML
+(`tarsi.yaml`/`tarsi.yml` preferred on discovery ties). Pure serde
+types in `crates/tarsi-core/src/config.rs`; loading/layering in
+`tarsi-config`. Secret **names** appear (`token_env`); values never
+do.
+
+## Top level
+
+```toml
+profile = "9aia-release"   # optional — selector, not a table
+
+[release]
+…
+
+[publish]
+…
+```
+
+| key | type | default | meaning |
+| --- | --- | --- | --- |
+| `profile` | string | — | named `type: tarsi` profile to layer under this file |
+| `release` | table | defaults | release planning config |
+| `publish` | table | defaults | publish target config |
+
+## `[release]`
+
+| key | type | default | meaning |
+| --- | --- | --- | --- |
+| `units` | spec | cargo workspace members | explicit units (`UnitsSpec::Explicit { units }`) |
+| `tag_format` | string | `{unit}-v{version}` | tag template; `{unit}`, `{version}` expand |
+| `changelog_path` | string | `CHANGELOG.md` | changelog file spliced per unit |
+| `strategy` | string | table | `conventional` | release strategy — builtin name or inline rules table (below) |
+| `default_bump` | bump | — | fallback bump when inference finds nothing (folded into the strategy's `fallback`) |
+| `diff_exclude` | `[string]` | `[]` | path globs stripped from commits before attribution; a commit left with no paths is dropped |
+| `unit_overrides` | table | `{}` | per-unit overrides by unit name |
+| `sync_refs` | table | `{rules:[]}` | pack/doc version-ref rewrites before the release commit |
+| `styleguide` | string | `keep-a-changelog` | **deprecated** — superseded by `strategy.changelog`; still parsed, ignored |
+
+`bump` values: `"major"` | `"minor"` | `"patch"` | `"none"`.
+
+### `[release] strategy`
+
+The release *policy* as data (P-030): bump inference and changelog
+sectioning. Either a builtin name or an inline table — absent means
+`conventional`, the pre-strategy behavior.
+
+```toml
+strategy = "conventional"            # builtin name, OR inline:
+
+[release.strategy.bump]
+fallback = "patch"                   # bump when no rule matches
+
+[[release.strategy.bump.rules]]
+type = "feat"                        # raw conventional type token; "*"/absent = any
+scope = "core-*"                     # optional: exact or trailing-* glob
+breaking = true                      # optional: pin the !/BREAKING CHANGE flag
+not_type = ["fix"]                   # optional: type tokens that veto the match
+bump = "minor"                       # major|minor|patch|none
+
+[release.strategy.changelog]
+[[release.strategy.changelog.sections]]
+key = "added"                        # stable section id
+heading = "Added"                    # rendered as `### Added`
+[[release.strategy.changelog.sections.rules]]
+type = "feat"                        # same matcher fields, no `bump`
+```
+
+Semantics:
+
+* **Bump rules are max-match** — a commit contributes the highest
+  `bump` across its matching rules; a unit folds max across its
+  commits (semantic-release commit-analyzer's "highest release
+  type wins" — rule order can't be gamed). `fallback` applies when
+  inference finds nothing; `release.default_bump` fills it when the
+  strategy doesn't set one.
+* **Changelog sections are first-match** — a commit lands in the
+  first section (table order) with a matching rule; table order is
+  also render order. Commits matching nothing are dropped.
+* Matchers run on the commit's **raw type token** — `deps`,
+  `i18n`, and other non-`CommitKind` types are nameable.
+* Each absent `strategy.*` sub-table defaults to the `conventional`
+  rules, so `[release.strategy.bump]` alone keeps the conventional
+  changelog.
+* Builtin names: `conventional` (default — byte-identical to the
+  pre-P-030 hardcoded policy), `semantic-release-angular` (the
+  commit-analyzer angular preset as data), and `keep-a-changelog`
+  (the keepachangelog.com section layout — see below).
+* The resolved strategy echoes on `plan` results as
+  `plan.strategy {name, resolved}` (`name` = the builtin name or
+  `"custom"`).
+
+What can't be data stays code: changelog render formats beyond
+section/heading/order, non-semver versioning, non-conventional
+commit parsing, anything needing execution (P-030 boundary).
+
+#### `keep-a-changelog`
+
+Keep a Changelog (keepachangelog.com) is a *changelog layout*, not
+a bump policy — the builtin keeps `conventional`'s bump rules
+verbatim and swaps only the section table for the six canonical
+sections, in keepachangelog.com order:
+
+| section | commits |
+| --- | --- |
+| `### Added` | `feat` |
+| `### Changed` | `refactor`, plus breaking commits of types with no section of their own (`chore!`, `deps!`, unknown `!` types) |
+| `### Deprecated` | `deprecate`, `deprecation` |
+| `### Removed` | `revert`, `remove` |
+| `### Fixed` | `fix`, `perf` |
+| `### Security` | `security` |
+
+Breaking commits of section-owning types stay in their own
+section (`fix!`→Fixed, `security!`→Security, …) — Changed's
+catch-all vetoes them via `not_type`. Types outside the table
+(`chore`, `docs`, `test`, `deps`, `release`, …) still count for
+bump inference but are dropped from the changelog. KaC-named
+types (`deprecate`, `revert`, `remove`, `security`) are
+changelog-only here — they don't move the version unless
+`default_bump` fills the fallback; a repo that wants e.g.
+`revert`→patch takes the same table inline with one extra bump
+rule.
+
+### `[release.unit_overrides.<name>]`
+
+| key | type | meaning |
+| --- | --- | --- |
+| `bump` | bump | force this unit's bump (beats inference) |
+| `tag_format` | string | per-unit tag template |
+| `publish` | `[target]` | restrict publish targets (`"crates-io"`, `"github-release"`) |
+| `skip` | bool | drop the unit from planning entirely |
+
+### `[release.sync_refs]`
+
+Rewrites stale version refs in repo files *inside* the `bump`/`release`
+pipeline — after manifests are bumped, before the release commit — so
+the tagged tree is self-consistent. This is the stage that replaced the
+per-repo `scripts/release.sh` plan+`sed` pre-step (T-039): pack
+`tamias.yaml` manifest versions and `name@ver` README/SKILL install
+examples.
+
+```toml
+[release.sync_refs]
+rules = [
+  # pack manifest version line (line anchor needs (?m))
+  { files = ["libraries/myco/tamias.yaml"],
+    find = "(?m)^version: \"{old}\"",
+    replace = "version: \"{new}\"" },
+  # doc refs — global, like the old `sed s|name@old|name@new|g`
+  { files = ["README.md", ".agents/skills/myco/SKILL.md"],
+    find = "myco@{old}",
+    replace = "myco@{new}" },
+]
+```
+
+| key | type | meaning |
+| --- | --- | --- |
+| `rules` | `[rule]` | rewrite rules applied in order; empty = stage disabled (default) |
+| `rule.files` | `[string]` | repo-root-relative globs; non-matching globs are skipped |
+| `rule.find` | string | regex matched against file contents — **required** |
+| `rule.replace` | string | literal replacement — **required** |
+
+`{old}`/`{new}` expand to the releasing units' shared
+`current_version`/`new_version`. Inside `find` they are
+regex-escaped (so `.` stays literal); inside `replace` they expand
+literally. Patterns are **not** auto-bounded — `app@{old}` matches
+the `app@1.2.3` prefix of `app@1.2.30`, exactly like the old `sed`
+pre-steps; add `\b` when a boundary is needed (`regex` has no
+look-around). Use `(?m)` for line anchors.
+
+Semantics:
+
+* **Single-version only** — sync needs one unambiguous `old → new`
+  pair. A plan whose releasing units disagree on `new_version` (or
+  `current_version`) reports `status:"skipped"` and the release
+  proceeds unsynced — the shims' `len(vs)==1` guard.
+* **Idempotent** — rules match the *old* version; once refs say
+  `new`, nothing matches and the stage reports zero changes.
+* **Dry-run** — `bump`/`release` with `dry_run:true` (the default)
+  reports `status:"dry-run"` plus `changed_files` without writing.
+* Results surface as `sync_refs{status, reason?, old, new,
+  changes[], changed_files?}` on `bump` and `release`; `steps_run`
+  gains a `"sync-refs"` entry between `bump-manifests` and
+  `commit-bump` when rules are configured. Synced files are staged
+  into the release commit itself — no separate pre-commit.
+
+## `[publish]`
+
+| key | type | default | meaning |
+| --- | --- | --- | --- |
+| `dry_run` | bool | `false` | schema-level flag; the serve op's `dry_run` param is what callers use |
+
+### `[publish.crates]`
+
+| key | type | default | meaning |
+| --- | --- | --- | --- |
+| `enabled` | bool | `true` | crates.io publishing on/off |
+| `retry_429` | bool | `true` | backoff on crates.io rate limits |
+| `max_attempts` | int | `5` | publish attempts per unit |
+
+### `[publish.ghreleases]`
+
+| key | type | default | meaning |
+| --- | --- | --- | --- |
+| `enabled` | bool | `true` | GitHub Releases on/off |
+| `token_env` | string | `GITHUB_TOKEN` | env var **name** holding the token |
+| `repo` | string | origin remote | `owner/name` override |
+| `assets` | `[string]` | `[]` | repo-root globs; `{unit}`/`{version}` expand per unit |
+
+## Layering
+
+With a profile resolved, config loads through
+`LayeredFileSource` — objects merge key-wise, later layers fill gaps:
+
+```
+repo tarsi.*  >  profile tarsi.*  >  ~/.config/tarsi/  >  defaults
+```
+
+Without a profile, discovery is first-match:
+`$TARSI_CONFIG` → `./tarsi.*` → `~/.config/tarsi/`. A missing
+profile name is a hard error; a present-but-broken `tarsi.*` file
+always errors loudly.
+
+## Example
+
+See `tarsi.toml` at the repo root (dogfooding config) and
+`libraries/9aia-release/tarsi.toml` (the org profile).
+
+---
+
+---
+url: /tarsi/reference/pack-layout.md
+---
+# Pack layout
+
+tarsi ships to the org as two tamias packs under `libraries/`.
+
+## `libraries/tarsi` — the command pack
+
+`type: files` — ships the `tarsi-serve` binary. There is no `tarsi`
+CLI and no `shim: cli` bin by design (PL-014 surface split:
+release-expertise libs + `tarsi-serve` only).
+
+```yaml
+# tamias.yaml (abridged)
+name: tarsi
+version: "0.1.0"
+type: files
+description: >-
+  Generic release tool — changelog → semver bump → tag → publish.
+bins:
+  - name: tarsi-serve
+    payload: tools/bin/x86_64-unknown-linux-gnu/tarsi-serve
+```
+
+Layout:
+
+```
+libraries/tarsi/
+├── tamias.yaml          # the manifest above
+└── tools/bin/<triple>/  # gitignored — `cargo xtask pack` stages
+    └── tarsi-serve      #   release builds here per host triple
+```
+
+```bash
+cargo xtask pack                          # build payload
+tamias install ./libraries/tarsi          # deploy tarsi-serve → PATH
+# or, once published: tamias install tarsi@<ver>
+```
+
+Dev shortcut: `cargo xtask install` puts a release `tarsi-serve` in
+`~/.local/bin` without the pack flow.
+
+## `libraries/9aia-release` — the org profile pack
+
+`type: tarsi` — the org's release conventions as a layered config
+profile (PL-014 D2).
+
+```
+libraries/9aia-release/
+├── tamias.yaml    # name/version/type: tarsi/description
+├── tarsi.toml     # THE profile — a plain Config document
+└── drivers/bin/<triple>/   # gitignored — `cargo xtask pack` stages
+    └── tamias-driver-tarsi #   the content driver here
+```
+
+The `type: tarsi` contract:
+
+* payload root MUST carry `tarsi.{yaml,yml,toml}` — no `[profile]`
+  table (`profile` is the consumer-side selector key)
+* `tamias.yaml`'s `description` is the profile's human label
+* optional extras (`styleguide.md`, commit maps) resolve relative to
+  the profile dir
+
+Install self-provisions the driver — tamias registers bundled drivers
+before dispatching `install`:
+
+```bash
+cargo xtask pack
+tamias install --allow-drivers ./libraries/9aia-release
+```
+
+The store commit is the placement: the profile resolves by name,
+versioned by label, the moment tamias commits it. See
+[Author a release profile pack](/how-to/author-release-profile).
+
+## xtask verbs
+
+| command | does |
+| --- | --- |
+| `cargo xtask check` | fmt + clippy `-D warnings` |
+| `cargo xtask test` | whole suite (nextest if present) |
+| `cargo xtask pack` | release-build `tarsi-serve` → `libraries/tarsi/tools/bin/<triple>/` **and** `tamias-driver-tarsi` → `libraries/9aia-release/drivers/bin/<triple>/` |
+| `cargo xtask install` | release `tarsi-serve` → `~/.local/bin` (dev shortcut) |
+
+Both payload dirs are gitignored build artifacts — the manifests are
+the source of truth.
+
+---
+
+---
+url: /tarsi/reference/crates.md
+---
+# Crates
+
+Rust workspace, ports-and-adapters — the same anatomy as
+tamias/bupha/peregrin. `tarsi-core` is pure domain (no I/O);
+`tarsi-serve` is the composition root and the only shipped binary.
+
+| crate | role |
+| --- | --- |
+| `tarsi-core` | pure domain — `Config`/`ReleaseConfig`/`PublishConfig` serde model, `plan_release` (bump inference + attribution + changelog render), `Bump`, `Commit`, `PublishTarget`, `ReleaseUnitSpec`/`UnitsSpec`. No I/O. |
+| `tarsi-config` | config wiring — scarab-config `FileSource`/`LayeredFileSource` discovery, `$TARSI_CONFIG`, profile resolution (`profile.rs`: dir profiles + tamias-store profiles, `find_dir`/`list_profiles`). |
+| `tarsi-manifest` | unit resolution + version writes — cargo-workspace member discovery, `apply_config` overrides, `toml_edit`-based `write_unit_version` (workspace-version aware). |
+| `tarsi-publish` | publish port — `Publisher` trait + `PublishJob`; dispatch over target impls. |
+| `tarsi-publish-crates` | crates.io publish impl (`publish`/`yank` via cargo, 429 retry). |
+| `tarsi-publish-ghreleases` | GitHub Releases impl — release + asset upload, `target_commitish` pinning. |
+| `tarsi-publish-dryrun` | dry-run publisher — reports what would publish, touches nothing. |
+| `tarsi-driver` | `tamias-driver-tarsi` — the `type: tarsi` content driver (capabilities/install/deploy/uninstall/status/health/logs/hooks); validates profile packs, optional `profilesDir` materialization. |
+| `tarsi-serve` | **the binary** — ndjson ops loop + `hypha-serve-cli` one-shot; composes config/manifest/lasius-vcs/publish into the six ops. Lib (`dispatch`/`serve`) + thin `main.rs`. |
+| `tarsi-testkit` | golden plan corpus (`golden_cases()`) + serve-op conformance suite (`serve::assert_*`) over `lasius_vcs::Vcs` fixtures. |
+| `xtask` | check / test / pack / install |
+
+## Key external deps
+
+* `lasius-vcs` + `lasius-vcs-git` — all git history/tag/push (P-019);
+  `tarsi-core` sees only `Commit` values.
+* `scarab-config` + `scarab-config-file` — config discovery and
+  layering (P-017); no `tarsi-config-*` format crates.
+* `hypha-serve-cli` — the shared one-shot argv→params shim.
+* `semver`, `toml_edit`, `serde`/`serde_json` — versions, manifest
+  mutation, the wire.
+
+API docs: `bun run docs:api` renders `cargo doc` into
+`public/api/` (linked from the built site under `/tarsi/api/`).
+
+---
+
+---
+url: /tarsi/getting-started.md
+---
+# Getting started
+
+tarsi is the org's release plane: it turns conventional commits into a
+release — changelog → semver bump → tag → publish. There is **no
+`tarsi` CLI**; the surface is `tarsi-serve`, an ndjson ops binary with
+a one-shot front door (PL-014, org ledger ADR-0003).
+
+## Install `tarsi-serve`
+
+The command ships as a tamias pack (`libraries/tarsi` — `type: files`
+declaring `tarsi-serve` as a `tools/bin/<triple>/` payload bin).
+
+```bash
+# From a tarsi checkout:
+cargo xtask pack    # release-build → libraries/tarsi/tools/bin/<triple>/
+tamias install ./libraries/tarsi   # deploys `tarsi-serve` onto PATH
+```
+
+Dev shortcut without tamias:
+
+```bash
+cargo xtask install   # release `tarsi-serve` → ~/.local/bin
+```
+
+## Check the wire
+
+```bash
+tarsi-serve manifest
+# → {"name":"tarsi-serve","version":"…","ops":["manifest","profiles","plan","changelog","notes","release"]}
+```
+
+Two modes:
+
+* **No args** — ndjson JSON-lines loop on stdio: one
+  `{"op": …, "params": …}` per line in, one
+  `{"ok": …, "result"|"error"}` per line out.
+* **`tarsi-serve <op> [--dir D] [--set k=v]… [--yes|--dry-run]`** —
+  one-shot via `hypha-serve-cli`; prints the result JSON, exit 0/1.
+  `--yes` maps to `dry_run: false`; `--dry-run` forces the default.
+
+## Plan your first release
+
+Inside a repo with a `tarsi.toml` (or none — units default to cargo
+workspace members):
+
+```bash
+tarsi-serve plan --dir .
+```
+
+The result lists each unit in topo order: inferred bump, new version,
+tag, rendered changelog markdown, and publish targets — all computed,
+nothing written. The full walkthrough is in
+[Your first release](/tutorials/first-release).
+
+---
+
+---
+url: /tarsi/public/api/static.files/SourceSerif4-LICENSE-a2cfd9d5.md
+---
+Copyright 2014-2021 Adobe (http://www.adobe.com/), with Reserved Font Name 'Source'. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries.
+Copyright 2014 - 2023 Adobe (http://www.adobe.com/), with Reserved Font Name ‘Source’. All Rights Reserved. Source is a trademark of Adobe in the United States and/or other countries.
+
+This Font Software is licensed under the SIL Open Font License, Version 1.1.
+
+This license is copied below, and is also available with a FAQ at: http://scripts.sil.org/OFL
+
+***
+
+## SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
+
+PREAMBLE
+The goals of the Open Font License (OFL) are to stimulate worldwide
+development of collaborative font projects, to support the font creation
+efforts of academic and linguistic communities, and to provide a free and
+open framework in which fonts may be shared and improved in partnership
+with others.
+
+The OFL allows the licensed fonts to be used, studied, modified and
+redistributed freely as long as they are not sold by themselves. The
+fonts, including any derivative works, can be bundled, embedded,
+redistributed and/or sold with any software provided that any reserved
+names are not used by derivative works. The fonts and derivatives,
+however, cannot be released under any other type of license. The
+requirement for fonts to remain under this license does not apply
+to any document created using the fonts or their derivatives.
+
+DEFINITIONS
+"Font Software" refers to the set of files released by the Copyright
+Holder(s) under this license and clearly marked as such. This may
+include source files, build scripts and documentation.
+
+"Reserved Font Name" refers to any names specified as such after the
+copyright statement(s).
+
+"Original Version" refers to the collection of Font Software components as
+distributed by the Copyright Holder(s).
+
+"Modified Version" refers to any derivative made by adding to, deleting,
+or substituting -- in part or in whole -- any of the components of the
+Original Version, by changing formats or by porting the Font Software to a
+new environment.
+
+"Author" refers to any designer, engineer, programmer, technical
+writer or other person who contributed to the Font Software.
+
+PERMISSION & CONDITIONS
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of the Font Software, to use, study, copy, merge, embed, modify,
+redistribute, and sell modified and unmodified copies of the Font
+Software, subject to the following conditions:
+
+1. Neither the Font Software nor any of its individual components,
+   in Original or Modified Versions, may be sold by itself.
+
+2. Original or Modified Versions of the Font Software may be bundled,
+   redistributed and/or sold with any software, provided that each copy
+   contains the above copyright notice and this license. These can be
+   included either as stand-alone text files, human-readable headers or
+   in the appropriate machine-readable metadata fields within text or
+   binary files as long as those fields can be easily viewed by the user.
+
+3. No Modified Version of the Font Software may use the Reserved Font
+   Name(s) unless explicit written permission is granted by the corresponding
+   Copyright Holder. This restriction only applies to the primary font name as
+   presented to the users.
+
+4. The name(s) of the Copyright Holder(s) or the Author(s) of the Font
+   Software shall not be used to promote, endorse or advertise any
+   Modified Version, except to acknowledge the contribution(s) of the
+   Copyright Holder(s) and the Author(s) or with their explicit written
+   permission.
+
+5. The Font Software, modified or unmodified, in part or in whole,
+   must be distributed entirely under this license, and must not be
+   distributed under any other license. The requirement for fonts to
+   remain under this license does not apply to any document created
+   using the Font Software.
+
+TERMINATION
+This license becomes null and void if any of the above conditions are
+not met.
+
+DISCLAIMER
+THE FONT SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO ANY WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT
+OF COPYRIGHT, PATENT, TRADEMARK, OR OTHER RIGHT. IN NO EVENT SHALL THE
+COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+INCLUDING ANY GENERAL, SPECIAL, INDIRECT, INCIDENTAL, OR CONSEQUENTIAL
+DAMAGES, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF THE USE OR INABILITY TO USE THE FONT SOFTWARE OR FROM
+OTHER DEALINGS IN THE FONT SOFTWARE.

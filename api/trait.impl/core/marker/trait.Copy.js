@@ -1,0 +1,9 @@
+(function() {
+    const implementors = Object.fromEntries([["tarsi_core",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.99.1/core/marker/trait.Copy.html\" title=\"trait core::marker::Copy\">Copy</a> for <a class=\"enum\" href=\"tarsi_core/bump/enum.Bump.html\" title=\"enum tarsi_core::bump::Bump\">Bump</a>",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.99.1/core/marker/trait.Copy.html\" title=\"trait core::marker::Copy\">Copy</a> for <a class=\"enum\" href=\"tarsi_core/commit/enum.CommitKind.html\" title=\"enum tarsi_core::commit::CommitKind\">CommitKind</a>",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.99.1/core/marker/trait.Copy.html\" title=\"trait core::marker::Copy\">Copy</a> for <a class=\"enum\" href=\"tarsi_core/unit/enum.PublishTarget.html\" title=\"enum tarsi_core::unit::PublishTarget\">PublishTarget</a>",0]]],["tarsi_publish_dryrun",[["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.99.1/core/marker/trait.Copy.html\" title=\"trait core::marker::Copy\">Copy</a> for <a class=\"struct\" href=\"tarsi_publish_dryrun/struct.DryRunPublisher.html\" title=\"struct tarsi_publish_dryrun::DryRunPublisher\">DryRunPublisher</a>",0],["impl <a class=\"trait\" href=\"https://doc.rust-lang.org/1.99.1/core/marker/trait.Copy.html\" title=\"trait core::marker::Copy\">Copy</a> for <a class=\"struct\" href=\"tarsi_publish_dryrun/struct.TargetDryRun.html\" title=\"struct tarsi_publish_dryrun::TargetDryRun\">TargetDryRun</a>",0]]]]);
+    if (window.register_implementors) {
+        window.register_implementors(implementors);
+    } else {
+        window.pending_implementors = implementors;
+    }
+})()
+//{"start":59,"fragment_lengths":[824,620]}

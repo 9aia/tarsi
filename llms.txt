@@ -1,0 +1,34 @@
+# tarsi
+
+> The release plane
+
+Changelog → semver bump → tag → publish — one ops wire for humans, agents, and campaigns.
+
+## Table of Contents
+
+### Tutorials
+
+- [Your first release](/tarsi/tutorials/first-release.md)
+
+### How-to
+
+- [Write a tarsi.toml](/tarsi/how-to/write-tarsi-toml.md)
+- [Author a release profile pack](/tarsi/how-to/author-release-profile.md)
+- [Drive tarsi-serve ops](/tarsi/how-to/use-serve-ops.md)
+
+### Explanation
+
+- [Release semantics](/tarsi/explanation/release-semantics.md)
+- [Boundary with tamias and peregrin](/tarsi/explanation/boundary.md)
+
+### Reference
+
+- [Ops wire surface](/tarsi/reference/ops.md)
+- [tarsi.toml schema](/tarsi/reference/config.md)
+- [Pack layout](/tarsi/reference/pack-layout.md)
+- [Crates](/tarsi/reference/crates.md)
+
+### Other
+
+- [Getting started](/tarsi/getting-started.md)
+- [Untitled](/tarsi/public/api/static.files/SourceSerif4-LICENSE-a2cfd9d5.md)

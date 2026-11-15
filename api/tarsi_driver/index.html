@@ -1,0 +1,106 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="tarsi-driver — library half of `tamias-driver-tarsi`, the tamias content driver for `type: tarsi` release-profile packs (PL-014 D3)."><title>tarsi_driver - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../static.files/rustdoc-0c87338a.css"><meta name="rustdoc-vars" data-root-path="../" data-static-root-path="../static.files/" data-current-crate="tarsi_driver" data-themes="" data-resource-suffix="" data-rustdoc-version="1.99.1 (58cf8f9c3 2026-10-13) (Arch Linux rust 1:1.99.1-1)" data-channel="1.99.1" data-search-js="search-cf4fc35e.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../static.files/storage-41dd4d93.js"></script><script defer src="../crates.js"></script><script defer src="../static.files/main-417ebf0a.js"></script><noscript><link rel="stylesheet" href="../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../static.files/favicon-044be391.svg"></head><body class="rustdoc mod crate"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Crate tarsi_driver</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../tarsi_driver/index.html">tarsi_<wbr>driver</a><span class="version">0.4.0</span></h2></div><div class="sidebar-elems"><ul class="block"><li><a id="all-types" href="all.html">All Items</a></li></ul><section id="rustdoc-toc"><h3><a href="#">Sections</a></h3><ul class="block top-toc"><li><a href="#where-install-places-the-profile" title="Where install places the profile">Where install places the profile</a></li><li><a href="#verbs-the-tamias-driver-contract" title="Verbs (the tamias driver contract)">Verbs (the tamias driver contract)</a></li><li><a href="#the-pavo-read-only-surface" title="The pavo read-only surface">The pavo read-only surface</a></li></ul><h3><a href="#modules">Crate Items</a></h3><ul class="block"><li><a href="#modules" title="Modules">Modules</a></li><li><a href="#structs" title="Structs">Structs</a></li><li><a href="#functions" title="Functions">Functions</a></li><li><a href="#types" title="Type Aliases">Type Aliases</a></li></ul></section><div id="rustdoc-modnav"></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1>Crate <span>tarsi_<wbr>driver</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../src/tarsi_driver/lib.rs.html#1-1109">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>tarsi-driver — library half of <code>tamias-driver-tarsi</code>, the tamias
+content driver for <code>type: tarsi</code> release-profile packs (PL-014 D3).</p>
+<p>A <code>type: tarsi</code> pack is a <strong>release profile</strong>: a payload whose
+root carries <code>tarsi.{yaml,yml,toml}</code> (a plain
+[<code>tarsi_core::Config</code>] document — no <code>[profile]</code> table; <code>profile</code>
+is the <em>selector</em> key) plus optional extras (<code>styleguide.md</code>,
+commit maps, …). See <code>tarsi-config</code>’s <code>profile</code> module for the
+discovery contract this driver installs into.</p>
+<h2 id="where-install-places-the-profile"><a class="doc-anchor" href="#where-install-places-the-profile">§</a>Where install places the profile</h2>
+<p>tamias dispatches <code>install</code> <em>before</em> its store commit, with
+<code>--dir</code> = the payload root; <code>uninstall</code>/<code>deploy</code>/<code>status</code> get the
+committed store entry dir (<code>&lt;store&gt;/[@scope/]&lt;name&gt;@&lt;label&gt;/</code>).
+tarsi’s profile discovery already treats the tamias store as a
+first-class source — <code>store_profiles</code> finds every
+<code>&lt;store&gt;/name@label/</code> carrying a <code>tarsi.*</code> and <code>find_dir</code> picks
+the newest version label. <strong>The store commit is therefore the
+placement</strong>: <code>install</code> validates the payload and reports; the
+pack becomes resolvable the moment tamias commits it, versioned
+by label.</p>
+<p>The driver deliberately does <em>not</em> copy payloads into
+<code>~/.config/tarsi/profiles/&lt;name&gt;/</code> by default: dir profiles are
+searched before the store and win <code>find_dir</code>, and they carry no
+version — an unversioned copy would shadow every store version,
+including ones <code>tamias remove</code> already dropped (the host only
+dispatches <code>uninstall</code> on the <em>last</em> same-name sibling, T-029).</p>
+<p>Opt-in escape hatch: <code>--config</code> may name a <code>profilesDir</code>. Then
+<code>install</code>/<code>deploy</code> also materialize an <strong>unversioned dir-profile
+copy</strong> at <code>&lt;profilesDir&gt;/&lt;name&gt;/</code> (scoped names nest
+<code>@scope/&lt;name&gt;/</code>) stamped with a <code>.tamias-driver-tarsi.json</code>
+marker, and <code>uninstall</code> removes marker-bearing copies it finds
+under the profiles roots. Use it to pin a profile outside the
+evictable store — knowing the copy shadows store resolution.</p>
+<h2 id="verbs-the-tamias-driver-contract"><a class="doc-anchor" href="#verbs-the-tamias-driver-contract">§</a>Verbs (the tamias driver contract)</h2>
+<p><code>&lt;verb&gt; --dir &lt;d&gt; --name &lt;n&gt; [--config &lt;f&gt;]</code>:</p>
+<ul>
+<li><code>capabilities</code> — <code>{"capabilities": ["tamias"], "types": ["tarsi"], "verbs": […]}</code>; tamias’s discovery probe.</li>
+<li><code>install</code> — validate the payload is a well-formed profile
+(<code>tarsi.*</code> present and parses as <code>Config</code>; <code>tamias.yaml</code>’s
+<code>type</code> must be <code>tarsi</code> when present), then optionally write
+the <code>profilesDir</code> copy. JSON report; nothing else is applied.</li>
+<li><code>deploy</code> — refresh the operator-facing state: re-validate the
+installed entry and re-sync the <code>profilesDir</code> copy when
+configured; reports how <code>tarsi</code> resolves the name.</li>
+<li><code>uninstall</code> — remove marker-bearing <code>profilesDir</code> copies under
+the profiles roots (<code>$TARSI_PROFILES_DIR</code>,
+<code>~/.config/tarsi/profiles</code>, plus the configured dir). The store
+entry itself is dropped by tamias after this verb returns.</li>
+<li><code>status</code> — resolution report: which dir <code>find_dir</code> picks for
+the name, from which source, and every installed candidate.</li>
+<li><code>health</code> — discovery probe: profiles roots + visible profile
+count. No services exist for a profile pack.</li>
+<li><code>logs</code> / <code>hooks</code> — empty reports; <code>type: tarsi</code> packs run no
+units and declare no forge hooks.</li>
+<li><code>config-schema</code> — JSON Schema (draft 2020-12) of the optional
+<code>--config</code> file (see <a href="struct.DriverConfig.html" title="struct tarsi_driver::DriverConfig"><code>DriverConfig</code></a>).</li>
+</ul>
+<h2 id="the-pavo-read-only-surface"><a class="doc-anchor" href="#the-pavo-read-only-surface">§</a>The pavo read-only surface</h2>
+<p>The same binary is also a <strong>pavo view driver</strong> (PL-014 D3
+remainder): <code>manifest</code> prints the [<code>pavo_protocol::DriverManifest</code>]
+and <code>serve</code> answers ndjson JSON-RPC (<code>manifest</code>/<code>views</code>/<code>view</code>/
+<code>query</code>) over <a href="views/index.html" title="mod tarsi_driver::views"><code>views</code></a> — release plans, changelog previews, and
+publish-profile state, all read through <code>tarsi-serve</code> one-shot
+ops (<a href="data/index.html" title="mod tarsi_driver::data"><code>data</code></a>). The surfaces are disjoint by argv: pavo’s probes
+(<code>manifest</code>/<code>capabilities</code>/<code>serve</code>) take no <code>--dir</code>/<code>--name</code>,
+tamias’s verbs always carry them — <code>capabilities</code> answers a
+merged payload satisfying both discoverers. Nothing on the pavo
+side mutates: the serve ops called are <code>manifest</code>, <code>profiles</code>,
+<code>plan</code>, <code>changelog</code> — <code>release</code> is never dispatched.</p>
+<p>See <code>views.rs</code> for the view/ query mapping and <code>data.rs</code> for
+the <code>tarsi-serve</code> invocation (<code>$TARSI_SERVE</code> overrides the
+binary, default <code>tarsi-serve</code> on PATH).</p>
+</div></details><h2 id="modules" class="section-header">Modules<a href="#modules" class="anchor">§</a></h2><dl class="item-table"><dt><a class="mod" href="data/index.html" title="mod tarsi_driver::data">data</a></dt><dd>data — the pavo read plane. Every query is one <code>tarsi-serve</code>
+one-shot op (<code>tarsi-serve &lt;op&gt; --dir &lt;d&gt; --set k=v …</code>), the same
+wire peregrin campaigns and humans use — the driver never opens
+tarsi state itself (“pavo renders what the serve reports”).</dd><dt><a class="mod" href="views/index.html" title="mod tarsi_driver::views">views</a></dt><dd>views — the driver’s manifest: every ViewSpec plus the query
+resolvers that feed them (the pavo read-only surface, PL-014
+D3 remainder).</dd></dl><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.DriverConfig.html" title="struct tarsi_driver::DriverConfig">Driver<wbr>Config</a></dt><dd>The optional <code>--config</code> document (YAML; JSON parses too):</dd><dt><a class="struct" href="struct.Invocation.html" title="struct tarsi_driver::Invocation">Invocation</a></dt><dd>One dispatched verb invocation — the flags tamias always passes.</dd></dl><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.capabilities_value.html" title="fn tarsi_driver::capabilities_value">capabilities_<wbr>value</a></dt><dd><code>capabilities</code> — merged for both consumers of this binary.
+pavo’s discovery checks <code>capabilities</code>/<code>verbs</code> for
+<code>"pavo"</code>/<code>"serve"</code>; tamias’s checks <code>types</code> for the content kind
+and warns on undeclared <code>verbs</code>. One JSON answers both: the
+kit’s <code>{capabilities, verbs}</code> shape plus <code>"types": ["tarsi"]</code>,
+<code>"tamias"</code> in <code>capabilities</code>, and every verb folded into
+<code>verbs</code>.</dd><dt><a class="fn" href="fn.config_schema.html" title="fn tarsi_driver::config_schema">config_<wbr>schema</a></dt><dd><code>config-schema</code> — the reserved verb printing the JSON Schema of
+the <code>--config</code> file. Instance-agnostic (draft 2020-12).</dd><dt><a class="fn" href="fn.deploy.html" title="fn tarsi_driver::deploy">deploy</a></dt><dd><code>deploy</code> — refresh operator-facing state for the installed
+entry: re-validate it is still a profile payload and re-sync
+the <code>profilesDir</code> copy when configured, then report how tarsi
+resolves the name. Idempotent; never fails on resolution alone.</dd><dt><a class="fn" href="fn.dispatch.html" title="fn tarsi_driver::dispatch">dispatch</a></dt><dd>Dispatch one parsed pavo wire [<code>pavo_protocol::wire::Request</code>] to
+its response. <code>env</code> feeds the <code>tarsi-serve</code> lookup
+(<code>$TARSI_SERVE</code> override) — injectable so tests never touch the
+process env.</dd><dt><a class="fn" href="fn.emit.html" title="fn tarsi_driver::emit">emit</a></dt><dd>Print a JSON report to stdout.</dd><dt><a class="fn" href="fn.health.html" title="fn tarsi_driver::health">health</a></dt><dd><code>health</code> — discovery probe: the profiles roots and how many
+profiles tarsi can see. Profile packs run no services, so this
+is the whole health surface.</dd><dt><a class="fn" href="fn.hooks.html" title="fn tarsi_driver::hooks">hooks</a></dt><dd><code>hooks</code> — profiles declare no forge hooks; empty report.</dd><dt><a class="fn" href="fn.install.html" title="fn tarsi_driver::install">install</a></dt><dd><code>install</code> — validate the payload is a well-formed profile, then
+optionally write the <code>profilesDir</code> copy. The store commit that
+follows this verb is what makes the pack resolvable (and
+versioned); see the module docs.</dd><dt><a class="fn" href="fn.load_config.html" title="fn tarsi_driver::load_config">load_<wbr>config</a></dt><dd>Load <code>--config</code>: <code>None</code> → defaults; a path → YAML (JSON is valid
+YAML) with <code>profilesDir</code> rebased onto the config file’s dir.</dd><dt><a class="fn" href="fn.logs.html" title="fn tarsi_driver::logs">logs</a></dt><dd><code>logs</code> — profile packs run no units; empty report keeps the
+verb contract total.</dd><dt><a class="fn" href="fn.manifest_value.html" title="fn tarsi_driver::manifest_value">manifest_<wbr>value</a></dt><dd><code>manifest</code> verb payload — the pavo [<code>pavo_protocol::DriverManifest</code>]
+as a JSON value.</dd><dt><a class="fn" href="fn.run_verb.html" title="fn tarsi_driver::run_verb">run_<wbr>verb</a></dt><dd>Dispatch one tamias verb → its JSON report. <code>verb</code> is the
+subcommand name; unknown verbs are an error (the clap front in
+<code>main.rs</code> normally keeps them out).</dd><dt><a class="fn" href="fn.serve.html" title="fn tarsi_driver::serve">serve</a></dt><dd>The <code>serve</code> verb — ndjson JSON-RPC on stdio until EOF or a
+broken pipe, via pavo-driver-kit’s loop (blank lines skip,
+parse failures answer <code>ok:false</code>, a dead client exits quietly).</dd><dt><a class="fn" href="fn.status.html" title="fn tarsi_driver::status">status</a></dt><dd><code>status</code> — resolution report for the installed name: which dir
+<code>find_dir</code> picks, from which source, and every candidate.</dd><dt><a class="fn" href="fn.uninstall.html" title="fn tarsi_driver::uninstall">uninstall</a></dt><dd><code>uninstall</code> — remove driver-managed <code>profilesDir</code> copies under
+every profiles root (plus the configured one). Only dirs
+carrying our marker are touched; the store entry itself is
+dropped by tamias after this verb returns.</dd></dl><h2 id="types" class="section-header">Type Aliases<a href="#types" class="anchor">§</a></h2><dl class="item-table"><dt><a class="type" href="type.Env.html" title="type tarsi_driver::Env">Env</a></dt><dd>Env lookup — injectable so tests never touch the process env.</dd></dl></section></div></main></body></html>
