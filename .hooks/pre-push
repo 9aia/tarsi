@@ -1,2 +1,2 @@
 #!/usr/bin/env bash
-exec cargo xtask check
+cargo xtask check && exec bash scripts/docs-check.sh
