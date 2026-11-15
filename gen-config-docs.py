@@ -2,7 +2,14 @@
 """Generate docs/reference/config.md — field tables from the
 `tarsi_core::config` structs (doc comments are the source of truth);
 the prose sections (strategy semantics, keep-a-changelog, sync_refs,
-layering) are curated text kept here verbatim."""
+layering) are curated text kept here verbatim.
+
+Migration note (myco T-065): the shared `cypera` tool
+(../cypera — `cypera gen config`) scans `pub struct` doc comments,
+but its page format has no marker splice and none of the curated
+prose/type-name conventions below — this script stays until cypera
+grows config-page splicing (or the page is restructured).
+"""
 import os, pathlib, re
 
 # Sources live in the main checkout — normally docs/ is a worktree of it
