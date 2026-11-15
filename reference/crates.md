@@ -7,19 +7,19 @@ Rust workspace, ports-and-adapters — the same anatomy as
 tamias/bupha/peregrin. `tarsi-core` is pure domain (no I/O);
 `tarsi-serve` is the composition root and the only shipped binary.
 
-| crate | role |
-| --- | --- |
-| `tarsi-core` | pure domain — `Config`/`ReleaseConfig`/`PublishConfig` serde model, `plan_release` (bump inference + attribution + changelog render), `Bump`, `Commit`, `PublishTarget`, `ReleaseUnitSpec`/`UnitsSpec`. No I/O. |
-| `tarsi-config` | config wiring — scarab-config `FileSource`/`LayeredFileSource` discovery, `$TARSI_CONFIG`, profile resolution (`profile.rs`: dir profiles + tamias-store profiles, `find_dir`/`list_profiles`). |
-| `tarsi-manifest` | unit resolution + version writes — cargo-workspace member discovery, `apply_config` overrides, `toml_edit`-based `write_unit_version` (workspace-version aware). |
-| `tarsi-publish` | publish port — `Publisher` trait + `PublishJob`; dispatch over target impls. |
-| `tarsi-publish-crates` | crates.io publish impl (`publish`/`yank` via cargo, 429 retry). |
-| `tarsi-publish-ghreleases` | GitHub Releases impl — release + asset upload, `target_commitish` pinning. |
-| `tarsi-publish-dryrun` | dry-run publisher — reports what would publish, touches nothing. |
-| `tarsi-driver` | `tamias-driver-tarsi` — the `type: tarsi` content driver (capabilities/install/deploy/uninstall/status/health/logs/hooks); validates profile packs, optional `profilesDir` materialization. |
-| `tarsi-serve` | **the binary** — ndjson ops loop + `hypha-serve-cli` one-shot; composes config/manifest/lasius-vcs/publish into the six ops. Lib (`dispatch`/`serve`) + thin `main.rs`. |
-| `tarsi-testkit` | golden plan corpus (`golden_cases()`) + serve-op conformance suite (`serve::assert_*`) over `lasius_vcs::Vcs` fixtures. |
-| `xtask` | check / test / pack / install |
+| crate | layer | purpose |
+|---|---|---|
+| `tarsi-core` | domain | Pure release-domain model — plans, units, semver bumps, commit classification, changelog. No I/O. |
+| `tarsi-publish` | port | Publish port — per-forge Publisher impls (crates.io, GitHub Releases, dry-run). |
+| `tarsi-config` | adapter | tarsi.toml/tarsi.yml loading — scarab-config file discovery over tarsi_core::Config, plus type:tarsi release-profile resolution. |
+| `tarsi-manifest` | adapter | Cargo manifest scanning — workspace members → tarsi_core::ReleaseUnitSpec, version reads/writes. |
+| `tarsi-publish-crates` | adapter | crates.io Publisher — dep-ordered cargo publish with 429 retry (release.sh semantics). |
+| `tarsi-publish-dryrun` | adapter | Dry-run Publisher — validates and reports every target without remote writes. |
+| `tarsi-publish-ghreleases` | adapter | GitHub Releases publisher — release create + notes + asset upload via ureq (blocking, bupha-github convention). |
+| `tarsi-serve` | engine | tarsi service surface — ndjson ops (plan/changelog/notes/check/schema + granular bump/tag/publish + release) over tarsi-core + lasius-vcs. |
+| `tarsi-driver` | driver | tamias-driver-tarsi — tamias content driver for type:tarsi release-profile packs |
+| `tarsi-testkit` | testkit | Conformance fixtures + golden corpus for tarsi ports/impls. |
+| `tarsi-xtask` | tooling | Repo chores: check / test / coverage / install / package / smoke / site |
 
 ## Key external deps
 

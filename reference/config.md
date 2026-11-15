@@ -11,37 +11,25 @@ do.
 
 ## Top level
 
-```toml
-profile = "9aia-release"   # optional — selector, not a table
-
-[release]
-…
-
-[publish]
-…
-```
-
-| key | type | default | meaning |
+| key | type | required | meaning |
 | --- | --- | --- | --- |
-| `profile` | string | — | named `type: tarsi` profile to layer under this file |
-| `release` | table | defaults | release planning config |
-| `publish` | table | defaults | publish target config |
+| `profile` | `string` | optional | Named release profile to layer *under* this config — a `type: tarsi` tamias pack or a dir under `~/.config/tarsi/profiles/`. Resolved by `tarsi-config` (profile dir becomes a config layer between the repo file and the user file); ignored by planning itself. |
+| `release` | `ReleaseConfig` | optional | — |
+| `publish` | `PublishConfig` | optional | — |
 
 ## `[release]`
 
-| key | type | default | meaning |
+| key | type | required | meaning |
 | --- | --- | --- | --- |
-| `units` | spec | cargo workspace members | explicit units (`UnitsSpec::Explicit { units }`) |
-| `tag_format` | string | `{unit}-v{version}` | tag template; `{unit}`, `{version}` expand |
-| `changelog_path` | string | `CHANGELOG.md` | changelog file spliced per unit |
-| `strategy` | string | table | `conventional` | release strategy — builtin name or inline rules table (below) |
-| `default_bump` | bump | — | fallback bump when inference finds nothing (folded into the strategy's `fallback`) |
-| `diff_exclude` | `[string]` | `[]` | path globs stripped from commits before attribution; a commit left with no paths is dropped |
-| `unit_overrides` | table | `{}` | per-unit overrides by unit name |
-| `sync_refs` | table | `{rules:[]}` | pack/doc version-ref rewrites before the release commit |
-| `styleguide` | string | `keep-a-changelog` | **deprecated** — superseded by `strategy.changelog`; still parsed, ignored |
-
-`bump` values: `"major"` | `"minor"` | `"patch"` | `"none"`.
+| `units` | `UnitsSpec` | optional | How release units resolve. Default: cargo workspace at root. |
+| `tag_format` | `string` | optional | Default tag template for units that don't override it. |
+| `changelog_path` | `string` | optional | Changelog file spliced per unit — resolved relative to each unit's path (`crates/foo` + `CHANGES.md` → `crates/foo/CHANGES.md`). |
+| `styleguide` | `string` | optional | keep-a-changelog | conventional-commit-grouped | …  **Deprecated (P-030)** — superseded by \[`ReleaseConfig::strategy`]'s `changelog` section table. Still parsed for backward compat; has no effect on planning (it never did — the field was always descriptive). |
+| `strategy` | `StrategyRef` | optional | Release strategy (P-030): a builtin name (`"conventional"`, `"semantic-release-angular"`) or an inline rules table (`[release.strategy.bump]` / `[release.strategy.changelog]`). Absent = `conventional`, the pre-strategy behavior. Resolved inside `tarsi-serve`'s plan path so every op inherits it. |
+| `default_bump` | `Bump` | optional | Repo-wide default bump when inference finds nothing — honored as the strategy's `fallback` (P-030 wired the previously-dead field; an explicit `strategy.bump.fallback` wins). |
+| `diff_exclude` | `list` | optional | Path globs excluded from commit→unit attribution (e.g. `["docs/**", "*.md"]`). Wired in P-030: matching paths are stripped from each commit before attribution; a commit left with no paths is dropped entirely. |
+| `unit_overrides` | `BTreeMap<String, UnitOverride>` | optional | Per-unit overrides keyed by unit name. |
+| `sync_refs` | `SyncRefsConfig` | optional | Pack-ref/doc version sync — rewrite stale `name@old` / manifest `version:` refs in repo files *before* the release commit lands, so the tagged tree is self-consistent (T-039; replaces the per-repo `scripts/release.sh` pre-step). Empty `rules` = disabled — repos opt in. |
 
 ### `[release] strategy`
 
@@ -127,14 +115,26 @@ rule.
 
 ### `[release.unit_overrides.<name>]`
 
-| key | type | meaning |
-| --- | --- | --- |
-| `bump` | bump | force this unit's bump (beats inference) |
-| `tag_format` | string | per-unit tag template |
-| `publish` | `[target]` | restrict publish targets (`"crates-io"`, `"github-release"`) |
-| `skip` | bool | drop the unit from planning entirely |
+| key | type | required | meaning |
+| --- | --- | --- | --- |
+| `bump` | `Bump` | optional | Force this unit's bump (beats inference). |
+| `tag_format` | `string` | optional | Per-unit tag template. |
+| `publish` | `Vec<PublishTarget>` | optional | Restrict publish targets (`"crates-io"`, `"github-release"`). |
+| `skip` | `bool` | optional | Skip this unit entirely (e.g. a lib that versions with its parent). |
 
 ### `[release.sync_refs]`
+
+| key | type | required | meaning |
+| --- | --- | --- | --- |
+| `rules` | `Vec<SyncRefRule>` | optional | Rewrite rules, applied in order. Empty = the stage is disabled entirely (no files touched, no step reported). |
+
+#### sync rule (`rules[]` entries)
+
+| key | type | required | meaning |
+| --- | --- | --- | --- |
+| `files` | `list` | optional | Repo-root-relative globs of files to rewrite (`"libraries/myco/tamias.yaml"`, `"README.md"`, `".agents/skills/myco/SKILL.md"`). Non-matching globs are skipped — a repo can carry rules for files it doesn't have. |
+| `find` | `string` | required | Regex matching the stale ref. Required. |
+| `replace` | `string` | required | Literal replacement text. Required — an empty string would silently delete refs, so serde rejects a missing key. |
 
 Rewrites stale version refs in repo files *inside* the `bump`/`release`
 pipeline — after manifests are bumped, before the release commit — so
@@ -156,13 +156,6 @@ rules = [
     replace = "myco@{new}" },
 ]
 ```
-
-| key | type | meaning |
-| --- | --- | --- |
-| `rules` | `[rule]` | rewrite rules applied in order; empty = stage disabled (default) |
-| `rule.files` | `[string]` | repo-root-relative globs; non-matching globs are skipped |
-| `rule.find` | string | regex matched against file contents — **required** |
-| `rule.replace` | string | literal replacement — **required** |
 
 `{old}`/`{new}` expand to the releasing units' shared
 `current_version`/`new_version`. Inside `find` they are
@@ -190,26 +183,34 @@ Semantics:
 
 ## `[publish]`
 
-| key | type | default | meaning |
+| key | type | required | meaning |
 | --- | --- | --- | --- |
-| `dry_run` | bool | `false` | schema-level flag; the serve op's `dry_run` param is what callers use |
+| `crates` | `CratesPublish` | optional | crates.io publish target. |
+| `ghreleases` | `GhReleasePublish` | optional | GitHub Releases publish target. |
+| `dry_run` | `bool` | optional | Schema-level dry-run flag; the serve op's `dry_run` param is what callers use. |
 
 ### `[publish.crates]`
 
-| key | type | default | meaning |
+| key | type | required | meaning |
 | --- | --- | --- | --- |
-| `enabled` | bool | `true` | crates.io publishing on/off |
-| `retry_429` | bool | `true` | backoff on crates.io rate limits |
-| `max_attempts` | int | `5` | publish attempts per unit |
+| `enabled` | `bool` | optional | crates.io publishing on/off. |
+| `retry_429` | `bool` | optional | Retry crates.io 429s with backoff (release.sh semantics). |
+| `max_attempts` | `int` | optional | Max publish attempts per unit. |
+| `token_env` | `string` | optional | Env var NAME consulted for the crates.io token when `token_ref` is unset or misses — cargo reads `CARGO_REGISTRY_TOKEN`, and a resolved value is injected into the publish child's environment under that name. The value never appears in config, manifests, or logs. |
+| `token_ref` | `string` | optional | Optional `cuora://&lt;scope&gt;/&lt;name&gt;` secret ref — resolved via cuora at publish time and takes precedence over `token_env`. The value never appears in config or logs. |
 
 ### `[publish.ghreleases]`
 
-| key | type | default | meaning |
+| key | type | required | meaning |
 | --- | --- | --- | --- |
-| `enabled` | bool | `true` | GitHub Releases on/off |
-| `token_env` | string | `GITHUB_TOKEN` | env var **name** holding the token |
-| `repo` | string | origin remote | `owner/name` override |
-| `assets` | `[string]` | `[]` | repo-root globs; `{unit}`/`{version}` expand per unit |
+| `enabled` | `bool` | optional | GitHub Releases on/off. |
+| `token_env` | `string` | optional | Env var NAME holding the GitHub token — resolved via environment/cuora at publish time; the value never appears in config, manifests, or logs. |
+| `repo` | `string` | optional | Repo override `owner/name`; default = git remote. |
+| `token_ref` | `string` | optional | Optional `cuora://&lt;scope&gt;/&lt;name&gt;` secret ref — resolved via cuora at publish time and takes precedence over `token_env`. The value never appears in config or logs. |
+| `assets` | `list` | optional | Repo-root-relative glob patterns for release assets — `{unit}` and `{version}` expand per releasing unit, e.g. `["dist/{unit}-{version}-*", "{unit}/checksums.txt"]`. A pattern with no glob magic must match an existing file; magic patterns matching nothing are skipped. Empty = notes-only releases. |
+
+`bump` values: `"major"` | `"minor"` | `"patch"` | `"none"`.
+`PublishTarget` values: `"crates-io"` | `"github-release"`.
 
 ## Layering
 
@@ -229,3 +230,12 @@ always errors loudly.
 
 See `tarsi.toml` at the repo root (dogfooding config) and
 `libraries/9aia-release/tarsi.toml` (the org profile).
+
+## Constraints
+
+* Secret **names** (`token_env`, `token_ref`) appear in config;
+  values never do — `cuora://` refs resolve via cuora at publish
+  time, env names resolve through the environment.
+* Unknown fields are not rejected at this layer — `deny_unknown_fields`
+  is not set on the config structs; typos surface as ignored keys,
+  so check `tarsi-serve` plan output when a key seems inert.
