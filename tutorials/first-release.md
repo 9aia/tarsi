@@ -1,11 +1,40 @@
 # Your first release
 
 This tutorial cuts a real release of a small repo using only
-`tarsi-serve`. It assumes `tarsi-serve` is on your PATH (see
-[Getting started](/getting-started)) and the repo uses conventional
-commits.
+`tarsi-serve` — install, wire check, plan, dry-run, release, verify.
+The repo should use conventional commits.
 
-## 1. Prepare the repo
+## 1. Install `tarsi-serve`
+
+There is **no `tarsi` CLI** — the surface is `tarsi-serve`, an
+ndjson ops binary with a one-shot front door. It ships as a tamias
+pack (`libraries/tarsi`, `type: files` declaring `tarsi-serve` as a
+`tools/bin/<triple>/` payload bin):
+
+```bash
+# From a tarsi checkout:
+cargo xtask pack    # release-build → libraries/tarsi/tools/bin/<triple>/
+tamias install ./libraries/tarsi   # deploys `tarsi-serve` onto PATH
+```
+
+Dev shortcut without tamias: `cargo xtask install` puts a release
+`tarsi-serve` in `~/.local/bin`.
+
+## 2. Check the wire
+
+```bash
+tarsi-serve manifest
+# → {"name":"tarsi-serve","version":"…","ops":["manifest","profiles","plan","changelog","notes","release"]}
+```
+
+Two modes: no args = ndjson JSON-lines loop on stdio
+(`{"op": …, "params": …}` in, `{"ok": …, "result"|"error"}` out);
+`tarsi-serve <op> [--dir D] [--set k=v]… [--yes|--dry-run]` = one-shot
+argv — `--yes` maps to `dry_run: false`, `--dry-run` forces the
+default. See [Drive tarsi-serve ops](/how-to/use-serve-ops) for the
+full surface.
+
+## 3. Prepare the repo
 
 The repo needs a `tarsi.toml`. The minimal useful one:
 
@@ -32,7 +61,7 @@ git log --oneline
 # chore: tidy imports           → no release on its own
 ```
 
-## 2. Plan
+## 4. Plan
 
 ```bash
 tarsi-serve plan --dir .
@@ -55,14 +84,14 @@ repo-root files land there. `plan.steps` is the mutation sequence
 Nothing has been written. This is the review gate — always `plan`
 before `release`.
 
-## 3. Preview the notes
+## 5. Preview the notes
 
 ```bash
 tarsi-serve changelog --dir .   # per-unit {unit, version, tag, markdown}
 tarsi-serve notes --dir .       # concatenated release notes
 ```
 
-## 4. Dry-run the release
+## 6. Dry-run the release
 
 ```bash
 tarsi-serve release --dir .
@@ -76,7 +105,7 @@ happen, and writes nothing. Equivalently over ndjson:
 {"op":"release","params":{"dir":".","dry_run":true}}
 ```
 
-## 5. Release for real
+## 7. Release for real
 
 Only after the plan looks right and a human approves:
 
@@ -102,7 +131,7 @@ The result reports `steps_run`, per-target `publish` reports, and —
 on failure — `rolled_back` or a manual-cleanup note for partial
 publishes.
 
-## 6. Verify
+## 8. Verify
 
 ```bash
 git tag -l '*-v*' | tail

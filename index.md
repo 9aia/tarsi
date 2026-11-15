@@ -8,7 +8,7 @@ hero:
   actions:
     - theme: brand
       text: Get started
-      link: /getting-started
+      link: /tutorials/first-release
     - theme: alt
       text: Release semantics
       link: /explanation/release-semantics
@@ -23,3 +23,36 @@ features:
   - title: One wire
     details: "ndjson ops over `tarsi-serve` — agents, peregrin campaigns, and humans speak the same protocol."
 ---
+
+## What it is
+
+Tarsi is the org's release plane: changelog → semver bump → tag →
+publish, exposed as `tarsi-serve` ndjson ops. Repo config is
+`tarsi.toml`; org conventions ride `type: tarsi` tamias profile
+packs; there is deliberately no `tarsi` CLI.
+
+## Why
+
+Every repo was reinventing release plumbing — changelog rendering,
+commit→bump inference, tag schemes, publish ordering. Tarsi makes
+release *semantics* a shared, deterministic ops surface that
+humans, agents, and peregrin campaigns all drive identically, with
+dry-run as the default so probing never mutates.
+
+## Boundary
+
+- **Owns:** release semantics — plans, bumps, changelogs, tags,
+  publish orchestration.
+- **Doesn't own:** orchestration timing/approval
+  ([peregrin](https://9aia.com/peregrin/)), distribution
+  ([tamias](https://9aia.com/tamias/)), git itself
+  ([lasius-vcs](https://github.com/9aia/lasius)).
+
+## Where to go next
+
+| You want to… | Go to |
+| --- | --- |
+| Cut a real release end to end | [Tutorial](/tutorials/first-release) |
+| Do a task (write tarsi.toml, author a profile, drive ops) | [How-to](/how-to/) |
+| Understand the design (ops wire, semantics, boundaries) | [Explanation](/explanation/) |
+| Look up an op, config field, or pack layout | [Reference](/reference/) |

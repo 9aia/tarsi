@@ -12,10 +12,9 @@ export default defineConfig({
   ignoreDeadLinks: [/\/api\//],
   themeConfig: {
     nav: [
-      { text: "Getting Started", link: "/getting-started" },
-      { text: "Tutorial", link: "/tutorials/first-release" },
-      { text: "How-to", link: "/how-to/write-tarsi-toml" },
-      { text: "Explanation", link: "/explanation/release-semantics" },
+      { text: "Tutorials", link: "/tutorials/first-release" },
+      { text: "How-to", link: "/how-to/" },
+      { text: "Explanation", link: "/explanation/" },
       { text: "Reference", link: "/reference/ops" },
       {
         text: "LLMs",
@@ -34,6 +33,7 @@ export default defineConfig({
       {
         text: "How-to",
         items: [
+          { text: "Overview", link: "/how-to/" },
           { text: "Write a tarsi.toml", link: "/how-to/write-tarsi-toml" },
           { text: "Author a release profile pack", link: "/how-to/author-release-profile" },
           { text: "Drive tarsi-serve ops", link: "/how-to/use-serve-ops" },
@@ -42,13 +42,18 @@ export default defineConfig({
       {
         text: "Explanation",
         items: [
+          { text: "Overview", link: "/explanation/" },
+          { text: "Architecture", link: "/explanation/architecture" },
           { text: "Release semantics", link: "/explanation/release-semantics" },
-          { text: "Boundary with tamias and peregrin", link: "/explanation/boundary" },
+          { text: "Concepts", link: "/explanation/concepts" },
+          { text: "Boundaries", link: "/explanation/boundaries" },
+          { text: "Decisions", link: "/explanation/decisions" },
         ],
       },
       {
         text: "Reference",
         items: [
+          { text: "Overview", link: "/reference/" },
           { text: "Ops wire surface", link: "/reference/ops" },
           { text: "tarsi.toml schema", link: "/reference/config" },
           { text: "Pack layout", link: "/reference/pack-layout" },
