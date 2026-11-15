@@ -8,7 +8,7 @@ hero:
   actions:
     - theme: brand
       text: Get started
-      link: /tutorials/first-release
+      link: /tutorials/getting-started
     - theme: alt
       text: Release semantics
       link: /explanation/release-semantics
@@ -52,7 +52,7 @@ dry-run as the default so probing never mutates.
 
 | You want to… | Go to |
 | --- | --- |
-| Cut a real release end to end | [Tutorial](/tutorials/first-release) |
+| Cut a real release end to end | [Tutorial](/tutorials/getting-started) |
 | Do a task (write tarsi.toml, author a profile, drive ops) | [How-to](/how-to/) |
 | Understand the design (ops wire, semantics, boundaries) | [Explanation](/explanation/) |
 | Look up an op, config field, or pack layout | [Reference](/reference/) |

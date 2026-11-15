@@ -12,7 +12,7 @@ export default defineConfig({
   ignoreDeadLinks: [/\/api\//],
   themeConfig: {
     nav: [
-      { text: "Tutorials", link: "/tutorials/first-release" },
+      { text: "Tutorials", link: "/tutorials/getting-started" },
       { text: "How-to", link: "/how-to/" },
       { text: "Explanation", link: "/explanation/" },
       { text: "Reference", link: "/reference/ops" },
@@ -28,7 +28,7 @@ export default defineConfig({
     sidebar: [
       {
         text: "Tutorials",
-        items: [{ text: "Your first release", link: "/tutorials/first-release" }],
+        items: [{ text: "Getting started", link: "/tutorials/getting-started" }],
       },
       {
         text: "How-to",
