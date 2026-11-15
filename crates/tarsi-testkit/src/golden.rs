@@ -1,7 +1,7 @@
 //! Golden plan corpus (PL-014 B3) — specs + commit ranges →
 //! expected bump/version/tag/changelog per unit. This is the spec
 //! the legacy TS `tarsi` behavior maps onto: every case is data,
-//! [`GoldenCase::check`] diffs the real [`plan_release`] output
+//! [`GoldenCase::check`] diffs the real [`plan_release`](tarsi_core::plan_release) output
 //! against it and returns human-readable mismatches (empty =
 //! pass).
 //!

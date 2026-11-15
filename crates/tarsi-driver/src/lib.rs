@@ -3,7 +3,7 @@
 //!
 //! A `type: tarsi` pack is a **release profile**: a payload whose
 //! root carries `tarsi.{yaml,yml,toml}` (a plain
-//! [`tarsi_core::Config`] document — no `[profile]` table; `profile`
+//! `tarsi_core::Config` document — no `[profile]` table; `profile`
 //! is the *selector* key) plus optional extras (`styleguide.md`,
 //! commit maps, …). See `tarsi-config`'s `profile` module for the
 //! discovery contract this driver installs into.

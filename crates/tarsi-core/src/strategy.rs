@@ -17,7 +17,7 @@
 //!
 //! Matchers run against the [`ConventionalCommit`]'s **raw type
 //! token** (`raw_type` — `deps`, `i18n`, … are nameable, unlike
-//! the closed [`CommitKind`] enum), its scope, and its breaking
+//! the closed [`CommitKind`](crate::CommitKind) enum), its scope, and its breaking
 //! flag:
 //!
 //! - `type` — exact raw-type token, or `"*"`/absent for any.

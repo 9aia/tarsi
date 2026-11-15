@@ -129,7 +129,7 @@ pub enum PlanError {
 /// pre-P-030 default. Equivalent to
 /// [`plan_release_with_strategy`] with [`Strategy::conventional`].
 ///
-/// `specs` may come from [`UnitsSpec::CargoWorkspace`] resolved by
+/// `specs` may come from [`UnitsSpec::CargoWorkspace`](crate::unit::UnitsSpec::CargoWorkspace) resolved by
 /// the caller, or be passed directly — this function is pure.
 pub fn plan_release(
     specs: &[ReleaseUnitSpec],
@@ -144,7 +144,7 @@ pub fn plan_release(
 /// `conventional` builtin reproduces the legacy hardcoded policy
 /// byte-identically.
 ///
-/// `specs` may come from [`UnitsSpec::CargoWorkspace`] resolved by
+/// `specs` may come from [`UnitsSpec::CargoWorkspace`](crate::unit::UnitsSpec::CargoWorkspace) resolved by
 /// the caller, or be passed directly — this function is pure.
 pub fn plan_release_with_strategy(
     specs: &[ReleaseUnitSpec],
