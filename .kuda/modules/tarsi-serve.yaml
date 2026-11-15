@@ -20,17 +20,17 @@ api:
 - name: ReleaseState
   kind: type
   file: crates/tarsi-serve/src/lib.rs
-  line: 945
+  line: 1010
   module: tarsi-serve
 - name: Request
   kind: type
   file: crates/tarsi-serve/src/lib.rs
-  line: 33
+  line: 34
   module: tarsi-serve
 - name: Response
   kind: type
   file: crates/tarsi-serve/src/lib.rs
-  line: 40
+  line: 41
   module: tarsi-serve
 - name: SyncOutcome
   kind: type
@@ -42,6 +42,11 @@ api:
   file: crates/tarsi-serve/src/sync_refs.rs
   line: 342
   module: tarsi-serve
+- name: apply_diff_exclude
+  kind: function
+  file: crates/tarsi-serve/src/lib.rs
+  line: 206
+  module: tarsi-serve
 - name: bad_regex_is_an_error
   kind: function
   file: crates/tarsi-serve/src/sync_refs.rs
@@ -50,47 +55,47 @@ api:
 - name: build_plan
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 152
+  line: 159
   module: tarsi-serve
 - name: bump_error
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 425
+  line: 490
   module: tarsi-serve
 - name: changelog_configured_path_is_unit_relative
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 1629
+  line: 1695
   module: tarsi-serve
 - name: changelog_empty_markdown_writes_nothing
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 1621
+  line: 1687
   module: tarsi-serve
 - name: changelog_new_file_reports_created
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 1607
+  line: 1673
   module: tarsi-serve
 - name: changelog_path
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 1388
+  line: 1454
   module: tarsi-serve
 - name: changelog_splice_appends_after_lone_unreleased
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 1591
+  line: 1657
   module: tarsi-serve
 - name: changelog_splice_has_single_blank_after_title
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 1545
+  line: 1611
   module: tarsi-serve
 - name: changelog_splice_keeps_unreleased_and_preamble_on_top
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 1564
+  line: 1630
   module: tarsi-serve
 - name: compile_find
   kind: function
@@ -100,7 +105,7 @@ api:
 - name: dispatch
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 67
+  line: 68
   module: tarsi-serve
 - name: drop
   kind: function
@@ -110,7 +115,7 @@ api:
 - name: dry_run_param
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 185
+  line: 249
   module: tarsi-serve
 - name: dry_run_reports_without_writing
   kind: function
@@ -125,12 +130,12 @@ api:
 - name: err
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 56
+  line: 57
   module: tarsi-serve
 - name: execute_release
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 978
+  line: 1043
   module: tarsi-serve
 - name: expand_files
   kind: function
@@ -160,7 +165,7 @@ api:
 - name: gather_commits
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 839
+  line: 904
   module: tarsi-serve
 - name: git
   kind: function
@@ -185,24 +190,19 @@ api:
 - name: latest_tag
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 877
+  line: 942
   module: tarsi-serve
 - name: load_config
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 807
+  line: 872
   module: tarsi-serve
 - name: ls_remote
   kind: function
   file: crates/tarsi-serve/tests/release_e2e.rs
   line: 100
   module: tarsi-serve
-- name: main
-  kind: function
-  file: crates/tarsi-serve/src/main.rs
-  line: 7
-  module: tarsi-serve
-api_omitted: 52
+api_omitted: 56
 deps:
 - glob
 - hypha-serve-cli
@@ -248,12 +248,12 @@ provenance:
   - crates/tarsi-serve/tests/release_e2e.rs
   hashes:
   - a07e7e1df345e0dc0daff69efffbe0aaa912b688
-  - b379cd892fe1b77579723cb68094922a620296f9
+  - 4b9a8fcaf9a52269a93cde7107f52affae8d88c8
   - b743a445f835cb91e5500badcfccabd1c4217675
   - 6c1f874fa8f6f585365eb631e432c8147122ae8f
-  - c7250f357726d6030e8d9f14e7ffdee7125b55f6
+  - 79c9d9c694dbd980b9a460bb036378600b457931
   - 7a7d451a1257ef820eeb4d1c99937f3e9c64602d
   - 9c7503a9b662c02477645d4d983ece6d8087f9c9
-  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
-  generated_at: '1794533324'
+  commit_sha: 409d6ea16e90c83cafea0f603cf0f70669eedd42
+  generated_at: '1794726505'
   generator: kuda-template/0.1.4

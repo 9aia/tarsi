@@ -7,20 +7,40 @@ api:
   file: crates/tarsi-core/src/bump.rs
   line: 11
   module: tarsi-core
+- name: BumpRule
+  kind: type
+  file: crates/tarsi-core/src/strategy.rs
+  line: 114
+  module: tarsi-core
+- name: BumpRules
+  kind: type
+  file: crates/tarsi-core/src/strategy.rs
+  line: 100
+  module: tarsi-core
 - name: Changelog
   kind: type
   file: crates/tarsi-core/src/changelog.rs
-  line: 66
+  line: 53
   module: tarsi-core
 - name: ChangelogEntry
   kind: type
   file: crates/tarsi-core/src/changelog.rs
-  line: 41
+  line: 26
+  module: tarsi-core
+- name: ChangelogRules
+  kind: type
+  file: crates/tarsi-core/src/strategy.rs
+  line: 134
+  module: tarsi-core
+- name: ChangelogSection
+  kind: type
+  file: crates/tarsi-core/src/changelog.rs
+  line: 18
   module: tarsi-core
 - name: Commit
   kind: type
   file: crates/tarsi-core/src/commit.rs
-  line: 63
+  line: 68
   module: tarsi-core
 - name: CommitKind
   kind: type
@@ -30,7 +50,7 @@ api:
 - name: Config
   kind: type
   file: crates/tarsi-core/src/config.rs
-  line: 15
+  line: 17
   module: tarsi-core
 - name: ConventionalCommit
   kind: type
@@ -40,7 +60,7 @@ api:
 - name: CratesPublish
   kind: type
   file: crates/tarsi-core/src/config.rs
-  line: 152
+  line: 180
   module: tarsi-core
 - name: DEFAULT_TAG_FORMAT
   kind: const
@@ -50,17 +70,17 @@ api:
 - name: GhReleasePublish
   kind: type
   file: crates/tarsi-core/src/config.rs
-  line: 178
+  line: 221
   module: tarsi-core
 - name: PlanError
   kind: type
   file: crates/tarsi-core/src/plan.rs
-  line: 116
+  line: 117
   module: tarsi-core
 - name: PublishConfig
   kind: type
   file: crates/tarsi-core/src/config.rs
-  line: 142
+  line: 166
   module: tarsi-core
 - name: PublishTarget
   kind: type
@@ -70,37 +90,52 @@ api:
 - name: ReleaseConfig
   kind: type
   file: crates/tarsi-core/src/config.rs
-  line: 30
+  line: 32
   module: tarsi-core
 - name: ReleasePlan
   kind: type
   file: crates/tarsi-core/src/plan.rs
-  line: 65
+  line: 66
   module: tarsi-core
 - name: ReleaseStep
   kind: type
   file: crates/tarsi-core/src/plan.rs
-  line: 45
+  line: 46
   module: tarsi-core
 - name: ReleaseUnitSpec
   kind: type
   file: crates/tarsi-core/src/unit.rs
   line: 25
   module: tarsi-core
-- name: Section
+- name: SectionRule
   kind: type
-  file: crates/tarsi-core/src/changelog.rs
-  line: 14
+  file: crates/tarsi-core/src/strategy.rs
+  line: 157
+  module: tarsi-core
+- name: SectionSpec
+  kind: type
+  file: crates/tarsi-core/src/strategy.rs
+  line: 143
+  module: tarsi-core
+- name: Strategy
+  kind: type
+  file: crates/tarsi-core/src/strategy.rs
+  line: 75
+  module: tarsi-core
+- name: StrategyRef
+  kind: type
+  file: crates/tarsi-core/src/strategy.rs
+  line: 49
   module: tarsi-core
 - name: SyncRefRule
   kind: type
   file: crates/tarsi-core/src/config.rs
-  line: 112
+  line: 133
   module: tarsi-core
 - name: SyncRefsConfig
   kind: type
   file: crates/tarsi-core/src/config.rs
-  line: 93
+  line: 114
   module: tarsi-core
 - name: UnitMap
   kind: type
@@ -110,12 +145,12 @@ api:
 - name: UnitOverride
   kind: type
   file: crates/tarsi-core/src/config.rs
-  line: 128
+  line: 149
   module: tarsi-core
 - name: UnitPlan
   kind: type
   file: crates/tarsi-core/src/plan.rs
-  line: 18
+  line: 19
   module: tarsi-core
 - name: UnitsSpec
   kind: type
@@ -130,7 +165,7 @@ api:
 - name: apply_overrides
   kind: function
   file: crates/tarsi-core/src/config.rs
-  line: 221
+  line: 274
   module: tarsi-core
 - name: apply_resets_lower_components
   kind: function
@@ -145,12 +180,12 @@ api:
 - name: attributes_and_infers_bumps
   kind: function
   file: crates/tarsi-core/src/plan.rs
-  line: 322
+  line: 341
   module: tarsi-core
 - name: body_footer_marks_breaking
   kind: function
   file: crates/tarsi-core/src/commit.rs
-  line: 154
+  line: 160
   module: tarsi-core
 - name: bump
   kind: module
@@ -159,50 +194,15 @@ api:
   module: tarsi-core
 - name: bump_for
   kind: function
-  file: crates/tarsi-core/src/plan.rs
-  line: 225
+  file: crates/tarsi-core/src/strategy.rs
+  line: 478
   module: tarsi-core
-- name: changelog
-  kind: module
-  file: crates/tarsi-core/src/lib.rs
-  line: 8
-  module: tarsi-core
-- name: chore_only_range_is_none_bump
+- name: bump_rule
   kind: function
-  file: crates/tarsi-core/src/plan.rs
-  line: 357
+  file: crates/tarsi-core/src/strategy.rs
+  line: 215
   module: tarsi-core
-- name: commit
-  kind: module
-  file: crates/tarsi-core/src/lib.rs
-  line: 9
-  module: tarsi-core
-- name: commit
-  kind: function
-  file: crates/tarsi-core/src/plan.rs
-  line: 312
-  module: tarsi-core
-- name: commit_touches
-  kind: function
-  file: crates/tarsi-core/src/plan.rs
-  line: 210
-  module: tarsi-core
-- name: config
-  kind: module
-  file: crates/tarsi-core/src/lib.rs
-  line: 10
-  module: tarsi-core
-- name: conventional
-  kind: function
-  file: crates/tarsi-core/src/commit.rs
-  line: 79
-  module: tarsi-core
-- name: default
-  kind: function
-  file: crates/tarsi-core/src/config.rs
-  line: 65
-  module: tarsi-core
-api_omitted: 48
+api_omitted: 86
 deps:
 - semver
 - serde
@@ -215,6 +215,7 @@ deps:
 - commit
 - config
 - plan
+- strategy
 - unit
 notes: ''
 verify:
@@ -225,6 +226,7 @@ verify:
 - crates/tarsi-core/src/config.rs
 - crates/tarsi-core/src/lib.rs
 - crates/tarsi-core/src/plan.rs
+- crates/tarsi-core/src/strategy.rs
 - crates/tarsi-core/src/unit.rs
 provenance:
   files:
@@ -235,16 +237,18 @@ provenance:
   - crates/tarsi-core/src/config.rs
   - crates/tarsi-core/src/lib.rs
   - crates/tarsi-core/src/plan.rs
+  - crates/tarsi-core/src/strategy.rs
   - crates/tarsi-core/src/unit.rs
   hashes:
   - 7bb345bac1bc466818261032e7f17f2d3bbf1d53
   - 487743d90e534df93d0f98cc5ba7dee7ba38b4d7
-  - aa40c97cb1589d609265ae13cac48413937a83a1
-  - 95d0664ccd594427a924f3311abb262b0973b25b
-  - 381aaa4e6f000662e62713c1bf69363899207bf9
-  - ba769ae9a225fe878cf3ad5fca35f0bfc97958d5
-  - cd5704c4ad62e75240421d5e557c4b85c58097e8
+  - b413dbc52f62eac1f150c1ef0508a8361d3c6de2
+  - 4e0cf57e55ad3f8e6820e42cdc43cd7adf51e5df
+  - 6c7047ec6f012883d0b508934ca57569d74addb7
+  - e84dd194ea80ac8fcf71f4a6d4f0034a0bcfbd3c
+  - 1054be6c74e000d42d0d5a31fcdd4e914cfba4d8
+  - 2cfd841c6976e21664a9adb9083878c4da95a370
   - 4833e193d20b16ebd48feec85a974eee087bdb53
-  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
-  generated_at: '1794533324'
+  commit_sha: 409d6ea16e90c83cafea0f603cf0f70669eedd42
+  generated_at: '1794726505'
   generator: kuda-template/0.1.4

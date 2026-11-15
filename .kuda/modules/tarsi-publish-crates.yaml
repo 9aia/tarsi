@@ -2,45 +2,75 @@ name: tarsi-publish-crates
 path: crates/tarsi-publish-crates/Cargo.toml
 purpose: crates.io Publisher — dep-ordered cargo publish with 429 retry (release.sh semantics).
 api:
+- name: CARGO_TOKEN_ENV
+  kind: const
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 21
+  module: tarsi-publish-crates
 - name: CratesPublisher
   kind: type
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 16
+  line: 25
+  module: tarsi-publish-crates
+- name: FakeResolver
+  kind: type
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 172
   module: tarsi-publish-crates
 - name: dry_run_never_spawns
   kind: function
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 115
+  line: 142
   module: tarsi-publish-crates
 - name: is_already_published
   kind: function
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 40
+  line: 59
   module: tarsi-publish-crates
 - name: is_rate_limited
   kind: function
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 36
+  line: 55
+  module: tarsi-publish-crates
+- name: job
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 158
   module: tarsi-publish-crates
 - name: new
   kind: function
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 27
+  line: 43
   module: tarsi-publish-crates
 - name: publish
   kind: function
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 51
+  line: 70
   module: tarsi-publish-crates
 - name: rate_limit_detection
   kind: function
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 105
+  line: 132
+  module: tarsi-publish-crates
+- name: resolve
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 175
+  module: tarsi-publish-crates
+- name: resolved_token_is_injected_as_cargo_token_env
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 188
+  module: tarsi-publish-crates
+- name: resolver_error_fails_before_spawning
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 222
   module: tarsi-publish-crates
 - name: target
   kind: function
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 47
+  line: 66
   module: tarsi-publish-crates
 - name: tarsi-publish-crates
   kind: module
@@ -50,12 +80,13 @@ api:
 - name: tests
   kind: module
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 101
+  line: 128
   module: tarsi-publish-crates
 deps:
 - tarsi-core
 - tarsi-publish
 - thiserror
+- tempfile
 - tarsi-core
 - tarsi-publish
 notes: ''
@@ -67,8 +98,8 @@ provenance:
   - crates/tarsi-publish-crates/Cargo.toml
   - crates/tarsi-publish-crates/src/lib.rs
   hashes:
-  - 08174e6b47e286cb2a3a5d18e48ee53f123a4353
-  - ca054dced85667d64969eed43731010feeb86c84
-  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
-  generated_at: '1794533324'
+  - 616776790778c2dce765ea9f9e95fb3b0db1749e
+  - 7e5cd470f8290b4327cc91c87e0a47bfb33a1152
+  commit_sha: 409d6ea16e90c83cafea0f603cf0f70669eedd42
+  generated_at: '1794726505'
   generator: kuda-template/0.1.4

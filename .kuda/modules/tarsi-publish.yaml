@@ -2,59 +2,147 @@ name: tarsi-publish
 path: crates/tarsi-publish/Cargo.toml
 purpose: Publish port — per-forge Publisher impls (crates.io, GitHub Releases, dry-run).
 api:
+- name: CUORA_BIN_ENV
+  kind: const
+  file: crates/tarsi-publish/src/token.rs
+  line: 35
+  module: tarsi-publish
+- name: CUORA_TRANSPORT_ENV
+  kind: const
+  file: crates/tarsi-publish/src/token.rs
+  line: 37
+  module: tarsi-publish
+- name: CuoraTokenResolver
+  kind: type
+  file: crates/tarsi-publish/src/token.rs
+  line: 85
+  module: tarsi-publish
 - name: PublishAsset
   kind: type
   file: crates/tarsi-publish/src/lib.rs
-  line: 16
+  line: 21
   module: tarsi-publish
 - name: PublishError
   kind: type
   file: crates/tarsi-publish/src/lib.rs
-  line: 68
+  line: 73
   module: tarsi-publish
 - name: PublishJob
   kind: type
   file: crates/tarsi-publish/src/lib.rs
-  line: 33
+  line: 38
   module: tarsi-publish
 - name: PublishReport
   kind: type
   file: crates/tarsi-publish/src/lib.rs
-  line: 58
+  line: 63
   module: tarsi-publish
 - name: Publisher
   kind: trait
   file: crates/tarsi-publish/src/lib.rs
-  line: 78
+  line: 83
+  module: tarsi-publish
+- name: TokenResolver
+  kind: trait
+  file: crates/tarsi-publish/src/token.rs
+  line: 41
+  module: tarsi-publish
+- name: cuora_get
+  kind: function
+  file: crates/tarsi-publish/src/token.rs
+  line: 114
+  module: tarsi-publish
+- name: env_is_the_fallback_and_default
+  kind: function
+  file: crates/tarsi-publish/src/token.rs
+  line: 199
+  module: tarsi-publish
+- name: new
+  kind: function
+  file: crates/tarsi-publish/src/token.rs
+  line: 95
+  module: tarsi-publish
+- name: parse_cuora_ref
+  kind: function
+  file: crates/tarsi-publish/src/token.rs
+  line: 62
+  module: tarsi-publish
+- name: parses_nested_scope_refs
+  kind: function
+  file: crates/tarsi-publish/src/token.rs
+  line: 162
   module: tarsi-publish
 - name: publishers_for
   kind: function
   file: crates/tarsi-publish/src/lib.rs
-  line: 87
+  line: 92
+  module: tarsi-publish
+- name: resolve
+  kind: function
+  file: crates/tarsi-publish/src/token.rs
+  line: 124
+  module: tarsi-publish
+- name: store
+  kind: function
+  file: crates/tarsi-publish/src/token.rs
+  line: 106
+  module: tarsi-publish
+- name: stub
+  kind: function
+  file: crates/tarsi-publish/src/token.rs
+  line: 149
   module: tarsi-publish
 - name: tarsi-publish
   kind: module
   file: crates/tarsi-publish/Cargo.toml
   line: 1
   module: tarsi-publish
+- name: tests
+  kind: module
+  file: crates/tarsi-publish/src/token.rs
+  line: 142
+  module: tarsi-publish
+- name: token
+  kind: module
+  file: crates/tarsi-publish/src/lib.rs
+  line: 8
+  module: tarsi-publish
+- name: token_ref_wins_over_env
+  kind: function
+  file: crates/tarsi-publish/src/token.rs
+  line: 178
+  module: tarsi-publish
+- name: with_bin
+  kind: function
+  file: crates/tarsi-publish/src/token.rs
+  line: 101
+  module: tarsi-publish
 deps:
+- hypha-secret
+- hypha-secret-cuora
 - serde
 - serde_json
 - tarsi-core
 - thiserror
+- tempfile
+- hypha_secret_cuora
+- token
 - tarsi-core
 - thiserror
 notes: ''
 verify:
 - crates/tarsi-publish/Cargo.toml
 - crates/tarsi-publish/src/lib.rs
+- crates/tarsi-publish/src/token.rs
 provenance:
   files:
   - crates/tarsi-publish/Cargo.toml
   - crates/tarsi-publish/src/lib.rs
+  - crates/tarsi-publish/src/token.rs
   hashes:
-  - 6b1d9af4efd6bfa3eb3cdced34025a40840bf33c
-  - 50e68074762895ccfd49eb21727475e52c3240bb
-  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
-  generated_at: '1794533324'
+  - 49e0eef4008d717028f4fa8a6b6d9ae14b86acd4
+  - d284084a15dff7f3a79ee7ad12a04c49210f583f
+  - 4268300548580739d49ae5103640a08632572a08
+  commit_sha: 409d6ea16e90c83cafea0f603cf0f70669eedd42
+  generated_at: '1794726505'
   generator: kuda-template/0.1.4

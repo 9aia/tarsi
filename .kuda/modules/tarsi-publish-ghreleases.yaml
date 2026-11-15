@@ -5,112 +5,122 @@ api:
 - name: AssetJson
   kind: type
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 44
+  line: 56
+  module: tarsi-publish-ghreleases
+- name: FakeResolver
+  kind: type
+  file: crates/tarsi-publish-ghreleases/src/lib.rs
+  line: 754
   module: tarsi-publish-ghreleases
 - name: GhReleasePublisher
   kind: type
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 22
+  line: 27
   module: tarsi-publish-ghreleases
 - name: ReleaseJson
   kind: type
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 33
+  line: 45
   module: tarsi-publish-ghreleases
 - name: Seen
   kind: type
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 375
+  line: 393
   module: tarsi-publish-ghreleases
 - name: auth
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 68
+  line: 86
   module: tarsi-publish-ghreleases
 - name: content_type_guessing
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 727
+  line: 745
   module: tarsi-publish-ghreleases
 - name: create_release
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 103
+  line: 121
   module: tarsi-publish-ghreleases
 - name: creates_release_then_uploads_assets
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 457
+  line: 475
   module: tarsi-publish-ghreleases
 - name: dry_run_reports_assets_without_http
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 643
+  line: 661
   module: tarsi-publish-ghreleases
 - name: expand_assets
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 238
+  line: 256
   module: tarsi-publish-ghreleases
 - name: expand_assets_globs_and_substitutes
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 678
+  line: 696
   module: tarsi-publish-ghreleases
 - name: find_release
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 78
+  line: 96
   module: tarsi-publish-ghreleases
 - name: find_subslice
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 416
+  line: 434
   module: tarsi-publish-ghreleases
 - name: guess_content_type
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 206
+  line: 224
   module: tarsi-publish-ghreleases
 - name: job
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 431
+  line: 449
   module: tarsi-publish-ghreleases
 - name: new
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 51
+  line: 63
   module: tarsi-publish-ghreleases
 - name: publish
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 297
+  line: 315
   module: tarsi-publish-ghreleases
 - name: publisher
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 444
+  line: 462
   module: tarsi-publish-ghreleases
 - name: read_http_request
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 382
+  line: 400
   module: tarsi-publish-ghreleases
 - name: release_json
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 420
+  line: 438
   module: tarsi-publish-ghreleases
 - name: rerun_reuses_release_and_replaces_same_name_asset
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 550
+  line: 568
+  module: tarsi-publish-ghreleases
+- name: resolve
+  kind: function
+  file: crates/tarsi-publish-ghreleases/src/lib.rs
+  line: 757
   module: tarsi-publish-ghreleases
 - name: target
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 293
+  line: 311
   module: tarsi-publish-ghreleases
 - name: tarsi-publish-ghreleases
   kind: module
@@ -120,27 +130,32 @@ api:
 - name: tests
   kind: module
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 365
+  line: 383
   module: tarsi-publish-ghreleases
 - name: token
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 59
+  line: 73
+  module: tarsi-publish-ghreleases
+- name: token_comes_from_resolver_when_env_is_unset
+  kind: function
+  file: crates/tarsi-publish-ghreleases/src/lib.rs
+  line: 767
   module: tarsi-publish-ghreleases
 - name: token_env
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 450
+  line: 468
   module: tarsi-publish-ghreleases
 - name: upload_asset
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 132
+  line: 150
   module: tarsi-publish-ghreleases
 - name: urlencoding
   kind: function
   file: crates/tarsi-publish-ghreleases/src/lib.rs
-  line: 190
+  line: 208
   module: tarsi-publish-ghreleases
 deps:
 - glob
@@ -163,7 +178,7 @@ provenance:
   - crates/tarsi-publish-ghreleases/src/lib.rs
   hashes:
   - da059826147a75ce8377d7fc194b9fb9fd0961b3
-  - b42d2724618a2fc50b88cd280651f62dbd79f4af
-  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
-  generated_at: '1794533324'
+  - 275807ef4ad04c93a7df52a1f15101dad57f63a0
+  commit_sha: 409d6ea16e90c83cafea0f603cf0f70669eedd42
+  generated_at: '1794726505'
   generator: kuda-template/0.1.4

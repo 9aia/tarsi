@@ -8,17 +8,19 @@ verify:
 - docs/package.json
 - docs/explanation/boundary.md
 - docs/explanation/release-semantics.md
+- docs/gen-config-docs.py
+- docs/gen-crate-map.py
 - docs/getting-started.md
 - docs/how-to/author-release-profile.md
 - docs/how-to/use-serve-ops.md
 - docs/how-to/write-tarsi-toml.md
 - docs/index.md
-- docs/public/api/static.files/SourceSerif4-LICENSE-a2cfd9d5.md
-- docs/reference/config.md
 provenance:
   files:
   - docs/explanation/boundary.md
   - docs/explanation/release-semantics.md
+  - docs/gen-config-docs.py
+  - docs/gen-crate-map.py
   - docs/getting-started.md
   - docs/how-to/author-release-profile.md
   - docs/how-to/use-serve-ops.md
@@ -33,19 +35,21 @@ provenance:
   - docs/tutorials/first-release.md
   hashes:
   - cfb1e78f63ec6fa18a7f028a3a89fb459a571cdb
-  - 1008837053a847bfa71d0f0dbb82a2f4ff8c6b98
+  - 7730086d96ee0ef9096c4e36c68bef2d2a3df5b4
+  - 5ef5371629ca21fc635da653ed35425d9bea8f34
+  - af7d1c2a822cdc8518bfa8ea2f16b4ac8bb281c1
   - 4141498c39c91fb41541ff69b5735f3605d14773
-  - aa6076d051b2271192b479db5a1442812fde19d8
+  - 0d3ddc126e94879a9ee8753b353c99f16fb3f800
   - 2006ef83b8b6d2b5de3df88f9a1a704b74156da3
-  - b101512bd97795624c49fab57bab87c854bbf4c4
+  - 2fcb7e3767d3042b2827ef0bf8e65c0e73497073
   - 0db9be1c6e8ab6d010f5854c4dcef95e4683500b
-  - 8e9c02031f96975780c0cd637843c2421d537d27
+  - e3513b929011e0f5b3b08f2745dae33b3751ff9c
   - 175fa4f47aecdc02e902d243a1c29914eb2ee258
-  - 6694998df8d9912cd59277655057831bc7f8d08b
-  - 8f7e2f48612634ae2d3e01526ce0ac117f9f5418
-  - f24cca260385a7fb9f071cc36ddbb0e91fed7ce0
+  - 4d075cfe973679de303db99aa26927a1d8ad5c9f
+  - 6ae3c3b72d534e7ff369347218564570d8469c02
+  - 8fa5cde019e63bfa3804c2082ee72f482835677d
   - e26cc038db67ca7f7e891f5ef4ff6df2ab2af686
   - 1b97c67c5601fec9926387d38a34b174d9b11555
-  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
-  generated_at: '1794533324'
+  commit_sha: 409d6ea16e90c83cafea0f603cf0f70669eedd42
+  generated_at: '1794726505'
   generator: kuda-template/0.1.4

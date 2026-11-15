@@ -15,7 +15,7 @@ api:
 - name: GoldenCase
   kind: type
   file: crates/tarsi-testkit/src/golden.rs
-  line: 43
+  line: 67
   module: tarsi-testkit
 - name: NO_PUBLISH_TOML
   kind: const
@@ -30,7 +30,7 @@ api:
 - name: UnitExpect
   kind: type
   file: crates/tarsi-testkit/src/golden.rs
-  line: 32
+  line: 56
   module: tarsi-testkit
 - name: assert_bump_defaults_to_dry_run
   kind: function
@@ -135,17 +135,22 @@ api:
 - name: cases
   kind: function
   file: crates/tarsi-testkit/src/golden.rs
-  line: 165
+  line: 207
   module: tarsi-testkit
 - name: check
   kind: function
   file: crates/tarsi-testkit/src/golden.rs
-  line: 67
+  line: 100
   module: tarsi-testkit
 - name: chore_only_commits
   kind: function
   file: crates/tarsi-testkit/src/fixtures.rs
   line: 42
+  module: tarsi-testkit
+- name: commit
+  kind: function
+  file: crates/tarsi-testkit/src/golden.rs
+  line: 165
   module: tarsi-testkit
 - name: commit_all
   kind: function
@@ -197,12 +202,7 @@ api:
   file: crates/tarsi-testkit/src/fixtures.rs
   line: 30
   module: tarsi-testkit
-- name: path
-  kind: function
-  file: crates/tarsi-testkit/src/repo.rs
-  line: 38
-  module: tarsi-testkit
-api_omitted: 18
+api_omitted: 19
 deps:
 - lasius-vcs
 - semver
@@ -242,11 +242,11 @@ provenance:
   hashes:
   - bc35d4a5f9467fb3e205175fc9cb68033bd2fe33
   - 88740f5ab062fc279dc806e59b5b2fc058464a45
-  - ec9b9cbdc2d392ee6804d4910ac8e7288bb35e79
+  - cc0ceb2fb6f20ffca79a3a1bcfcf5105392b6fde
   - 4f85d55a0dff032e1efe05cb6e5f4f9f6d4f5b9f
   - 745f93d489cc577c467104b08dcd6aab501d2db4
   - 1a7c2da9cf54325145cd71d39e8470052717721a
   - b2897b6481cdab5c0d00b0a0c663c891813b8014
-  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
-  generated_at: '1794533324'
+  commit_sha: 409d6ea16e90c83cafea0f603cf0f70669eedd42
+  generated_at: '1794726505'
   generator: kuda-template/0.1.4
