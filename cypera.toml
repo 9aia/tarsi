@@ -290,3 +290,6 @@ See `tarsi.toml` at the repo root (dogfooding config) and
   is not set on the config structs; typos surface as ignored keys,
   so check `tarsi-serve` plan output when a key seems inert.
 '''
+
+[check]
+profile = "engine"
