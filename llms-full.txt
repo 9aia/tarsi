@@ -4,11 +4,40 @@ url: /tarsi/tutorials/first-release.md
 # Your first release
 
 This tutorial cuts a real release of a small repo using only
-`tarsi-serve`. It assumes `tarsi-serve` is on your PATH (see
-[Getting started](/getting-started)) and the repo uses conventional
-commits.
+`tarsi-serve` — install, wire check, plan, dry-run, release, verify.
+The repo should use conventional commits.
 
-## 1. Prepare the repo
+## 1. Install `tarsi-serve`
+
+There is **no `tarsi` CLI** — the surface is `tarsi-serve`, an
+ndjson ops binary with a one-shot front door. It ships as a tamias
+pack (`libraries/tarsi`, `type: files` declaring `tarsi-serve` as a
+`tools/bin/<triple>/` payload bin):
+
+```bash
+# From a tarsi checkout:
+cargo xtask pack    # release-build → libraries/tarsi/tools/bin/<triple>/
+tamias install ./libraries/tarsi   # deploys `tarsi-serve` onto PATH
+```
+
+Dev shortcut without tamias: `cargo xtask install` puts a release
+`tarsi-serve` in `~/.local/bin`.
+
+## 2. Check the wire
+
+```bash
+tarsi-serve manifest
+# → {"name":"tarsi-serve","version":"…","ops":["manifest","profiles","plan","changelog","notes","release"]}
+```
+
+Two modes: no args = ndjson JSON-lines loop on stdio
+(`{"op": …, "params": …}` in, `{"ok": …, "result"|"error"}` out);
+`tarsi-serve <op> [--dir D] [--set k=v]… [--yes|--dry-run]` = one-shot
+argv — `--yes` maps to `dry_run: false`, `--dry-run` forces the
+default. See [Drive tarsi-serve ops](/how-to/use-serve-ops) for the
+full surface.
+
+## 3. Prepare the repo
 
 The repo needs a `tarsi.toml`. The minimal useful one:
 
@@ -35,7 +64,7 @@ git log --oneline
 # chore: tidy imports           → no release on its own
 ```
 
-## 2. Plan
+## 4. Plan
 
 ```bash
 tarsi-serve plan --dir .
@@ -58,14 +87,14 @@ repo-root files land there. `plan.steps` is the mutation sequence
 Nothing has been written. This is the review gate — always `plan`
 before `release`.
 
-## 3. Preview the notes
+## 5. Preview the notes
 
 ```bash
 tarsi-serve changelog --dir .   # per-unit {unit, version, tag, markdown}
 tarsi-serve notes --dir .       # concatenated release notes
 ```
 
-## 4. Dry-run the release
+## 6. Dry-run the release
 
 ```bash
 tarsi-serve release --dir .
@@ -79,7 +108,7 @@ happen, and writes nothing. Equivalently over ndjson:
 {"op":"release","params":{"dir":".","dry_run":true}}
 ```
 
-## 5. Release for real
+## 7. Release for real
 
 Only after the plan looks right and a human approves:
 
@@ -105,7 +134,7 @@ The result reports `steps_run`, per-target `publish` reports, and —
 on failure — `rolled_back` or a manual-cleanup note for partial
 publishes.
 
-## 6. Verify
+## 8. Verify
 
 ```bash
 git tag -l '*-v*' | tail
@@ -123,6 +152,17 @@ commits since the tags you just pushed.
 * Tune attribution and overrides —
   [Write a tarsi.toml](/how-to/write-tarsi-toml)
 * Script it from an agent — [Drive tarsi-serve ops](/how-to/use-serve-ops)
+
+---
+
+---
+url: /tarsi/how-to.md
+---
+# How-to guides
+
+* [Write a tarsi.toml](write-tarsi-toml.md) — units, publish targets, strategy tables
+* [Author a release profile pack](author-release-profile.md) — `type: tarsi` tamias packs
+* [Drive tarsi-serve ops](use-serve-ops.md) — the ndjson wire and one-shot argv
 
 ---
 
@@ -535,6 +575,105 @@ repos without a process.
 ---
 
 ---
+url: /tarsi/explanation.md
+---
+# Explanation
+
+* [Architecture](architecture.md) — the ops wire, ports, where tarsi sits
+* [Release semantics](release-semantics.md) — dry-run default, bump inference, per-unit tags, ordering, rollback (ADR-0003)
+* [Concepts](concepts.md) — units, strategies, profiles, the wire
+* [Boundaries](boundaries.md) — owns / doesn't-own, neighbors named
+* [Decisions](decisions.md) — ADR-lite: decision → alternative → consequence
+
+---
+
+---
+url: /tarsi/explanation/architecture.md
+---
+# Architecture
+
+Tarsi is the org's **release plane**: one pure domain core, a
+config loader, an ops wire, a publish port — and nothing else. It
+answers questions about releases; it never decides *when* to
+release or *who* approves.
+
+```
+ caller (human, agent, peregrin campaign, scripts/release.sh)
+        │  ndjson {"op": …, "params": …}  or  one-shot argv
+        ▼
+   tarsi-serve ────────── hypha-serve-cli (shared arg→params shim)
+        │                       │
+        │  plans · bumps ·      │ tarsi.toml / type: tarsi profiles
+        │  changelogs · tags    │ (scarab-config FileSource/Layered)
+        ▼                       ▼
+   tarsi-core (pure)      tarsi-manifest (Cargo.toml scan/patch)
+        │
+        ▼
+   lasius-vcs ── git history, tags, push (tarsi-core never touches git)
+        │
+        ▼
+   tarsi-publish port ── crates / ghreleases / dryrun impls
+```
+
+## The pieces
+
+* **`tarsi-core`** — pure release domain: plans, units, semver
+  bumps, commit classification, changelog rendering. No I/O.
+* **`tarsi-manifest`** — Cargo manifest scanning: workspace members
+  → `ReleaseUnitSpec`, version reads/writes via `toml_edit`.
+* **`tarsi-config`** — `tarsi.toml`/`.yml` loading (scarab-config)
+  plus `type: tarsi` profile-pack resolution.
+* **`tarsi-serve`** — the ops surface: `manifest` / `profiles` /
+  `plan` / `changelog` / `notes` / `check` / `schema` / `bump` /
+  `tag` / `publish` / `release`. No `tarsi` CLI exists.
+* **`tarsi-publish`** + `-crates` / `-ghreleases` / `-dryrun` — the
+  publish port and per-forge impls.
+* **`tarsi-driver`** — `tamias-driver-tarsi`: the `type: tarsi`
+  pack driver, plus a read-only pavo view.
+* **`tarsi-testkit`** — conformance fixtures + golden corpus.
+
+## The ops wire
+
+Two modes over the same ops: no args = ndjson JSON-lines on stdio;
+`<op> [--dir D] [--set k=v] [--yes|--dry-run]` = one-shot argv via
+the shared `hypha-serve-cli` shim. `release`-family ops are
+**dry-run by default** — mutation requires `dry_run: false`
+(`--yes`). Humans, agents, and peregrin campaigns speak identical
+wire; there is deliberately no `tarsi-llm`.
+
+## Profiles are packs
+
+Org release conventions ship as `type: tarsi` tamias packs
+(`libraries/9aia-release`) — layered config, versioned by the
+tamias store. `tamias-driver-tarsi` validates and installs them;
+`tarsi-config` resolves the layers through scarab-config's
+`FileSource`/`LayeredFileSource`.
+
+## Where it sits
+
+In the org's layering — **tamias** (package & content manager) →
+**engines** (myco records, kuda code maps, mimus proofs, sepia
+sessions, sturn coordination, hypha substrate, cicada schedules,
+cypera docs, scarab config, peregrin orchestration) → **surfaces**
+(pavo views, MCP fronts).
+
+Tarsi sits at the **release plane beside the engines**: every
+repo's `scripts/release.sh` is a thin shim over `tarsi-serve`,
+org conventions ride tamias profile packs, and peregrin's
+`libraries/release` campaign drives the same ops — tarsi computes
+plans and mutations; orchestration decides when to run them.
+
+## Deeper reads
+
+* [Release semantics](release-semantics.md) — the load-bearing
+  rules (dry-run default, per-unit tags, ordering, rollback).
+* [Boundaries](boundaries.md) — owns / doesn't-own, neighbors named.
+* [Concepts](concepts.md) — units, strategies, profiles, the wire.
+* [Decisions](decisions.md) — ADR-lite.
+
+---
+
+---
 url: /tarsi/explanation/release-semantics.md
 ---
 # Release semantics
@@ -647,7 +786,75 @@ dispatch stays a match arm.
 ---
 
 ---
-url: /tarsi/explanation/boundary.md
+url: /tarsi/explanation/concepts.md
+---
+# Concepts
+
+The domain vocabulary, each term defined once. Field-level
+contracts live in [Reference](../reference/).
+
+## Release unit
+
+One independently versioned thing — a cargo workspace member or an
+explicitly declared unit. Units resolve their own commit range
+(`{latest-tag-for-that-unit}..HEAD`) and release only when their
+paths changed.
+
+## Op
+
+The unit of the `tarsi-serve` wire: `manifest`, `profiles`, `plan`,
+`changelog`, `notes`, `check`, `schema`, `bump`, `tag`, `publish`,
+`release`. One JSON object in, one result out — identical for
+humans, agents, and campaigns.
+
+## Plan
+
+The computed, unwritten release: per-unit bump, `new_version`,
+tag, rendered changelog, publish targets, `steps` — plus
+`unattributed` commits. `plan` is the review gate; `release`
+executes it.
+
+## Bump strategy
+
+The data-driven rule table mapping commit types to semver bumps —
+`[release] strategy` in `tarsi.toml`, defaulting to `conventional`.
+`semantic-release-angular` ships the angular preset;
+`keep-a-changelog` keeps the same bumps with KaC section names.
+`spec.bump` and `release.default_bump` override inference.
+
+## Tag format
+
+`{unit}-v{version}` per unit (`tamias-core-v0.4.2`) — not a
+repo-level `v{semver}`.
+
+## Profile pack
+
+A `type: tarsi` tamias package carrying org release defaults —
+layered config resolved by `tarsi-config` through scarab-config.
+Shipped via `libraries/9aia-release`.
+
+## Publish target
+
+A forge destination — `crates` (crates.io), `ghreleases`
+(GitHub Releases), `dryrun`. Org repos keep both off: releases are
+tag-only and crates.io publishing is tamias-only.
+
+## Dry-run
+
+The default for every `release`-family op: full plan + dry-run
+publish, zero writes. Mutation requires `dry_run: false` (`--yes`).
+
+## Rollback
+
+Ordered mutation (changelogs → manifests → scoped add → bump
+commit → tags → push → publish) with exact undo: remote tags
+deleted, branch reset, created files removed. Publish failures
+roll back only if *nothing* published.
+
+---
+
+---
+url: /tarsi/explanation/boundaries.md
 ---
 # Boundary with tamias and peregrin
 
@@ -684,6 +891,91 @@ Its neighbors own the layers around it:
 from the cargo workspace, `tarsi-xtask` is skipped, both publish
 targets are off. Releasing tarsi itself is plan F of PL-014: a human
 or campaign decision, never an agent's.
+
+---
+
+---
+url: /tarsi/explanation/decisions.md
+---
+# Decisions
+
+ADR-lite: the load-bearing decisions, each with the alternative it
+beat and the consequence it carries. The contracts are pinned by
+org-ledger ADRs — ADR-0003 (release semantics), ADR-0004 (tag-only
+
+* tamias publish), ADR-0005 (tarsi as the release plane), P-030
+  (strategy tables).
+
+## Ops surface, not a CLI
+
+**Decision:** there is no `tarsi` binary — `tarsi-serve` exposes
+ndjson ops plus a one-shot argv front door.
+
+* *Alternative:* a conventional clap CLI like every other engine.
+* *Consequence:* humans, agents, and peregrin campaigns speak one
+  wire; the surface is generatable (ops manifest → MCP/CLI tools).
+  Cost: every interaction is a JSON round-trip, and `release.sh`
+  shims exist per repo to keep the muscle memory.
+
+## Dry-run is the default
+
+**Decision:** `release`-family ops mutate only with
+`dry_run: false` (`--yes`).
+
+* *Alternative:* mutate by default, flag to preview.
+* *Consequence:* agents and campaigns can probe any repo safely;
+  the explicit opt-in mirrors "service surfaces never mutate
+  unless asked" org-wide.
+
+## Per-unit tags and ranges
+
+**Decision:** `{unit}-v{version}` tags; each unit's range is
+latest-tag-for-that-unit..HEAD.
+
+* *Alternative:* one repo-level `v{semver}`.
+* *Consequence:* units in a workspace release independently and
+  only when their paths changed — the common case for polyrepos.
+
+## Strategy as data, not code
+
+**Decision:** bump inference and changelog sectioning are
+data-driven rule tables (`[release] strategy`), not a plugin API.
+
+* *Alternative:* executable plugins / per-repo code.
+* *Consequence:* presets (`semantic-release-angular`,
+  `keep-a-changelog`) ship as config; arbitrary types like `deps`
+  are nameable. The documented P-030 boundary: non-semver
+  versioning or plugin execution would need a different mechanism.
+
+## No `tarsi-llm`
+
+**Decision:** changelog polish composes with sepia sessions at
+the *caller*; tarsi itself never calls a model.
+
+* *Alternative:* an in-repo LLM path for nicer notes.
+* *Consequence:* release semantics stay deterministic and
+  auditable; the cuora/secrets boundary is untouched.
+
+## Push before publish
+
+**Decision:** mutation order ends `push branch+tags → publish`.
+
+* *Alternative:* publish, then push.
+* *Consequence:* GitHub Releases auto-creates missing tags at
+  remote HEAD — pushing first keeps the tag pinned to the bumped
+  commit. Load-bearing, pinned by ADR-0003.
+
+---
+
+---
+url: /tarsi/reference.md
+---
+# Reference
+
+* [Ops wire surface](ops.md) — every `tarsi-serve` op and its params
+* [tarsi.toml schema](config.md) — repo config fields
+* [Pack layout](pack-layout.md) — `libraries/` tamias packs
+* [Crates](crates.md) — the workspace crate map
 
 ---
 
@@ -1213,65 +1505,6 @@ tamias/bupha/peregrin. `tarsi-core` is pure domain (no I/O);
 
 API docs: `bun run docs:api` renders `cargo doc` into
 `public/api/` (linked from the built site under `/tarsi/api/`).
-
----
-
----
-url: /tarsi/getting-started.md
----
-# Getting started
-
-tarsi is the org's release plane: it turns conventional commits into a
-release — changelog → semver bump → tag → publish. There is **no
-`tarsi` CLI**; the surface is `tarsi-serve`, an ndjson ops binary with
-a one-shot front door (PL-014, org ledger ADR-0003).
-
-## Install `tarsi-serve`
-
-The command ships as a tamias pack (`libraries/tarsi` — `type: files`
-declaring `tarsi-serve` as a `tools/bin/<triple>/` payload bin).
-
-```bash
-# From a tarsi checkout:
-cargo xtask pack    # release-build → libraries/tarsi/tools/bin/<triple>/
-tamias install ./libraries/tarsi   # deploys `tarsi-serve` onto PATH
-```
-
-Dev shortcut without tamias:
-
-```bash
-cargo xtask install   # release `tarsi-serve` → ~/.local/bin
-```
-
-## Check the wire
-
-```bash
-tarsi-serve manifest
-# → {"name":"tarsi-serve","version":"…","ops":["manifest","profiles","plan","changelog","notes","release"]}
-```
-
-Two modes:
-
-* **No args** — ndjson JSON-lines loop on stdio: one
-  `{"op": …, "params": …}` per line in, one
-  `{"ok": …, "result"|"error"}` per line out.
-* **`tarsi-serve <op> [--dir D] [--set k=v]… [--yes|--dry-run]`** —
-  one-shot via `hypha-serve-cli`; prints the result JSON, exit 0/1.
-  `--yes` maps to `dry_run: false`; `--dry-run` forces the default.
-
-## Plan your first release
-
-Inside a repo with a `tarsi.toml` (or none — units default to cargo
-workspace members):
-
-```bash
-tarsi-serve plan --dir .
-```
-
-The result lists each unit in topo order: inferred bump, new version,
-tag, rendered changelog markdown, and publish targets — all computed,
-nothing written. The full walkthrough is in
-[Your first release](/tutorials/first-release).
 
 ---
 

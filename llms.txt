@@ -12,17 +12,23 @@ Changelog → semver bump → tag → publish — one ops wire for humans, agent
 
 ### How-to
 
+- [How-to guides](/tarsi/how-to.md)
 - [Write a tarsi.toml](/tarsi/how-to/write-tarsi-toml.md)
 - [Author a release profile pack](/tarsi/how-to/author-release-profile.md)
 - [Drive tarsi-serve ops](/tarsi/how-to/use-serve-ops.md)
 
 ### Explanation
 
+- [Explanation](/tarsi/explanation.md)
+- [Architecture](/tarsi/explanation/architecture.md)
 - [Release semantics](/tarsi/explanation/release-semantics.md)
-- [Boundary with tamias and peregrin](/tarsi/explanation/boundary.md)
+- [Concepts](/tarsi/explanation/concepts.md)
+- [Boundary with tamias and peregrin](/tarsi/explanation/boundaries.md)
+- [Decisions](/tarsi/explanation/decisions.md)
 
 ### Reference
 
+- [Reference](/tarsi/reference.md)
 - [Ops wire surface](/tarsi/reference/ops.md)
 - [tarsi.toml schema](/tarsi/reference/config.md)
 - [Pack layout](/tarsi/reference/pack-layout.md)
@@ -30,5 +36,4 @@ Changelog → semver bump → tag → publish — one ops wire for humans, agent
 
 ### Other
 
-- [Getting started](/tarsi/getting-started.md)
 - [Untitled](/tarsi/public/api/static.files/SourceSerif4-LICENSE-a2cfd9d5.md)

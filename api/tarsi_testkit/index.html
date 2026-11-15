@@ -30,14 +30,14 @@ commit ranges, parsed into <a href="../tarsi_core/commit/struct.Commit.html" tit
 golden cases and port tests.</dd><dt><a class="mod" href="golden/index.html" title="mod tarsi_testkit::golden">golden</a></dt><dd>Golden plan corpus (PL-014 B3) — specs + commit ranges →
 expected bump/version/tag/changelog per unit. This is the spec
 the legacy TS <code>tarsi</code> behavior maps onto: every case is data,
-<a href="golden/struct.GoldenCase.html#method.check" title="method tarsi_testkit::golden::GoldenCase::check"><code>GoldenCase::check</code></a> diffs the real [<code>plan_release</code>] output
+<a href="golden/struct.GoldenCase.html#method.check" title="method tarsi_testkit::golden::GoldenCase::check"><code>GoldenCase::check</code></a> diffs the real <a href="../tarsi_core/plan/fn.plan_release.html" title="fn tarsi_core::plan::plan_release"><code>plan_release</code></a> output
 against it and returns human-readable mismatches (empty =
 pass).</dd><dt><a class="mod" href="repo/index.html" title="mod tarsi_testkit::repo">repo</a></dt><dd>Real-git fixture repos for VCS-touching tests — temp
 workspaces with conventional commits, tags, and a bare
 <code>origin</code>, built with the <code>git</code> CLI (no VCS-impl dependency, so
 any [<code>lasius_vcs::Vcs</code>] adapter can be pointed at them).</dd><dt><a class="mod" href="serve/index.html" title="mod tarsi_testkit::serve">serve</a></dt><dd><code>tarsi-serve</code> op conformance — the wire contract every VCS
 impl (and every serve refactor) must satisfy. Each <code>assert_*</code>
-drives <a href="../tarsi_serve/fn.dispatch.html" title="fn tarsi_serve::dispatch"><code>tarsi_serve::dispatch</code></a> against a caller-supplied
+drives [<code>tarsi_serve::dispatch</code>] against a caller-supplied
 <code>&amp;dyn lasius_vcs::Vcs</code> and a fixture dir (see <a href="repo/index.html" title="mod tarsi_testkit::repo"><code>crate::repo</code></a>);
 failures panic with the op + response, passes return the
 response value for further assertions.</dd></dl></section></div></main></body></html>

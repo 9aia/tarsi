@@ -129,7 +129,7 @@
 <a href=#129 id=129 data-nosnippet>129</a>/// pre-P-030 default. Equivalent to
 <a href=#130 id=130 data-nosnippet>130</a>/// [`plan_release_with_strategy`] with [`Strategy::conventional`].
 <a href=#131 id=131 data-nosnippet>131</a>///
-<a href=#132 id=132 data-nosnippet>132</a>/// `specs` may come from [`UnitsSpec::CargoWorkspace`] resolved by
+<a href=#132 id=132 data-nosnippet>132</a>/// `specs` may come from [`UnitsSpec::CargoWorkspace`](crate::unit::UnitsSpec::CargoWorkspace) resolved by
 <a href=#133 id=133 data-nosnippet>133</a>/// the caller, or be passed directly — this function is pure.
 <a href=#134 id=134 data-nosnippet>134</a></span><span class="kw">pub fn </span>plan_release(
 <a href=#135 id=135 data-nosnippet>135</a>    specs: <span class="kw-2">&amp;</span>[ReleaseUnitSpec],
@@ -144,7 +144,7 @@
 <a href=#144 id=144 data-nosnippet>144</a>/// `conventional` builtin reproduces the legacy hardcoded policy
 <a href=#145 id=145 data-nosnippet>145</a>/// byte-identically.
 <a href=#146 id=146 data-nosnippet>146</a>///
-<a href=#147 id=147 data-nosnippet>147</a>/// `specs` may come from [`UnitsSpec::CargoWorkspace`] resolved by
+<a href=#147 id=147 data-nosnippet>147</a>/// `specs` may come from [`UnitsSpec::CargoWorkspace`](crate::unit::UnitsSpec::CargoWorkspace) resolved by
 <a href=#148 id=148 data-nosnippet>148</a>/// the caller, or be passed directly — this function is pure.
 <a href=#149 id=149 data-nosnippet>149</a></span><span class="kw">pub fn </span>plan_release_with_strategy(
 <a href=#150 id=150 data-nosnippet>150</a>    specs: <span class="kw-2">&amp;</span>[ReleaseUnitSpec],
