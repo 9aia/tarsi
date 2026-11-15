@@ -13,6 +13,40 @@ per project ADR-0004 (crates.io is tamias-only). The canonical
 agent surface is `.agents/skills/tarsi/SKILL.md` — read it before
 driving a release; `release`-family ops are dry-run by default.
 
+## Layout
+
+| Crate | Role |
+| --- | --- |
+| `crates/tarsi-core` | pure release domain — plans, units, semver bumps, commit classification, changelog — no I/O |
+| `crates/tarsi-manifest` | Cargo manifest scanning — workspace members → `ReleaseUnitSpec`, version reads/writes |
+| `crates/tarsi-config` | `tarsi.toml`/`tarsi.yml` loading (scarab-config) + `type: tarsi` profile resolution |
+| `crates/tarsi-serve` | `tarsi-serve` ops surface — ndjson ops + one-shot argv over tarsi-core + lasius-vcs |
+| `crates/tarsi-publish` + `-crates`/`-ghreleases`/`-dryrun` | publish port + per-forge impls (crates.io, GitHub Releases, dry-run) |
+| `crates/tarsi-driver` | `tamias-driver-tarsi` — `type: tarsi` pack driver; also a read-only pavo view driver (`manifest`/`serve`) |
+| `crates/tarsi-testkit` | conformance fixtures + golden corpus |
+| `xtask` | check / test / coverage / install / pack / package (+ `smoke`/`site` stubs) |
+
+`scripts/release.sh` is the per-repo shim; `scripts/fleet-check.sh`
+sweeps sibling clones for `tarsi.toml` coverage. `libraries/` holds
+the tamias packs (`tarsi` command pack, `9aia-release` profile
+pack).
+
+## Commands
+
+```bash
+cargo xtask check          # fmt + clippy -D warnings
+cargo xtask test           # whole suite (nextest if present)
+cargo xtask coverage       # llvm-cov report; extra args pass through
+cargo xtask install        # release tarsi-serve → ~/.local/bin
+cargo xtask pack           # stage libraries/tarsi payload
+                           # (release tarsi-serve → tools/bin/<triple>/)
+cargo xtask package        # cargo package --workspace (verify)
+cargo xtask smoke          # stub — not wired yet (needs crates.io publish)
+cargo xtask site           # stub — not wired yet (needs docs/ worktree)
+```
+
+Git hooks live in `.hooks/` (`core.hooksPath` = `.hooks`).
+
 <!-- myco:agent-awareness -->
 
 ## Agent awareness

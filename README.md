@@ -34,11 +34,16 @@ sweeps the sibling clones and reports which carry `tarsi.toml` + a
 `tarsi-serve` `release.sh` shim — run it from any checkout to see the
 current state.
 
+`crates/tarsi-driver` ships `tamias-driver-tarsi` — the content
+driver for `type: tarsi` release-profile packs, doubling as a
+read-only pavo view driver (`manifest`/`serve` over `tarsi-serve`
+one-shot ops).
+
 The legacy TypeScript implementation lives on the `legacy-ts` branch.
 
 ## Docs
 
-`docs/` worktree — VitePress + Diátaxis → `9aia.com/tarsi`;
-`cargo xtask site` builds it. Repo docs: [AGENTS](AGENTS.md) ·
+`docs/` worktree — VitePress + Diátaxis → `9aia.com/tarsi`
+(`cargo xtask site` is a stub — not wired yet). Repo docs: [AGENTS](AGENTS.md) ·
 [CONTRIBUTING](CONTRIBUTING.md) · [SECURITY](SECURITY.md) ·
 [LICENSE](LICENSE) (MIT) · [project](project/index.md).
