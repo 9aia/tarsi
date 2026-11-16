@@ -11,7 +11,7 @@ tamias/bupha/peregrin. `tarsi-core` is pure domain (no I/O);
 | `tarsi-publish` | port | Publish port — per-forge Publisher impls (crates.io, GitHub Releases, dry-run). |
 | `tarsi-config` | adapter | tarsi.toml/tarsi.yml loading — scarab-config file discovery over tarsi_core::Config, plus type:tarsi release-profile resolution. |
 | `tarsi-manifest` | adapter | Cargo manifest scanning — workspace members → tarsi_core::ReleaseUnitSpec, version reads/writes. |
-| `tarsi-publish-crates` | adapter | crates.io Publisher — dep-ordered cargo publish with 429 retry (release.sh semantics). |
+| `tarsi-publish-crates` | adapter | crates.io Publisher — dep-ordered cargo publish with 429 retry (idempotent re-runs). |
 | `tarsi-publish-dryrun` | adapter | Dry-run Publisher — validates and reports every target without remote writes. |
 | `tarsi-publish-ghreleases` | adapter | GitHub Releases publisher — release create + notes + asset upload via ureq (blocking, bupha-github convention). |
 | `tarsi-serve` | engine | tarsi service surface — ndjson ops (plan/changelog/notes/check/schema + granular bump/tag/publish + release) over tarsi-core + lasius-vcs. |

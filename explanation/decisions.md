@@ -14,8 +14,9 @@ ndjson ops plus a one-shot argv front door.
 - *Alternative:* a conventional clap CLI like every other engine.
 - *Consequence:* humans, agents, and peregrin campaigns speak one
   wire; the surface is generatable (ops manifest → MCP/CLI tools).
-  Cost: every interaction is a JSON round-trip, and `release.sh`
-shims exist per repo to keep the muscle memory.
+  Cost: every interaction is a JSON round-trip — agents and
+humans drive the same `tarsi-serve <op>` calls (the per-repo
+`scripts/release.sh` shims were removed org-wide).
 
 ## Dry-run is the default
 

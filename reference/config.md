@@ -193,7 +193,7 @@ Semantics:
 | key | type | required | meaning |
 | --- | --- | --- | --- |
 | `enabled` | `bool` | optional | crates.io publishing on/off. |
-| `retry_429` | `bool` | optional | Retry crates.io 429s with backoff (release.sh semantics). |
+| `retry_429` | `bool` | optional | Retry crates.io 429s with backoff (idempotent re-runs). |
 | `max_attempts` | `int` | optional | Max publish attempts per unit. |
 | `timeout_secs` | `u64` | optional | Per-attempt wall-clock cap for `cargo publish` in seconds (verify build + upload). Heavy crates need minutes — the default covers tamias-serve/tamias-tui-class builds (I-003). `0` disables the cap. |
 | `retry_base_secs` | `u64` | optional | Base delay in seconds between 429 retries — doubles per attempt up to `retry_max_secs`. crates.io bulk throttles ask for minutes-scale spacing (I-003). |

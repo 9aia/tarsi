@@ -6,7 +6,7 @@ answers questions about releases; it never decides *when* to
 release or *who* approves.
 
 ```
- caller (human, agent, peregrin campaign, scripts/release.sh)
+ caller (human, agent, peregrin campaign — `tarsi-serve release --dir .`)
         │  ndjson {"op": …, "params": …}  or  one-shot argv
         ▼
    tarsi-serve ────────── hypha-serve-cli (shared arg→params shim)
@@ -67,7 +67,7 @@ workspace, sepia sessions, peregrin campaigns) → **interface** (pavo
 views, MCP fronts).
 
 Tarsi sits at the **release plane in the delivery layer**: every
-repo's `scripts/release.sh` is a thin shim over `tarsi-serve`,
+repos run `tarsi-serve release --dir .` directly,
 org conventions ride tamias profile packs, and peregrin's
 `libraries/release` campaign drives the same ops — tarsi computes
 plans and mutations; the process layer decides when to run them.

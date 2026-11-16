@@ -142,8 +142,8 @@ Rules skip (with a reported reason) on mixed-version plans, are
 idempotent, and show up as `status:"dry-run"` + `changed_files` in a
 `bump`/`release` dry-run. Full semantics in
 [reference/config](/reference/config#release-sync_refs). With rules
-configured, `scripts/release.sh` shrinks to a bare
-`tarsi-serve release --dir . --yes`.
+configured, the direct `tarsi-serve release --dir . --yes` call
+carries the ref sync inside the release commit.
 
 ## `[publish.*]` — where releases go
 
