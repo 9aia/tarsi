@@ -6,7 +6,7 @@
 //! server `Retry-After` hint when cargo surfaces one; each
 //! attempt is bounded by a wall-clock timeout (verify builds on
 //! heavy crates can run for minutes — I-003). "Already exists"
-//! counts as success (idempotent re-runs — release.sh semantics).
+//! counts as success (idempotent re-runs).
 
 use std::path::PathBuf;
 use std::process::{Command, ExitStatus, Stdio};

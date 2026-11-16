@@ -30,6 +30,12 @@ tarsi-serve            # ndjson loop on stdio — one {"op","params"}
 Or one-shot (hypha-serve-cli): `tarsi-serve <op> --dir <repo>
 --set key=value [--yes]`.
 
+Repos call this directly — `tarsi-serve release --dir .` (dry-run)
+then `--yes` on approval. The per-repo `scripts/release.sh` shims
+were removed org-wide; there is no wrapper to source or `.env` to
+load (secret *names* still come from `token_env` in `tarsi.toml`,
+resolved via cuora where configured).
+
 Ops (all JSON in/out — no `--json` flag exists or is needed):
 
 | op | params | returns |

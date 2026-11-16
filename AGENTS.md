@@ -6,9 +6,10 @@ bump → tag → publish, exposed as `tarsi-serve` ndjson ops
 `bump`/`tag`/`publish`/`release`) — there is no `tarsi` CLI.
 Repo config is `tarsi.toml`; org release defaults ride `type: tarsi`
 profile packs (`libraries/9aia-release`) distributed by tamias;
-peregrin's `libraries/release` campaign drives the same ops. Each
-repo's `scripts/release.sh` is a thin shim over `tarsi-serve`
-(PL-014 E1); the release *model* stays tag-only + `tamias publish`
+peregrin's `libraries/release` campaign drives the same ops.
+Releases run `tarsi-serve release --dir .` directly — the
+per-repo `scripts/release.sh` shims were removed org-wide
+(PL-014 E1/F); the release *model* stays tag-only + `tamias publish`
 per project ADR-0004 (crates.io is tamias-only). The canonical
 agent surface is `.agents/skills/tarsi/SKILL.md` — read it before
 driving a release; `release`-family ops are dry-run by default.
@@ -26,8 +27,9 @@ driving a release; `release`-family ops are dry-run by default.
 | `crates/tarsi-testkit` | conformance fixtures + golden corpus |
 | `xtask` | check / test / coverage / install / pack / package (+ `smoke`/`site` stubs) |
 
-`scripts/release.sh` is the per-repo shim; `scripts/fleet-check.sh`
-sweeps sibling clones for `tarsi.toml` coverage. `libraries/` holds
+`scripts/fleet-check.sh`
+sweeps sibling clones for `tarsi.toml` coverage (and flags any
+leftover `scripts/release.sh`). `libraries/` holds
 the tamias packs (`tarsi` command pack, `9aia-release` profile
 pack).
 

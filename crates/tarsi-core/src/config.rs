@@ -181,7 +181,7 @@ pub struct CratesPublish {
     /// crates.io publishing on/off.
     #[serde(default = "default_true")]
     pub enabled: bool,
-    /// Retry crates.io 429s with backoff (release.sh semantics).
+    /// Retry crates.io 429s with backoff (idempotent re-runs).
     #[serde(default = "default_true")]
     pub retry_429: bool,
     /// Max publish attempts per unit.

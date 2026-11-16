@@ -5,8 +5,9 @@
 >
 > The org release plane (project ADR-0005): `tarsi-serve` exposes the
 > ops — `manifest`/`profiles`/`plan`/`changelog`/`notes`/`check`/
-> `schema`/`bump`/`tag`/`publish`/`release`. There is no `tarsi` CLI;
-> a repo's `scripts/release.sh` is a thin shim over `tarsi-serve`.
+> `schema`/`bump`/`tag`/`publish`/`release`. There is no `tarsi` CLI —
+> repos run `tarsi-serve release --dir .` directly (the per-repo
+> `scripts/release.sh` shims were removed org-wide).
 
 ## Distribution
 
@@ -30,9 +31,9 @@ Dev shortcut without tamias: `cargo xtask install` puts a release
 `tarsi-serve` in `~/.local/bin`.
 
 Fleet rollout is opt-in per repo (ADR-0005): `scripts/fleet-check.sh`
-sweeps the sibling clones and reports which carry `tarsi.toml` + a
-`tarsi-serve` `release.sh` shim — run it from any checkout to see the
-current state.
+sweeps the sibling clones and reports which carry `tarsi.toml` (and
+flags any leftover `scripts/release.sh`) — run it from any checkout
+to see the current state.
 
 `crates/tarsi-driver` ships `tamias-driver-tarsi` — the content
 driver for `type: tarsi` release-profile packs, doubling as a
