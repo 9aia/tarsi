@@ -204,9 +204,15 @@ pub fn assert_plan_op(vcs: &dyn Vcs, dir: &Path) -> Value {
         "publish targets carry effective enabled state: {aaa}"
     );
     let bbb = &units[1];
-    assert_eq!(bbb["bump"], "patch", "{bbb}");
-    assert_eq!(bbb["new_version"], "0.1.1", "{bbb}");
-    assert_eq!(bbb["tag"], "bbb-v0.1.1", "{bbb}");
+    // Both units inherit `[workspace.package].version` →
+    // `version_shared` → lockstep: bbb's inferred patch is
+    // folded into aaa's stronger minor, so both release at
+    // 0.2.0 (I-002 — the workspace version can't split).
+    assert_eq!(bbb["spec"]["version_shared"], true, "{bbb}");
+    assert_eq!(bbb["bump"], "minor", "{bbb}");
+    assert_eq!(bbb["new_version"], "0.2.0", "{bbb}");
+    assert_eq!(bbb["tag"], "bbb-v0.2.0", "{bbb}");
+    assert_eq!(bbb["releases"], true, "{bbb}");
     r
 }
 
@@ -245,29 +251,30 @@ pub fn assert_changelog_notes_ops(vcs: &dyn Vcs, dir: &Path) {
 
 /// `params.range` overrides the since-last-tag range for every
 /// unit — `"<tag>..HEAD"` style rev syntax passes through to the
-/// VCS port.
+/// VCS port. On a shared-version workspace the lockstep still
+/// applies: only bbb has in-range commits (patch), but aaa's
+/// manifest version moves with the group, so aaa releases too.
 ///
 /// # Panics
 /// On contract violation.
 pub fn assert_range_param(vcs: &dyn Vcs, dir: &Path) {
-    // Only the newest commit (fix(bbb)) is in range → aaa sees
-    // nothing releasable, bbb still patches.
+    // Only the newest commit (fix(bbb)) is in range → bbb patches;
+    // the shared-version group folds aaa in at the same bump.
     let mut params = dir_params(dir);
     params["range"] = json!("HEAD~1..HEAD");
     let r = ok(vcs, "plan", params);
     let units = r["plan"]["units"]
         .as_array()
         .expect("plan.units must be an array");
-    let aaa = units
-        .iter()
-        .find(|u| u["spec"]["name"] == "aaa")
-        .expect("aaa unit");
-    assert_eq!(aaa["releases"], false, "aaa out of range: {aaa}");
-    let bbb = units
-        .iter()
-        .find(|u| u["spec"]["name"] == "bbb")
-        .expect("bbb unit");
-    assert_eq!(bbb["bump"], "patch", "{bbb}");
+    for name in ["aaa", "bbb"] {
+        let u = units
+            .iter()
+            .find(|u| u["spec"]["name"] == name)
+            .unwrap_or_else(|| panic!("{name} unit"));
+        assert_eq!(u["bump"], "patch", "{name}: {u}");
+        assert_eq!(u["new_version"], "0.1.1", "{name}: {u}");
+        assert_eq!(u["releases"], true, "{name}: {u}");
+    }
 }
 
 /// An unknown op is an error, not a panic or silent ok.
@@ -368,7 +375,7 @@ pub fn assert_release_conformance(vcs: &dyn Vcs, dir: &Path) {
         Some(bump.as_str()),
         "remote main at bump commit: {remote:?}"
     );
-    for tag in ["aaa-v0.2.0", "bbb-v0.1.1"] {
+    for tag in ["aaa-v0.2.0", "bbb-v0.2.0"] {
         assert_eq!(
             remote.get(&format!("refs/tags/{tag}")).map(String::as_str),
             Some(bump.as_str()),
@@ -385,13 +392,12 @@ pub fn assert_release_conformance(vcs: &dyn Vcs, dir: &Path) {
     }
 
     // Workspace version: both units inherit
-    // `version.workspace = true`, so each `write_unit_version`
-    // rewrites the same `[workspace.package] version` — last
-    // releasing unit wins (bbb → 0.1.1). This is the documented
-    // ADR-0003 shared-workspace-version limitation, not a bug the
-    // conformance suite should paper over.
+    // `version.workspace = true` → `version_shared` → the
+    // lockstep group takes the strongest member bump (aaa's
+    // minor), so `[workspace.package].version` lands on 0.2.0 —
+    // every inheriting member's manifest agrees (I-002).
     let ws = std::fs::read_to_string(dir.join("Cargo.toml")).expect("workspace manifest");
-    assert!(ws.contains("0.1.1"), "workspace version bumped: {ws}");
+    assert!(ws.contains("0.2.0"), "workspace version bumped: {ws}");
     assert!(!ws.contains("0.1.0"), "old version gone: {ws}");
 }
 
@@ -544,7 +550,7 @@ pub fn assert_granular_release_chain(vcs: &dyn Vcs, dir: &Path) {
         Some(bump_commit.as_str()),
         "remote main at bump commit: {remote:?}"
     );
-    for tag in ["aaa-v0.2.0", "bbb-v0.1.1"] {
+    for tag in ["aaa-v0.2.0", "bbb-v0.2.0"] {
         assert_eq!(
             remote.get(&format!("refs/tags/{tag}")).map(String::as_str),
             Some(bump_commit.as_str()),
@@ -557,7 +563,7 @@ pub fn assert_granular_release_chain(vcs: &dyn Vcs, dir: &Path) {
         assert!(text.starts_with("# Changelog\n\n##"), "{text:?}");
     }
     let ws = std::fs::read_to_string(dir.join("Cargo.toml")).expect("workspace manifest");
-    assert!(ws.contains("0.1.1"), "workspace version bumped: {ws}");
+    assert!(ws.contains("0.2.0"), "workspace version bumped: {ws}");
 
     // Post-release `check` is clean: the new tags bound each
     // unit's range, so nothing is left to release (idempotent —
@@ -722,10 +728,13 @@ pub fn assert_sync_refs_conformance(vcs: &dyn Vcs, dir: &Path) {
     }
 }
 
-/// Mixed-version guard: on the two-unit [`repo::workspace_repo`]
-/// fixture the releasing units plan *different* new versions
-/// (0.2.0 vs 0.1.1), so sync_refs must skip — the shim's
-/// `len(vs)==1` guard, now a reported reason. Release proceeds.
+/// Mixed-version guard: on [`repo::mixed_version_repo`] —
+/// literal per-package versions, no shared workspace version —
+/// the releasing units plan *different* new versions (0.2.0 vs
+/// 0.1.1), so sync_refs must skip — the shim's `len(vs)==1`
+/// guard, now a reported reason. Release proceeds. (The
+/// shared-version [`repo::workspace_repo`] can no longer produce
+/// a mixed plan: lockstep folds every member to one version.)
 ///
 /// # Panics
 /// On contract violation.

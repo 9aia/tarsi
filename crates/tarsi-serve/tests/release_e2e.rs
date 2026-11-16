@@ -159,7 +159,7 @@ fn release_pushes_commit_and_tags_before_publish() {
         Some(bump.as_str()),
         "{remote:?}"
     );
-    for tag in ["aaa-v0.2.0", "bbb-v0.1.1"] {
+    for tag in ["aaa-v0.2.0", "bbb-v0.2.0"] {
         assert_eq!(
             remote.get(&format!("refs/tags/{tag}")).map(String::as_str),
             Some(bump.as_str()),
@@ -236,7 +236,7 @@ fn release_publish_failure_rolls_back_local_and_remote() {
         Some(pre_head.as_str()),
         "{remote:?}"
     );
-    for tag in ["aaa-v0.2.0", "bbb-v0.1.1"] {
+    for tag in ["aaa-v0.2.0", "bbb-v0.2.0"] {
         assert!(
             !remote.contains_key(&format!("refs/tags/{tag}")),
             "remote tag {tag} must be deleted: {remote:?}"

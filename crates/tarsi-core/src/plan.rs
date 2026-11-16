@@ -219,6 +219,45 @@ pub fn plan_release_with_strategy(
         });
     }
 
+    // Shared-version lockstep (ADR-0003 d4, I-002): units whose
+    // version comes from one shared source (`[workspace.package]
+    // .version` via `version.workspace = true`) cannot version
+    // independently — the bump writes a single file, so every
+    // inheriting member's manifest moves together. Group them by
+    // `current_version`; when any member resolves to a releasing
+    // bump, EVERY member takes the group's strongest bump —
+    // otherwise the workspace version would advance past units
+    // that were never tagged/published (the tamias v0.2.0
+    // half-release). `spec.bump` overrides feed the max like any
+    // inferred bump; `unit_overrides.skip` remains the only way
+    // to exempt a unit.
+    let mut shared: BTreeMap<Version, Vec<usize>> = BTreeMap::new();
+    for (i, u) in units.iter().enumerate() {
+        if u.spec.version_shared {
+            shared
+                .entry(u.spec.current_version.clone())
+                .or_default()
+                .push(i);
+        }
+    }
+    for idxs in shared.into_values() {
+        let group = idxs
+            .iter()
+            .map(|&i| units[i].bump)
+            .max()
+            .unwrap_or(Bump::None);
+        if !group.releases() {
+            continue;
+        }
+        for i in idxs {
+            let u = &mut units[i];
+            u.bump = group;
+            u.new_version = group.apply(&u.spec.current_version);
+            u.tag = u.spec.tag(&u.new_version);
+            u.changelog.version = u.new_version.to_string();
+        }
+    }
+
     // Unattributed = commits touching no unit path. A commit with
     // empty `paths` is conservatively attributed to every unit
     // (unknown granularity), so it never lands here.
@@ -325,6 +364,14 @@ mod tests {
             bump: None,
             publish: vec![PublishTarget::CratesIo],
             depends_on: deps.iter().map(|s| s.to_string()).collect(),
+            version_shared: false,
+        }
+    }
+
+    fn shared_spec(name: &str, path: &str, deps: &[&str]) -> ReleaseUnitSpec {
+        ReleaseUnitSpec {
+            version_shared: true,
+            ..spec(name, path, deps)
         }
     }
 
@@ -392,6 +439,42 @@ mod tests {
             plan.units.iter().filter(|u| u.bump == Bump::Minor).count(),
             2
         );
+    }
+
+    #[test]
+    fn shared_version_units_release_in_lockstep() {
+        // I-002: `[workspace.package].version` bumps EVERY
+        // inheriting member — a unit left at `Bump::None` would
+        // still get the new version in its manifest, untagged and
+        // unpublished. The group takes the strongest member bump.
+        let specs = vec![
+            shared_spec("core", "crates/core", &[]),
+            shared_spec("cli", "crates/cli", &["core"]),
+        ];
+        let commits = vec![
+            commit("aaa", "feat(core): add thing", &["crates/core/lib.rs"]),
+            commit("bbb", "fix(cli): crash", &["crates/cli/main.rs"]),
+        ];
+        let plan = plan_release(&specs, &commits, None).unwrap();
+        assert_eq!(plan.units.len(), 2);
+        for u in &plan.units {
+            assert_eq!(u.bump, Bump::Minor, "{}: {u:?}", u.spec.name);
+            assert_eq!(u.new_version.to_string(), "0.2.0");
+            assert!(u.releases());
+        }
+        assert_eq!(plan.units[0].tag, "core-v0.2.0");
+        assert_eq!(plan.units[1].tag, "cli-v0.2.0");
+    }
+
+    #[test]
+    fn shared_version_group_quiet_when_nothing_releases() {
+        let specs = vec![
+            shared_spec("a", "crates/a", &[]),
+            shared_spec("b", "crates/b", &[]),
+        ];
+        let commits = vec![commit("x", "chore: tidy", &["crates/a/x.rs"])];
+        let plan = plan_release(&specs, &commits, None).unwrap();
+        assert!(plan.releasing().next().is_none());
     }
 
     #[test]

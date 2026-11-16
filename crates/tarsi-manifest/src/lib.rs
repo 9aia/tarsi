@@ -88,6 +88,12 @@ fn expand_members(root: &Path, globs: &[String]) -> Result<Vec<PathBuf>, Manifes
 struct MemberInfo {
     name: String,
     version: Version,
+    /// Version resolves from `[workspace.package].version`
+    /// (`version.workspace = true`, or the inherited fallback) —
+    /// such units share one version file and must release in
+    /// lockstep (I-002). Literal per-package versions are
+    /// independent.
+    version_shared: bool,
     publishable: bool,
     /// Names of sibling members this one path-depends on.
     path_deps: Vec<String>,
@@ -106,7 +112,12 @@ fn read_member(dir: &Path, ws_version: Option<&Version>) -> Result<MemberInfo, M
         .ok_or_else(|| ManifestError::NoPackage(manifest.clone()))?
         .to_string();
     // `version.workspace = true` inherits workspace.package.version.
-    let version = match package.get("version") {
+    // Anything that isn't a literal string (the inherit table, or
+    // a missing key falling back to the workspace version) shares
+    // the workspace version file → `version_shared`.
+    let version_item = package.get("version");
+    let version_shared = !version_item.is_some_and(|v| v.is_str());
+    let version = match version_item {
         Some(v) if v.is_str() => Version::parse(v.as_str().unwrap_or("0.0.0"))
             .map_err(|e| ManifestError::Toml(manifest.clone(), e.to_string()))?,
         Some(v) if v.is_table() => ws_version
@@ -174,6 +185,7 @@ fn read_member(dir: &Path, ws_version: Option<&Version>) -> Result<MemberInfo, M
     Ok(MemberInfo {
         name,
         version,
+        version_shared,
         publishable,
         path_deps,
     })
@@ -231,6 +243,7 @@ pub fn cargo_workspace_units(root: &Path) -> Result<Vec<ReleaseUnitSpec>, Manife
                 .into_iter()
                 .filter(|d| names.contains(d))
                 .collect(),
+            version_shared: m.version_shared,
         });
     }
     if specs.is_empty() {
@@ -496,6 +509,14 @@ version = "1.2.3"
             "[package]\nname = \"internal\"\nversion.workspace = true\npublish = false\n",
         )
         .unwrap();
+        // literal pins its own version — NOT workspace-shared
+        let dir = root.join("crates/literal");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("Cargo.toml"),
+            "[package]\nname = \"literal\"\nversion = \"9.9.9\"\n",
+        )
+        .unwrap();
         d
     }
 
@@ -503,14 +524,23 @@ version = "1.2.3"
     fn workspace_members_become_specs() {
         let d = fixture();
         let specs = cargo_workspace_units(d.path()).unwrap();
-        assert_eq!(specs.len(), 3);
+        assert_eq!(specs.len(), 4);
         let cli = specs.iter().find(|s| s.name == "cli").unwrap();
         assert_eq!(cli.depends_on, vec!["core"]);
         assert_eq!(cli.current_version.to_string(), "1.2.3");
         assert_eq!(cli.path, "crates/cli");
         assert_eq!(cli.publish.len(), 2);
+        // version.workspace = true → shared version file →
+        // lockstep release group (I-002). publish=false doesn't
+        // change that — the manifest version still moves.
+        assert!(cli.version_shared);
         let internal = specs.iter().find(|s| s.name == "internal").unwrap();
         assert!(internal.publish.is_empty());
+        assert!(internal.version_shared);
+        // Literal version → independent versioning.
+        let literal = specs.iter().find(|s| s.name == "literal").unwrap();
+        assert!(!literal.version_shared);
+        assert_eq!(literal.current_version.to_string(), "9.9.9");
     }
 
     #[test]
@@ -522,10 +552,21 @@ version = "1.2.3"
             write_unit_version(d.path(), "crates/cli", &Version::parse("2.0.0").unwrap()).unwrap();
         assert!(changed);
         // workspace version now 2.0.0 for all inheriting members
+        // (the literal-version member keeps its own version)
         let specs = cargo_workspace_units(d.path()).unwrap();
         assert!(specs
             .iter()
+            .filter(|s| s.version_shared)
             .all(|s| s.current_version.to_string() == "2.0.0"));
+        assert_eq!(
+            specs
+                .iter()
+                .find(|s| s.name == "literal")
+                .unwrap()
+                .current_version
+                .to_string(),
+            "9.9.9"
+        );
         let _ = cli;
     }
 

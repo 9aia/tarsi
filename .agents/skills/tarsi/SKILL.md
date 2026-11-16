@@ -150,10 +150,12 @@ changelog `Changed`. Other strategies are data — see
 commit-analyzer angular preset; `keep-a-changelog` ships the
 keepachangelog.com section layout over the same bump rules).
 Commits attribute to units by
-path prefix; repo-root files land in `unattributed`. Per-unit
-bumps can disagree — with `version.workspace = true` the
-workspace version is last-writer-wins (documented ADR-0003
-limitation).
+path prefix; repo-root files land in `unattributed`. Units with
+`version.workspace = true` are marked `version_shared` on their
+spec and release **in lockstep**: each same-version group takes
+the strongest member bump, so every inheriting member is tagged
+and published at one version (I-002; ADR-0003 d4). Literal
+per-package versions keep per-unit bumps.
 
 ## Testing / dogfooding
 

@@ -47,6 +47,16 @@ pub struct ReleaseUnitSpec {
     /// config; the planner topo-sorts on it.
     #[serde(default)]
     pub depends_on: Vec<String>,
+    /// `true` when this unit's version is shared with sibling
+    /// units — e.g. `[workspace.package].version` inherited via
+    /// `version.workspace = true`. Shared-version units release
+    /// in lockstep: the planner folds each same-version group
+    /// into one bump (the strongest member bump wins) so
+    /// manifests, tags, and publishes all agree on a single
+    /// version (I-002). Literal per-package versions leave this
+    /// `false` and version independently.
+    #[serde(default)]
+    pub version_shared: bool,
 }
 
 fn default_root() -> String {

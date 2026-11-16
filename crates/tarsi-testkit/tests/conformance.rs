@@ -58,7 +58,8 @@ fn serve_sync_refs_conforms_on_git() {
 
 #[test]
 fn serve_sync_refs_skips_mixed_versions_on_git() {
-    let fx = repo::workspace_repo();
+    // Independent (literal) versions → genuinely mixed plan.
+    let fx = repo::mixed_version_repo();
     serve::assert_sync_refs_skips_mixed_versions(&GitVcs, fx.path());
 }
 

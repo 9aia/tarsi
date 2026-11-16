@@ -180,6 +180,16 @@ fn spec(name: &str, path: &str, version: &str, deps: &[&str]) -> ReleaseUnitSpec
         bump: None,
         publish: vec![PublishTarget::CratesIo, PublishTarget::GithubRelease],
         depends_on: deps.iter().map(|s| (*s).to_string()).collect(),
+        version_shared: false,
+    }
+}
+
+/// A spec whose version is workspace-shared (`version.workspace =
+/// true`) — members of such a group release in lockstep.
+fn shared_spec(name: &str, path: &str, version: &str, deps: &[&str]) -> ReleaseUnitSpec {
+    ReleaseUnitSpec {
+        version_shared: true,
+        ..spec(name, path, version, deps)
     }
 }
 
@@ -242,6 +252,35 @@ pub fn cases() -> Vec<GoldenCase> {
                 ),
             ],
             // Cargo.lock + README.md touch neither unit path.
+            expect_unattributed: 2,
+        },
+        GoldenCase {
+            name: "workspace-shared-lockstep",
+            // I-002: units inheriting `[workspace.package].version`
+            // cannot version independently — cli's inferred major
+            // pulls core up to major too; both release at 1.0.0.
+            specs: vec![
+                shared_spec("core", "crates/core", "0.1.0", &[]),
+                shared_spec("cli", "crates/cli", "0.1.0", &["core"]),
+            ],
+            commits: fixtures::synthetic_commits(),
+            strategy: None,
+            expect_units: vec![
+                unit(
+                    "core",
+                    Bump::Major,
+                    "1.0.0",
+                    "core-v1.0.0",
+                    &["add widget API"],
+                ),
+                unit(
+                    "cli",
+                    Bump::Major,
+                    "1.0.0",
+                    "cli-v1.0.0",
+                    &["crash on empty args", "drop --legacy flag"],
+                ),
+            ],
             expect_unattributed: 2,
         },
         GoldenCase {

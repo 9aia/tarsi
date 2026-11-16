@@ -166,6 +166,62 @@ pub fn workspace_repo() -> Fixture {
     }
 }
 
+/// [`workspace_repo`]'s sibling with *independent* versions: same
+/// two-unit shape and commit tail, but literal per-package
+/// versions and no `[workspace.package]` — units version
+/// separately (aaa minor → 0.2.0, bbb patch → 0.1.1), which is
+/// what exercises mixed-version guards like `sync_refs`' skip.
+#[must_use]
+pub fn mixed_version_repo() -> Fixture {
+    let repo = TempDir::new().expect("tarsi-testkit: tempdir");
+    let origin = TempDir::new().expect("tarsi-testkit: tempdir");
+    let root = repo.path().to_path_buf();
+    let origin_git = origin.path().join("origin.git");
+
+    git(origin.path(), &["init", "-q", "--bare", "origin.git"]);
+
+    write(
+        &root,
+        "Cargo.toml",
+        "[workspace]\nmembers=[\"crates/*\"]\nresolver=\"2\"\n",
+    );
+    for (n, dep) in [("aaa", ""), ("bbb", "aaa = { path = \"../aaa\" }")] {
+        write(
+            &root,
+            &format!("crates/{n}/Cargo.toml"),
+            &format!("[package]\nname=\"{n}\"\nversion=\"0.1.0\"\n\n[dependencies]\n{dep}\n"),
+        );
+        write(&root, &format!("crates/{n}/src/lib.rs"), "// lib\n");
+    }
+    git(&root, &["init", "-q", "-b", "main"]);
+    git(&root, &["config", "user.name", "t"]);
+    git(&root, &["config", "user.email", "t@t"]);
+    git(&root, &["config", "commit.gpgsign", "false"]);
+    commit_all(&root, "chore: scaffold");
+    git(&root, &["tag", "aaa-v0.1.0"]);
+    git(&root, &["tag", "bbb-v0.1.0"]);
+    git(
+        &root,
+        &[
+            "remote",
+            "add",
+            "origin",
+            origin_git.to_str().expect("utf8 path"),
+        ],
+    );
+    write(&root, "crates/aaa/src/lib.rs", "// feat\n");
+    commit_all(&root, "feat(aaa): add thing");
+    write(&root, "crates/bbb/src/lib.rs", "// fix\n");
+    commit_all(&root, "fix(bbb): crash on empty");
+
+    Fixture {
+        root,
+        origin_git,
+        _repo: repo,
+        _origin: origin,
+    }
+}
+
 /// A single-package repo: one `Cargo.toml` + `src/lib.rs`, one
 /// `feat:` commit, tag `app-v0.1.0`, bare `origin`. For
 /// single-unit release conformance.

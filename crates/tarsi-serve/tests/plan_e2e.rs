@@ -79,12 +79,15 @@ fn plan_since_tags_attributes_and_orders() {
     assert_eq!(aaa["bump"], "minor");
     assert_eq!(aaa["new_version"], "0.2.0");
     assert_eq!(aaa["tag"], "aaa-v0.2.0");
-    // bbb only saw a fix → patch; aaa saw a feat → minor. The two
-    // disagree — exactly the workspace-version limitation ADR-0003
-    // documents (shared workspace.package.version can't express it).
     let bbb = &units[1];
-    assert_eq!(bbb["bump"], "patch");
-    assert_eq!(bbb["new_version"], "0.1.1");
+    // bbb only saw a fix → patch; aaa saw a feat → minor. Both
+    // inherit `[workspace.package].version` → `version_shared` →
+    // lockstep: the group takes the strongest bump, so bbb
+    // releases at the same 0.2.0 (I-002 — the shared version
+    // file can't express per-unit bumps).
+    assert_eq!(bbb["bump"], "minor");
+    assert_eq!(bbb["new_version"], "0.2.0");
+    assert_eq!(bbb["tag"], "bbb-v0.2.0");
     // changelog markdown rendered for the releasing unit
     assert!(aaa["changelog_markdown"]
         .as_str()
@@ -166,7 +169,8 @@ fn release_dry_run_reports_configured_assets() {
     assert!(detail.contains("dry-run"), "{detail}");
     assert!(detail.contains("aaa-0.2.0-linux.tar.gz"), "{detail}");
     assert!(detail.contains("application/gzip"), "{detail}");
-    // bbb's version differs → its glob matches nothing → no assets.
+    // bbb matches no files under its own unit name → no assets
+    // (both units now share version 0.2.0 via lockstep).
     let gh_bbb = publish
         .iter()
         .find(|p| p["target"] == "github-release" && p["unit"] == "bbb")
@@ -245,9 +249,11 @@ bump = "major"
         .find(|u| u["spec"]["name"] == "bbb")
         .expect("bbb unit");
     // fix matches no custom rule → inferred none → default_bump
-    // fallback → patch.
-    assert_eq!(bbb["bump"], "patch");
-    assert_eq!(bbb["new_version"], "0.1.1");
+    // fallback → patch; but the shared-version lockstep folds it
+    // into aaa's stronger major — the workspace version is one
+    // file, so the group takes the max (I-002).
+    assert_eq!(bbb["bump"], "major");
+    assert_eq!(bbb["new_version"], "1.0.0");
     // The docs-only commit was filtered pre-attribution — nothing
     // unattributed.
     assert_eq!(r["plan"]["unattributed"].as_array().unwrap().len(), 0);
