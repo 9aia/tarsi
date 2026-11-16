@@ -193,6 +193,8 @@ defaults would surprise.
 ## Workspace-version caveat
 
 Units whose manifests use `version.workspace = true` share one version
-file: the bump is last-writer-wins across releasing units. Keep
-workspaces in lockstep or give units explicit versions until per-unit
-workspace versions exist (org ledger ADR-0003, decision 4).
+file, so they release in lockstep: the group takes the strongest
+member bump and every member is tagged/published at the same version
+(org ledger ADR-0003, decision 4; I-002). Members with literal
+`version = "x.y.z"` version independently — use that for crates that
+must not ride the workspace bump.

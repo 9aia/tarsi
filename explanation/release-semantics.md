@@ -53,16 +53,21 @@ dropped).
 Tag format is `{unit}-v{version}` per unit (`tamias-core-v0.4.2`),
 not repo-level `v{semver}`. Each unit's commit range is
 `{latest-tag-for-that-unit}..HEAD` — units release independently and
-only when their own paths changed. `params.range` overrides with one
-range for all units.
+only when their own paths changed, **except** units sharing one
+version file (see below): those release in lockstep. `params.range`
+overrides with one range for all units.
 
 ## Manifest mutation
 
 Versions are written via `toml_edit` (`tarsi-manifest`) — formatting
 and comments survive. Units with `version.workspace = true` bump
-`[workspace.package].version` instead: **all releasing units in such
-a workspace share one bump** (last-writer-wins today; per-unit
-workspace versions are a known limitation).
+`[workspace.package].version` instead — one file for every inheriting
+member, so the planner marks them `version_shared` and folds each
+same-version group into a single bump: **when any member releases,
+all members release at the group's strongest bump** (I-002 — a
+partial release would leave the workspace version ahead of units
+that were never tagged or published). Literal per-package versions
+stay independent.
 
 ## Ordering and rollback
 
