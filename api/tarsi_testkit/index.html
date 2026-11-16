@@ -37,7 +37,7 @@ workspaces with conventional commits, tags, and a bare
 <code>origin</code>, built with the <code>git</code> CLI (no VCS-impl dependency, so
 any [<code>lasius_vcs::Vcs</code>] adapter can be pointed at them).</dd><dt><a class="mod" href="serve/index.html" title="mod tarsi_testkit::serve">serve</a></dt><dd><code>tarsi-serve</code> op conformance — the wire contract every VCS
 impl (and every serve refactor) must satisfy. Each <code>assert_*</code>
-drives [<code>tarsi_serve::dispatch</code>] against a caller-supplied
+drives <a href="../tarsi_serve/fn.dispatch.html" title="fn tarsi_serve::dispatch"><code>tarsi_serve::dispatch</code></a> against a caller-supplied
 <code>&amp;dyn lasius_vcs::Vcs</code> and a fixture dir (see <a href="repo/index.html" title="mod tarsi_testkit::repo"><code>crate::repo</code></a>);
 failures panic with the op + response, passes return the
 response value for further assertions.</dd></dl></section></div></main></body></html>
