@@ -334,6 +334,128 @@ pub fn write_unit_version(
     write_version(&manifest, version)
 }
 
+/// Navigate `doc` along `path` of table keys to a [`TableLike`].
+fn table_at<'a>(
+    doc: &'a mut toml_edit::DocumentMut,
+    path: &[&str],
+) -> Option<&'a mut dyn toml_edit::TableLike> {
+    let mut item = doc.as_item_mut();
+    for key in path {
+        item = item.as_table_like_mut()?.get_mut(key)?;
+    }
+    item.as_table_like_mut()
+}
+
+/// The version a dep's manifest currently declares — literal
+/// `[package].version`, or `[workspace.package].version` when the
+/// package inherits (`version.workspace = true`).
+fn dep_manifest_version(manifest: &Path, ws_version: Option<&str>) -> Option<String> {
+    let text = std::fs::read_to_string(manifest).ok()?;
+    let doc: toml::Table = toml::from_str(&text).ok()?;
+    let v = doc.get("package")?.get("version")?;
+    if let Some(s) = v.as_str() {
+        return Some(s.to_string());
+    }
+    if v.as_table()
+        .is_some_and(|t| t.get("workspace") == Some(&toml::Value::Boolean(true)))
+    {
+        return ws_version.map(str::to_string);
+    }
+    None
+}
+
+/// Rewrite `version` reqs on path deps so each names the target
+/// package's *current* manifest version. `cargo publish` ships path
+/// deps with their `version` req — after a bump the req must match
+/// the new version (`^0.1.5` rejects `0.2.0`, and cargo's own
+/// resolver fails the same way on `cargo check`). Run after
+/// [`write_unit_version`] writes land. Covers
+/// `[workspace.dependencies]` in the root manifest plus
+/// `dependencies`/`build-dependencies`/`dev-dependencies` in every
+/// workspace member; only entries carrying both `path` and a string
+/// `version` are touched. Returns true when any file changed.
+pub fn sync_path_dep_reqs(root: &Path) -> Result<bool, ManifestError> {
+    let root = root.canonicalize().map_err(|e| err_io(root, e))?;
+    let ws_version = read_toml(&root.join("Cargo.toml")).ok().and_then(|t| {
+        t.get("workspace")?
+            .get("package")?
+            .get("version")?
+            .as_str()
+            .map(str::to_string)
+    });
+    let mut manifests = vec![(root.join("Cargo.toml"), true)];
+    let globs = member_globs(&root)?;
+    for dir in expand_members(&root, &globs)? {
+        manifests.push((dir.join("Cargo.toml"), false));
+    }
+    let mut changed = false;
+    for (manifest, is_root) in manifests {
+        if !manifest.exists() {
+            continue;
+        }
+        let Some(base) = manifest.parent() else {
+            continue;
+        };
+        let sections: &[&[&str]] = if is_root {
+            &[&["workspace", "dependencies"]]
+        } else {
+            &[
+                &["dependencies"],
+                &["build-dependencies"],
+                &["dev-dependencies"],
+            ]
+        };
+        let text = std::fs::read_to_string(&manifest).map_err(|e| err_io(&manifest, e))?;
+        let mut doc = text
+            .parse::<toml_edit::DocumentMut>()
+            .map_err(|e| ManifestError::Toml(manifest.clone(), e.to_string()))?;
+        let mut file_changed = false;
+        for section in sections {
+            let Some(table) = table_at(&mut doc, section) else {
+                continue;
+            };
+            let entries: Vec<(String, String, String, String)> = table
+                .iter()
+                .filter_map(|(key, item)| {
+                    let t = item.as_table_like()?;
+                    let path = t.get("path")?.as_str()?.to_string();
+                    let req = t.get("version")?.as_str()?.to_string();
+                    let name = t
+                        .get("package")
+                        .and_then(|p| p.as_str())
+                        .unwrap_or(key)
+                        .to_string();
+                    Some((key.to_string(), path, name, req))
+                })
+                .collect();
+            for (key, dep_path, _name, req) in entries {
+                let dep_manifest = base.join(&dep_path).join("Cargo.toml");
+                let Some(actual) = dep_manifest_version(&dep_manifest, ws_version.as_deref())
+                else {
+                    continue;
+                };
+                if actual == req {
+                    continue;
+                }
+                let Some(spec) = table
+                    .get_mut(&key)
+                    .and_then(|i| i.as_table_like_mut())
+                    .and_then(|t| t.get_mut("version"))
+                else {
+                    continue;
+                };
+                *spec = toml_edit::value(actual);
+                file_changed = true;
+            }
+        }
+        if file_changed {
+            std::fs::write(&manifest, doc.to_string()).map_err(|e| err_io(&manifest, e))?;
+            changed = true;
+        }
+    }
+    Ok(changed)
+}
+
 #[cfg(test)]
 #[allow(clippy::unwrap_used)]
 mod tests {
@@ -405,5 +527,48 @@ version = "1.2.3"
             .iter()
             .all(|s| s.current_version.to_string() == "2.0.0"));
         let _ = cli;
+    }
+
+    #[test]
+    fn sync_path_dep_reqs_tracks_bumped_versions() {
+        let d = tempfile::tempdir().unwrap();
+        let root = d.path();
+        std::fs::write(
+            root.join("Cargo.toml"),
+            r#"[workspace]
+members = ["crates/*"]
+resolver = "2"
+
+[workspace.package]
+version = "1.2.3"
+
+[workspace.dependencies]
+core = { path = "crates/core", version = "1.2.3" }
+"#,
+        )
+        .unwrap();
+        for name in ["core", "cli"] {
+            let dir = root.join("crates").join(name);
+            std::fs::create_dir_all(&dir).unwrap();
+            std::fs::write(
+                dir.join("Cargo.toml"),
+                if name == "cli" {
+                    "[package]\nname = \"cli\"\nversion.workspace = true\n\n[dependencies]\ncore.workspace = true\n"
+                } else {
+                    "[package]\nname = \"core\"\nversion.workspace = true\n"
+                },
+            )
+            .unwrap();
+        }
+        // Bump the workspace version, then sync — the req must follow.
+        write_unit_version(root, "crates/cli", &Version::parse("2.0.0").unwrap()).unwrap();
+        assert!(sync_path_dep_reqs(root).unwrap());
+        let text = std::fs::read_to_string(root.join("Cargo.toml")).unwrap();
+        assert!(
+            text.contains("core = { path = \"crates/core\", version = \"2.0.0\" }"),
+            "{text}"
+        );
+        // Idempotent — second run changes nothing.
+        assert!(!sync_path_dep_reqs(root).unwrap());
     }
 }

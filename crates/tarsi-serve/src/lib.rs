@@ -584,6 +584,18 @@ fn op_bump(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
         }
     }
     steps_run.push(json!("bump-manifests"));
+    // Path-dep `version` reqs must name the post-bump versions or
+    // cargo's resolver (and `cargo publish`) rejects the workspace.
+    if let Err(e) = tarsi_manifest::sync_path_dep_reqs(dir) {
+        return bump_error(
+            &plan,
+            &releasing,
+            &created_files,
+            &steps_run,
+            "bump-manifests",
+            e.to_string(),
+        );
+    }
     // `[release.sync_refs]` — rewrite pack/doc version refs before
     // the release commit so the tagged tree is self-consistent
     // (T-039; replaces the per-repo release.sh pre-step). Synced
@@ -1188,6 +1200,9 @@ fn mutate_release(
         }
     }
     steps_run.push(json!("bump-manifests"));
+    // Path-dep `version` reqs must name the post-bump versions or
+    // cargo's resolver (and `cargo publish`) rejects the workspace.
+    tarsi_manifest::sync_path_dep_reqs(dir).map_err(|e| format!("bump-manifests: {e}"))?;
     // `[release.sync_refs]` — pack/doc version refs rewrite into
     // the release commit so the tagged tree is self-consistent.
     let mut synced_files: Vec<String> = Vec::new();
