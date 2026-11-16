@@ -1434,6 +1434,9 @@ Semantics:
 | `enabled` | `bool` | optional | crates.io publishing on/off. |
 | `retry_429` | `bool` | optional | Retry crates.io 429s with backoff (release.sh semantics). |
 | `max_attempts` | `int` | optional | Max publish attempts per unit. |
+| `timeout_secs` | `u64` | optional | Per-attempt wall-clock cap for `cargo publish` in seconds (verify build + upload). Heavy crates need minutes — the default covers tamias-serve/tamias-tui-class builds (I-003). `0` disables the cap. |
+| `retry_base_secs` | `u64` | optional | Base delay in seconds between 429 retries — doubles per attempt up to `retry_max_secs`. crates.io bulk throttles ask for minutes-scale spacing (I-003). |
+| `retry_max_secs` | `u64` | optional | Ceiling in seconds for computed 429 backoff. A server `Retry-After` hint is honored verbatim and may exceed it. |
 | `token_env` | `string` | optional | Env var NAME consulted for the crates.io token when `token_ref` is unset or misses — cargo reads `CARGO_REGISTRY_TOKEN`, and a resolved value is injected into the publish child's environment under that name. The value never appears in config, manifests, or logs. |
 | `token_ref` | `string` | optional | Optional `cuora://&lt;scope&gt;/&lt;name&gt;` secret ref — resolved via cuora at publish time and takes precedence over `token_env`. The value never appears in config or logs. |
 
