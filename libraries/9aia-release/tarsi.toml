@@ -5,7 +5,7 @@
 # `~/.config/tarsi/` (profile keys win). Keep it to *conventions* —
 # repo-specific overrides belong in the repo's own tarsi.toml.
 #
-# Mirrors the org's `scripts/release.sh` reality + ADR-0003/0004:
+# Mirrors the org's release reality + ADR-0003/0004:
 # per-unit tags `{unit}-v{semver}`, the `conventional` release
 # strategy (keep-a-changelog sections, feat/fix/perf bump rules —
 # P-030; pinned explicitly though it is the default),
