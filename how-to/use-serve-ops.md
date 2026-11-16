@@ -58,13 +58,24 @@ Common params (all ops accept `dir`, default `.`):
 | `dir` | string | repo being released |
 | `profile` | string | `type: tarsi` profile name (beats `$TARSI_PROFILE` and config `profile`) |
 | `range` | string | explicit rev range e.g. `"HEAD~5..HEAD"` — overrides since-last-tag for **every** unit |
-| `dry_run` | bool | `release` only; **default `true`** — mutation needs `false` |
+| `units` | array | plan-unit JSON from a prior op — `bump`/`tag`/`publish` act on exactly these |
+| `dry_run` | bool | `release`/`bump`/`tag`/`publish` only; **default `true`** — mutation needs `false` |
+
+Op-specific params (`sha`, `push`, `commitish`) and every result
+shape are introspectable via `tarsi-serve schema` — see
+[Ops wire surface](/reference/ops).
 
 ## The safe sequence
 
 ```text
-manifest → profiles → plan → changelog → notes → release(dry_run:true) → release(dry_run:false)
+manifest → schema → profiles → plan → check → changelog → notes
+  → release(dry_run:true) → release(dry_run:false)
 ```
+
+Campaigns that need per-stage control (approval between bump and
+tag, partial publishes) compose the granular chain instead:
+`check → bump → tag(push:true) → publish`, threading `units` between
+steps — see [Ops wire surface](/reference/ops#bump).
 
 Rules of thumb:
 

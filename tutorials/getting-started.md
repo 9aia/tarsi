@@ -24,7 +24,7 @@ Dev shortcut without tamias: `cargo xtask install` puts a release
 
 ```bash
 tarsi-serve manifest
-# → {"name":"tarsi-serve","version":"…","ops":["manifest","profiles","plan","changelog","notes","release"]}
+# → {"name":"tarsi-serve","version":"…","ops":["manifest","profiles","plan","changelog","notes","check","schema","bump","tag","publish","release"]}
 ```
 
 Two modes: no args = ndjson JSON-lines loop on stdio

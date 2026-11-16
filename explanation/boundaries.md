@@ -16,8 +16,8 @@ Its neighbors own the layers around it:
 ## What tarsi is not
 
 - **Not a CLI.** No `tarsi` binary, no verb tree — the surface is
-  ops. (The legacy TypeScript changelog CLI under the README's
-  bottom half is pre-rewrite reference only.)
+  ops. (The legacy TypeScript implementation lives on the
+  `legacy-ts` branch — pre-rewrite reference only.)
 - **Not an orchestrator.** `tarsi-serve` composes ports and answers
   ops; scheduling, approval flows, and UI live in peregrin/pavo.
 - **Not a publisher of record for the org.** Org repos release
