@@ -8,7 +8,7 @@ This `SECURITY.md` file outlines the process for reporting security vulnerabilit
 
 Community collaboration is essential for our security. We greatly appreciate your responsible disclosure and value the contributions of security researchers, ethical hackers, and technology enthusiasts.
 
-If you discover a security vulnerability in any part of the Tarsi project, please **do not create a public issue**. Instead, **report it immediately** to the email [security@tarsi.9aia.com](mailto:security@tarsi.9aia.com).
+If you discover a security vulnerability in any part of the Tarsi project, please **do not create a public issue** and **do not disclose details publicly**. 9aia does not run public issue or pull request queues. Instead, **report it immediately** by emailing [luisfuturist+9aia@gmail.com](mailto:luisfuturist+9aia@gmail.com) with "SECURITY" in the subject. Do not use GitHub's public advisories or private vulnerability reporting — contact us first and we will coordinate disclosure privately.
 
 In your email, please include the following information:
 

@@ -10,8 +10,8 @@ Thank you for your interest in contributing to Tarsi! This document provides gui
 - [Contributing](#contributing)
   - [Committing](#committing)
   - [Pushing to the Repositories](#pushing-to-the-repositories)
-  - [Creating Pull Requests](#creating-pull-requests)
-  - [Submitting a Pull Request](#submitting-a-pull-request)
+  - [Proposing Changes](#proposing-changes)
+  - [Submitting Changes](#submitting-changes)
 - [Developing](#developing)
   - [Running in Development Mode](#running-in-development-mode)
   - [Writing Code](#writing-code)
@@ -115,14 +115,23 @@ You can use the following command to push your changes to the repository:
 git push --set-upstream origin main # or `git push` if you have already set up upstream
 ```
 
-### Creating Pull Requests
+### Proposing Changes
 
-- Provide a clear description of the changes
-- Include any relevant issue numbers
+The 9aia org does not use public pull requests or issue queues —
+there is no PR review bottleneck by design. Pushed branches are the
+deliverable and review is continuous (sturn WAL). For anything
+non-trivial, coordinate first by emailing
+luisfuturist+9aia@gmail.com; small fixes can go straight to a
+pushed branch.
+
+When proposing a change:
+
+- Provide a clear description of the changes in the commit message
+  (conventional commits) or in your email
 - Ensure all tests pass and code quality checks are satisfied
 - Update documentation if necessary
 
-### Submitting a Pull Request
+### Submitting Changes
 
 1. **Create a branch**:
    ```bash
@@ -146,7 +155,7 @@ git push --set-upstream origin main # or `git push` if you have already set up u
 
 5. **Commit your changes**. See [Committing](#committing) for more information.
 
-6. **Push and create a pull request**. See [Pushing to the Repositories](#pushing-to-the-repositories) and [Creating Pull Requests](#creating-pull-requests) for more information.
+6. **Push your branch**. See [Pushing to the Repositories](#pushing-to-the-repositories) and [Proposing Changes](#proposing-changes) for more information. If you cannot push to the org remote, coordinate access via email first.
 
 ## Developing
 
@@ -234,8 +243,8 @@ If you have questions or need help, we recommend you to follow these steps in or
 1. Read through this contributing guide.
 2. Check the existing documentation in the `docs/` folder.
 3. Refer to the official documentation for any relevant technologies.
-4. Examine existing code, issues, and discussions for similar problems.
-5. If you still need help, open a new issue for bugs or feature requests, or use a discussion for general questions.
+4. Examine existing code and documentation for similar problems.
+5. If you still need help, email luisfuturist+9aia@gmail.com — there are no public issue or discussion queues.
 
 ### Getting Real-Time Help
 
