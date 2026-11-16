@@ -1431,6 +1431,10 @@ fn run_publishers(
                     let mut p = tarsi_publish_crates::CratesPublisher::new(dir.to_path_buf());
                     p.max_attempts = cfg.publish.crates.max_attempts;
                     p.retry_429 = cfg.publish.crates.retry_429;
+                    p.timeout = std::time::Duration::from_secs(cfg.publish.crates.timeout_secs);
+                    p.retry_base =
+                        std::time::Duration::from_secs(cfg.publish.crates.retry_base_secs);
+                    p.retry_max = std::time::Duration::from_secs(cfg.publish.crates.retry_max_secs);
                     p.token_env = cfg.publish.crates.token_env.clone();
                     p.token_ref = cfg.publish.crates.token_ref.clone();
                     p.publish(&job).map(|r| json!(r)).map_err(|e| e.to_string())

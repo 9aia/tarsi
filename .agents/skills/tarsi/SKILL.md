@@ -124,6 +124,13 @@ A plain `tarsi_core::Config` document (TOML or YAML). Key sections:
 - `[publish.crates]` / `[publish.ghreleases]` — `enabled`,
   `token_env` (secret **name**, never a value), `repo`,
   `assets` globs (`{unit}`/`{version}` expand per unit).
+  `[publish.crates]` also takes `timeout_secs` (per-attempt
+  `cargo publish` cap, default 900, `0` = no cap — verify builds
+  on heavy crates run for minutes), `retry_base_secs` /
+  `retry_max_secs` (429 backoff bounds, defaults 30/300 —
+  exponential with jitter; a server `Retry-After` hint wins),
+  `max_attempts`, `retry_429`. Publishes run sequentially in
+  plan order — crates.io publishes are never parallel.
 - `profile = "name"` — layer a `type: tarsi` pack under this file.
 
 Config layers: repo `tarsi.*` > profile > `~/.config/tarsi/` >

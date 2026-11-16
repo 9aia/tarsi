@@ -187,6 +187,21 @@ pub struct CratesPublish {
     /// Max publish attempts per unit.
     #[serde(default = "default_attempts")]
     pub max_attempts: u32,
+    /// Per-attempt wall-clock cap for `cargo publish` in seconds
+    /// (verify build + upload). Heavy crates need minutes — the
+    /// default covers tamias-serve/tamias-tui-class builds
+    /// (I-003). `0` disables the cap.
+    #[serde(default = "default_timeout_secs")]
+    pub timeout_secs: u64,
+    /// Base delay in seconds between 429 retries — doubles per
+    /// attempt up to `retry_max_secs`. crates.io bulk throttles
+    /// ask for minutes-scale spacing (I-003).
+    #[serde(default = "default_retry_base_secs")]
+    pub retry_base_secs: u64,
+    /// Ceiling in seconds for computed 429 backoff. A server
+    /// `Retry-After` hint is honored verbatim and may exceed it.
+    #[serde(default = "default_retry_max_secs")]
+    pub retry_max_secs: u64,
     /// Env var NAME consulted for the crates.io token when
     /// `token_ref` is unset or misses — cargo reads
     /// `CARGO_REGISTRY_TOKEN`, and a resolved value is injected
@@ -207,6 +222,9 @@ impl Default for CratesPublish {
             enabled: true,
             retry_429: true,
             max_attempts: default_attempts(),
+            timeout_secs: default_timeout_secs(),
+            retry_base_secs: default_retry_base_secs(),
+            retry_max_secs: default_retry_max_secs(),
             token_env: default_crates_token_env(),
             token_ref: None,
         }
@@ -215,6 +233,15 @@ impl Default for CratesPublish {
 
 fn default_attempts() -> u32 {
     5
+}
+fn default_timeout_secs() -> u64 {
+    15 * 60
+}
+fn default_retry_base_secs() -> u64 {
+    30
+}
+fn default_retry_max_secs() -> u64 {
+    5 * 60
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -386,6 +413,25 @@ rules = [
         );
         // Empty rules = disabled.
         assert!(Config::default().release.sync_refs.rules.is_empty());
+    }
+
+    #[test]
+    fn crates_publish_timing_knobs() {
+        let text = r#"
+[publish.crates]
+timeout_secs = 1200
+retry_base_secs = 60
+retry_max_secs = 600
+"#;
+        let cfg: Config = toml::from_str(text).unwrap();
+        assert_eq!(cfg.publish.crates.timeout_secs, 1200);
+        assert_eq!(cfg.publish.crates.retry_base_secs, 60);
+        assert_eq!(cfg.publish.crates.retry_max_secs, 600);
+        // Defaults cover heavy verify builds + bulk 429s (I-003).
+        let d = Config::default().publish.crates;
+        assert_eq!(d.timeout_secs, 900);
+        assert_eq!(d.retry_base_secs, 30);
+        assert_eq!(d.retry_max_secs, 300);
     }
 
     #[test]
