@@ -6,12 +6,8 @@ url: /tarsi/reference/ops.md
 `tarsi-serve` speaks ndjson JSON-lines: one `{"op": …, "params": …}`
 per line on stdin, one `{"ok": …, "result"|"error"}` per line on
 stdout — the same protocol shape as `sepia serve` / `tamias-driver`
-verbs. `tarsi-serve manifest` returns this list authoritatively.
-
-> Stage-wise note: granular per-stage ops may land as the surface
-> grows. The six ops below are the current stable contract; check
-> `manifest` for the live list before scripting against anything
-> newer.
+verbs. `tarsi-serve manifest` returns this list authoritatively, and
+`schema` returns the same surface as data (params + result shapes).
 
 ## Ops
 
@@ -20,7 +16,7 @@ verbs. `tarsi-serve manifest` returns this list authoritatively.
 No params. Returns the service manifest:
 
 ```json
-{"name":"tarsi-serve","version":"0.1.0","ops":["manifest","profiles","plan","changelog","notes","release"]}
+{"name":"tarsi-serve","version":"0.1.0","ops":["manifest","profiles","plan","changelog","notes","check","schema","bump","tag","publish","release"]}
 ```
 
 ### `profiles`
@@ -38,7 +34,8 @@ wins). See [Author a release profile pack](/how-to/author-release-profile).
 
 ### `plan`
 
-Params: `dir?`, `profile?`, `range?`. Pure — computes, writes nothing.
+Params: `dir?`, `profile?`, `range?`, `units?`. Pure — computes,
+writes nothing.
 
 ```json
 {
@@ -86,9 +83,78 @@ in plan order:
 {"notes":"## [0.3.0] …\n## [1.1.0] …\n"}
 ```
 
+### `check`
+
+Same params as `plan`. Read-only release validation — the pre-flight
+before `release`: per releasing unit it checks the tag is free, the
+manifest exists, the changelog isn't already released (drift), and
+reports each publish target's effective enabled state.
+
+```json
+{"ok":true,"checks":[{"check":"tag-available","unit":"my-unit","ok":true,"detail":"tag my-unit-v0.3.0 is free"},…],"releasing":2,"plan":{…}}
+```
+
+`ok:false` when any *hard* check fails (tag taken, manifest missing,
+changelog drifted); publish-target rows are informational — a
+disabled target still reports `ok:true`.
+
+### `schema`
+
+No params. Returns this document as data — every op, its params,
+and its result shape. Node authors introspect it instead of reading
+source.
+
+### `bump`
+
+Granular pipeline step 1 of 3 — the mutation half of `release`
+without tag/push/publish. Params: `dir?`, `profile?`, `range?`,
+`units?`, `dry_run?` (**default `true`**). Writes changelogs, bumps
+manifests (`toml_edit`), runs `[release.sync_refs]` rewrites, stages
+the touched paths, and creates the `chore(release): bump versions`
+commit. Result echoes `units` (the plan-unit JSON) so a caller can
+chain `tag`/`publish` via `params.units` without re-planning:
+
+```json
+{"ok":true,"dry_run":false,"plan":{…},"bump":{"commit":"<sha>","units":[…],"steps_run":["write-changelogs","bump-manifests","sync-refs","commit-bump"]},"sync_refs":{"status":"applied",…},"units":[…]}
+```
+
+Failures leave partial working-tree state and report it (`created_files`,
+`steps_run`, a cleanup note) — compensation is the caller's job;
+`release` is the atomic path.
+
+### `tag`
+
+Granular step 2 — create the per-unit `{unit}-v{version}` tags.
+Params: `dir?`, `profile?`, `range?`, `units?`, `sha?`, `push?`,
+`dry_run?` (**default `true`**). `sha` is the tag target (default
+HEAD — pass the `bump` commit); `push:true` pushes branch + tags —
+**required before `publish`** (GitHub Releases auto-creates missing
+tags at remote HEAD otherwise).
+
+```json
+{"ok":true,"dry_run":false,"tag":{"sha":"<sha>","tags":[{"tag":"my-unit-v0.3.0","sha":"<sha>"}],"pushed":{"branch":true,"tags":[…]}},"units":[…],"steps_run":["tag","push"]}
+```
+
+### `publish`
+
+Granular step 3 — run the publish targets (crates.io, GitHub
+Releases) for the units. Params: `dir?`, `profile?`, `range?`,
+`units?`, `commitish?`, `dry_run?` (**default `true`**). `commitish`
+pins the forge target (default HEAD). Result:
+
+```json
+{"ok":true,"dry_run":false,"publish":[{"unit":"my-unit","target":"github-release","ok":true,"detail":"…"}],"targets":[…],"units":[…]}
+```
+
+The granular chain `check → bump → tag(push:true) → publish` is what
+peregrin campaign nodes compose; `release` runs the same sequence
+atomically with rollback. `params.units` carries plan-unit JSON
+between steps so each op acts on exactly the units the previous step
+reported.
+
 ### `release`
 
-Same params plus `dry_run` (**default `true`**). Executes the plan.
+Same params as `plan` plus `dry_run` (**default `true`**). Executes the plan.
 
 Dry-run result:
 
@@ -140,7 +206,11 @@ release URL, crates.io warnings).
 | `dir` | string | `"."` | repo root being released |
 | `profile` | string | — | profile name; precedence: param > `$TARSI_PROFILE` > config `profile` |
 | `range` | string | per-unit tag range | `"a..b"` rev range applied to **every** unit |
-| `dry_run` | bool | `true` | `release` only — `false` is the mutation opt-in |
+| `units` | array | releasing units | plan-unit JSON echoed by `plan`/`check`/`bump` — the granular ops (`bump`/`tag`/`publish`) act on exactly these instead of re-planning |
+| `dry_run` | bool | `true` | `release`/`bump`/`tag`/`publish` — `false` is the mutation opt-in |
+| `sha` | string | HEAD | `tag` only — commit the tags point at |
+| `push` | bool | `false` | `tag` only — also push branch + tags (required before `publish`) |
+| `commitish` | string | HEAD | `publish` only — forge target ref |
 
 ## One-shot mapping
 
