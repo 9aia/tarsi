@@ -56,7 +56,7 @@ units and declare no forge hooks.</li>
 </ul>
 <h2 id="the-pavo-read-only-surface"><a class="doc-anchor" href="#the-pavo-read-only-surface">§</a>The pavo read-only surface</h2>
 <p>The same binary is also a <strong>pavo view driver</strong> (PL-014 D3
-remainder): <code>manifest</code> prints the [<code>pavo_protocol::DriverManifest</code>]
+remainder): <code>manifest</code> prints the <a href="../pavo_protocol/manifest/struct.DriverManifest.html" title="struct pavo_protocol::manifest::DriverManifest"><code>pavo_protocol::DriverManifest</code></a>
 and <code>serve</code> answers ndjson JSON-RPC (<code>manifest</code>/<code>views</code>/<code>view</code>/
 <code>query</code>) over <a href="views/index.html" title="mod tarsi_driver::views"><code>views</code></a> — release plans, changelog previews, and
 publish-profile state, all read through <code>tarsi-serve</code> one-shot
@@ -84,7 +84,7 @@ kit’s <code>{capabilities, verbs}</code> shape plus <code>"types": ["tarsi"]</
 the <code>--config</code> file. Instance-agnostic (draft 2020-12).</dd><dt><a class="fn" href="fn.deploy.html" title="fn tarsi_driver::deploy">deploy</a></dt><dd><code>deploy</code> — refresh operator-facing state for the installed
 entry: re-validate it is still a profile payload and re-sync
 the <code>profilesDir</code> copy when configured, then report how tarsi
-resolves the name. Idempotent; never fails on resolution alone.</dd><dt><a class="fn" href="fn.dispatch.html" title="fn tarsi_driver::dispatch">dispatch</a></dt><dd>Dispatch one parsed pavo wire [<code>pavo_protocol::wire::Request</code>] to
+resolves the name. Idempotent; never fails on resolution alone.</dd><dt><a class="fn" href="fn.dispatch.html" title="fn tarsi_driver::dispatch">dispatch</a></dt><dd>Dispatch one parsed pavo wire <a href="../pavo_protocol/wire/enum.Request.html" title="enum pavo_protocol::wire::Request"><code>pavo_protocol::wire::Request</code></a> to
 its response. <code>env</code> feeds the <code>tarsi-serve</code> lookup
 (<code>$TARSI_SERVE</code> override) — injectable so tests never touch the
 process env.</dd><dt><a class="fn" href="fn.emit.html" title="fn tarsi_driver::emit">emit</a></dt><dd>Print a JSON report to stdout.</dd><dt><a class="fn" href="fn.health.html" title="fn tarsi_driver::health">health</a></dt><dd><code>health</code> — discovery probe: the profiles roots and how many
@@ -94,7 +94,7 @@ optionally write the <code>profilesDir</code> copy. The store commit that
 follows this verb is what makes the pack resolvable (and
 versioned); see the module docs.</dd><dt><a class="fn" href="fn.load_config.html" title="fn tarsi_driver::load_config">load_<wbr>config</a></dt><dd>Load <code>--config</code>: <code>None</code> → defaults; a path → YAML (JSON is valid
 YAML) with <code>profilesDir</code> rebased onto the config file’s dir.</dd><dt><a class="fn" href="fn.logs.html" title="fn tarsi_driver::logs">logs</a></dt><dd><code>logs</code> — profile packs run no units; empty report keeps the
-verb contract total.</dd><dt><a class="fn" href="fn.manifest_value.html" title="fn tarsi_driver::manifest_value">manifest_<wbr>value</a></dt><dd><code>manifest</code> verb payload — the pavo [<code>pavo_protocol::DriverManifest</code>]
+verb contract total.</dd><dt><a class="fn" href="fn.manifest_value.html" title="fn tarsi_driver::manifest_value">manifest_<wbr>value</a></dt><dd><code>manifest</code> verb payload — the pavo <a href="../pavo_protocol/manifest/struct.DriverManifest.html" title="struct pavo_protocol::manifest::DriverManifest"><code>pavo_protocol::DriverManifest</code></a>
 as a JSON value.</dd><dt><a class="fn" href="fn.run_verb.html" title="fn tarsi_driver::run_verb">run_<wbr>verb</a></dt><dd>Dispatch one tamias verb → its JSON report. <code>verb</code> is the
 subcommand name; unknown verbs are an error (the clap front in
 <code>main.rs</code> normally keeps them out).</dd><dt><a class="fn" href="fn.serve.html" title="fn tarsi_driver::serve">serve</a></dt><dd>The <code>serve</code> verb — ndjson JSON-RPC on stdio until EOF or a

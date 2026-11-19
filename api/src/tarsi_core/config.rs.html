@@ -181,7 +181,7 @@
 <a href=#181 id=181 data-nosnippet>181</a>    <span class="doccomment">/// crates.io publishing on/off.
 <a href=#182 id=182 data-nosnippet>182</a>    </span><span class="attr">#[serde(default = <span class="string">"default_true"</span>)]
 <a href=#183 id=183 data-nosnippet>183</a>    </span><span class="kw">pub </span>enabled: bool,
-<a href=#184 id=184 data-nosnippet>184</a>    <span class="doccomment">/// Retry crates.io 429s with backoff (release.sh semantics).
+<a href=#184 id=184 data-nosnippet>184</a>    <span class="doccomment">/// Retry crates.io 429s with backoff (idempotent re-runs).
 <a href=#185 id=185 data-nosnippet>185</a>    </span><span class="attr">#[serde(default = <span class="string">"default_true"</span>)]
 <a href=#186 id=186 data-nosnippet>186</a>    </span><span class="kw">pub </span>retry_429: bool,
 <a href=#187 id=187 data-nosnippet>187</a>    <span class="doccomment">/// Max publish attempts per unit.

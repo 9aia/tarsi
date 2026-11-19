@@ -324,8 +324,8 @@ Rules skip (with a reported reason) on mixed-version plans, are
 idempotent, and show up as `status:"dry-run"` + `changed_files` in a
 `bump`/`release` dry-run. Full semantics in
 [reference/config](/reference/config#release-sync_refs). With rules
-configured, `scripts/release.sh` shrinks to a bare
-`tarsi-serve release --dir . --yes`.
+configured, the direct `tarsi-serve release --dir . --yes` call
+carries the ref sync inside the release commit.
 
 ## `[publish.*]` — where releases go
 
@@ -622,7 +622,7 @@ answers questions about releases; it never decides *when* to
 release or *who* approves.
 
 ```
- caller (human, agent, peregrin campaign, scripts/release.sh)
+ caller (human, agent, peregrin campaign — `tarsi-serve release --dir .`)
         │  ndjson {"op": …, "params": …}  or  one-shot argv
         ▼
    tarsi-serve ────────── hypha-serve-cli (shared arg→params shim)
@@ -683,7 +683,7 @@ workspace, sepia sessions, peregrin campaigns) → **interface** (pavo
 views, MCP fronts).
 
 Tarsi sits at the **release plane in the delivery layer**: every
-repo's `scripts/release.sh` is a thin shim over `tarsi-serve`,
+repos run `tarsi-serve release --dir .` directly,
 org conventions ride tamias profile packs, and peregrin's
 `libraries/release` campaign drives the same ops — tarsi computes
 plans and mutations; the process layer decides when to run them.
@@ -944,8 +944,9 @@ ndjson ops plus a one-shot argv front door.
 * *Alternative:* a conventional clap CLI like every other engine.
 * *Consequence:* humans, agents, and peregrin campaigns speak one
   wire; the surface is generatable (ops manifest → MCP/CLI tools).
-  Cost: every interaction is a JSON round-trip, and `release.sh`
-  shims exist per repo to keep the muscle memory.
+  Cost: every interaction is a JSON round-trip — agents and
+  humans drive the same `tarsi-serve <op>` calls (the per-repo
+  `scripts/release.sh` shims were removed org-wide).
 
 ## Dry-run is the default
 
@@ -1432,7 +1433,7 @@ Semantics:
 | key | type | required | meaning |
 | --- | --- | --- | --- |
 | `enabled` | `bool` | optional | crates.io publishing on/off. |
-| `retry_429` | `bool` | optional | Retry crates.io 429s with backoff (release.sh semantics). |
+| `retry_429` | `bool` | optional | Retry crates.io 429s with backoff (idempotent re-runs). |
 | `max_attempts` | `int` | optional | Max publish attempts per unit. |
 | `timeout_secs` | `u64` | optional | Per-attempt wall-clock cap for `cargo publish` in seconds (verify build + upload). Heavy crates need minutes — the default covers tamias-serve/tamias-tui-class builds (I-003). `0` disables the cap. |
 | `retry_base_secs` | `u64` | optional | Base delay in seconds between 429 retries — doubles per attempt up to `retry_max_secs`. crates.io bulk throttles ask for minutes-scale spacing (I-003). |
@@ -1588,7 +1589,7 @@ tamias/bupha/peregrin. `tarsi-core` is pure domain (no I/O);
 | `tarsi-publish` | port | Publish port — per-forge Publisher impls (crates.io, GitHub Releases, dry-run). |
 | `tarsi-config` | adapter | tarsi.toml/tarsi.yml loading — scarab-config file discovery over tarsi_core::Config, plus type:tarsi release-profile resolution. |
 | `tarsi-manifest` | adapter | Cargo manifest scanning — workspace members → tarsi_core::ReleaseUnitSpec, version reads/writes. |
-| `tarsi-publish-crates` | adapter | crates.io Publisher — dep-ordered cargo publish with 429 retry (release.sh semantics). |
+| `tarsi-publish-crates` | adapter | crates.io Publisher — dep-ordered cargo publish with 429 retry (idempotent re-runs). |
 | `tarsi-publish-dryrun` | adapter | Dry-run Publisher — validates and reports every target without remote writes. |
 | `tarsi-publish-ghreleases` | adapter | GitHub Releases publisher — release create + notes + asset upload via ureq (blocking, bupha-github convention). |
 | `tarsi-serve` | engine | tarsi service surface — ndjson ops (plan/changelog/notes/check/schema + granular bump/tag/publish + release) over tarsi-core + lasius-vcs. |
