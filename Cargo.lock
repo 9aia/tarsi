@@ -222,12 +222,12 @@ checksum = "6dbf3de79e51f3d586ab4cb9d5c3e2c14aa28ed23d180cf89b4df0454a69cc87"
 [[package]]
 name = "hypha-secret"
 version = "0.1.0"
-source = "git+ssh://git@github.com/9aia/hypha.git?rev=1e39f7f74490d9fb8f15db8841216dd3a7c00c46#1e39f7f74490d9fb8f15db8841216dd3a7c00c46"
+source = "git+ssh://git@github.com/9aia/hypha.git?rev=41dbbd49dd9985e26c63c4c7267f4c4b0a21e7e9#41dbbd49dd9985e26c63c4c7267f4c4b0a21e7e9"
 
 [[package]]
 name = "hypha-secret-cuora"
 version = "0.1.0"
-source = "git+ssh://git@github.com/9aia/hypha.git?rev=1e39f7f74490d9fb8f15db8841216dd3a7c00c46#1e39f7f74490d9fb8f15db8841216dd3a7c00c46"
+source = "git+ssh://git@github.com/9aia/hypha.git?rev=41dbbd49dd9985e26c63c4c7267f4c4b0a21e7e9#41dbbd49dd9985e26c63c4c7267f4c4b0a21e7e9"
 dependencies = [
  "hypha-secret",
  "serde_json",
