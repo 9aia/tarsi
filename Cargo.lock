@@ -90,6 +90,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "cuora-secret"
+version = "1.0.4"
+source = "git+ssh://git@github.com/9aia/cuora.git?rev=f81164366bd436a7d4cf204c6e7a83555f50302f#f81164366bd436a7d4cf204c6e7a83555f50302f"
+
+[[package]]
+name = "cuora-secret-cuora"
+version = "1.0.4"
+source = "git+ssh://git@github.com/9aia/cuora.git?rev=f81164366bd436a7d4cf204c6e7a83555f50302f#f81164366bd436a7d4cf204c6e7a83555f50302f"
+dependencies = [
+ "cuora-secret",
+ "serde_json",
+]
+
+[[package]]
 name = "deranged"
 version = "0.5.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -218,20 +232,6 @@ name = "httparse"
 version = "1.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6dbf3de79e51f3d586ab4cb9d5c3e2c14aa28ed23d180cf89b4df0454a69cc87"
-
-[[package]]
-name = "hypha-secret"
-version = "0.1.0"
-source = "git+ssh://git@github.com/9aia/hypha.git?rev=1e39f7f74490d9fb8f15db8841216dd3a7c00c46#1e39f7f74490d9fb8f15db8841216dd3a7c00c46"
-
-[[package]]
-name = "hypha-secret-cuora"
-version = "0.1.0"
-source = "git+ssh://git@github.com/9aia/hypha.git?rev=1e39f7f74490d9fb8f15db8841216dd3a7c00c46#1e39f7f74490d9fb8f15db8841216dd3a7c00c46"
-dependencies = [
- "hypha-secret",
- "serde_json",
-]
 
 [[package]]
 name = "hypha-serve-cli"
@@ -835,8 +835,8 @@ dependencies = [
 name = "tarsi-publish"
 version = "0.4.0"
 dependencies = [
- "hypha-secret",
- "hypha-secret-cuora",
+ "cuora-secret",
+ "cuora-secret-cuora",
  "serde",
  "serde_json",
  "tarsi-core",

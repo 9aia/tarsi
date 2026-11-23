@@ -7,7 +7,7 @@
 //! Resolution order (T-041):
 //!
 //! 1. `token_ref` — an explicit `cuora://<scope>/<name>` secret
-//!    ref, fetched through `hypha-secret-cuora` (audit events and
+//!    ref, fetched through `cuora-secret-cuora` (audit events and
 //!    vault policy apply). Nested scopes work (`cuora://a/b/name`
 //!    → scope `a/b`, name `name` — the ref tail is the secret
 //!    name).
@@ -26,8 +26,8 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Mutex;
 
-use hypha_secret::Secrets as _;
-use hypha_secret_cuora::CuoraSecrets;
+use cuora_secret::Secrets as _;
+use cuora_secret_cuora::CuoraSecrets;
 
 use crate::PublishError;
 
@@ -76,7 +76,7 @@ fn parse_cuora_ref(r: &str) -> Result<(&str, &str), PublishError> {
     Ok((scope, name))
 }
 
-/// The default resolver: `cuora://` refs via `hypha-secret-cuora`,
+/// The default resolver: `cuora://` refs via `cuora-secret-cuora`,
 /// env var fallback. One [`CuoraSecrets`] store per scope, built
 /// lazily and cached for the resolver's lifetime (cheap under the
 /// `cli` transport; under `serve` it keeps the `cuora serve` child
