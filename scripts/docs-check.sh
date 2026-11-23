@@ -65,7 +65,12 @@ cypera_bin check --repo "$ROOT"
 
 if [ -f "$ROOT/docs/package.json" ]; then
   if command -v bun >/dev/null 2>&1; then
-    (cd "$ROOT/docs" && bun run docs:check)
+    # Scrub the git env a hook context leaks (GIT_DIR & friends):
+    # inside the linked docs/ worktree they rebind `git diff` to the
+    # parent repo's index and every tracked file reads as deleted.
+    (cd "$ROOT/docs" && env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE \
+      -u GIT_OBJECT_DIRECTORY -u GIT_ALTERNATE_OBJECT_DIRECTORIES \
+      bun run docs:check)
   else
     echo "docs-check: bun not on PATH — skipping docs drift check" >&2
   fi
