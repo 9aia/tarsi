@@ -245,6 +245,47 @@ fn release_publish_failure_rolls_back_local_and_remote() {
 }
 
 #[test]
+fn publish_resumes_units_from_existing_tags() {
+    let (_repo, _origin, root, _og) = fixture();
+    write(&root, "tarsi.toml", NO_PUBLISH);
+    release(&root); // bumps to 0.2.0, tags aaa-v0.2.0/bbb-v0.2.0, pushes
+
+    // The plan is now empty — but a partial publish failure would
+    // leave exactly this state. `publish` resumes units whose
+    // release tag exists at the current manifest version; with
+    // targets disabled the reports come back ok+disabled.
+    let req = Request {
+        op: "publish".into(),
+        params: json!({ "dir": root.to_string_lossy(), "dry_run": false }),
+    };
+    let resp = dispatch(&GitVcs, &req);
+    assert!(resp.ok, "{:?} / {:?}", resp.error, resp.result);
+    let r = resp.result.unwrap();
+    assert_eq!(r["resumed_from_tags"], true, "{r}");
+    assert_eq!(r["units"].as_array().unwrap().len(), 2, "{r}");
+    assert!(
+        r["publish"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|p| p["ok"] == true && p["disabled"] == true),
+        "{r}"
+    );
+
+    // An explicit `units: []` still means "nothing" — the resume
+    // derivation only fires when the caller didn't pass units.
+    let req = Request {
+        op: "publish".into(),
+        params: json!({ "dir": root.to_string_lossy(), "dry_run": false, "units": [] }),
+    };
+    let resp = dispatch(&GitVcs, &req);
+    assert!(resp.ok);
+    let r = resp.result.unwrap();
+    assert_eq!(r["units"].as_array().unwrap().len(), 0, "{r}");
+    assert!(r.get("resumed_from_tags").is_none(), "{r}");
+}
+
+#[test]
 fn release_dry_run_still_mutates_nothing() {
     let (_repo, _origin, root, _og) = fixture();
     write(&root, "tarsi.toml", NO_PUBLISH);

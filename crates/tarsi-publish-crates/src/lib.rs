@@ -6,8 +6,13 @@
 //! server `Retry-After` hint when cargo surfaces one; each
 //! attempt is bounded by a wall-clock timeout (verify builds on
 //! heavy crates can run for minutes — I-003). "Already exists"
-//! counts as success (idempotent re-runs).
+//! counts as success, verified against the sparse index when
+//! possible (idempotent re-runs). A "failed to select a version"
+//! error naming a release sibling retries too — crates.io's
+//! index lags each upload by seconds–minutes, so dependents
+//! would otherwise fail on a dep published moments earlier.
 
+use std::collections::BTreeMap;
 use std::path::PathBuf;
 use std::process::{Command, ExitStatus, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -36,6 +41,9 @@ pub const DEFAULT_RETRY_BASE: Duration = Duration::from_secs(30);
 /// `Retry-After` hint is honored verbatim and may exceed this.
 pub const DEFAULT_RETRY_MAX: Duration = Duration::from_secs(5 * 60);
 
+/// Sparse-index probe signature — `(crate, version) -> listed?`.
+pub type IndexProbe = Arc<dyn Fn(&str, &str) -> bool + Send + Sync>;
+
 /// crates.io publisher. `repo_root` anchors relative manifest dirs.
 #[derive(Clone)]
 pub struct CratesPublisher {
@@ -57,6 +65,20 @@ pub struct CratesPublisher {
     /// Optional `cuora://<scope>/<name>` secret ref — takes
     /// precedence over `token_env`.
     pub token_ref: Option<String>,
+    /// Unit name → version for every unit in this release. When
+    /// `cargo publish` fails with "failed to select a version"
+    /// naming one of these, the dep was uploaded moments ago and
+    /// crates.io's sparse index is lagging — retry with backoff
+    /// instead of failing the unit (tamias 0.3.0 needed ~4 manual
+    /// re-run rounds without this). Empty = no sibling context,
+    /// index-lag errors fail fast.
+    pub release_versions: BTreeMap<String, String>,
+    /// `(crate, version) -> true` when the sparse index lists the
+    /// version — the "is it actually live" probe behind the
+    /// already-published fast path. Injectable for tests; the
+    /// default GETs `index.crates.io`. Probe errors read as
+    /// "unconfirmed" — the path never blocks on it.
+    pub index_probe: IndexProbe,
     /// Token resolver — defaults to [`CuoraTokenResolver`]; tests
     /// inject a fake.
     pub resolver: Arc<dyn TokenResolver>,
@@ -74,6 +96,8 @@ impl CratesPublisher {
             retry_max: DEFAULT_RETRY_MAX,
             token_env: CARGO_TOKEN_ENV.to_string(),
             token_ref: None,
+            release_versions: BTreeMap::new(),
+            index_probe: Arc::new(default_index_probe),
             resolver: Arc::new(CuoraTokenResolver::new()),
         }
     }
@@ -97,6 +121,60 @@ fn is_already_published(stderr: &str) -> bool {
     stderr.contains("already exists")
         || stderr.contains("is already uploaded")
         || stderr.contains("previously uploaded")
+}
+
+/// crates.io sparse-index URL for `name`. Prefix layout: len 1 →
+/// `1/`, 2 → `2/`, 3 → `3/<c0>/`, ≥4 → `<c0c1>/<c2c3>/` — all
+/// lowercase (crate names are case-insensitive on the index).
+fn index_url(name: &str) -> String {
+    let n = name.to_ascii_lowercase();
+    let path = match n.len() {
+        1 => format!("1/{n}"),
+        2 => format!("2/{n}"),
+        3 => format!("3/{}/{n}", &n[..1]),
+        _ => format!("{}/{}/{n}", &n[..2], &n[2..4]),
+    };
+    format!("https://index.crates.io/{path}")
+}
+
+/// Default [`CratesPublisher::index_probe`]: GET the sparse index
+/// entry and look for `"vers":"<version>"` — one JSON object per
+/// line, versions as a string field. Any transport/HTTP error
+/// reads as unconfirmed (the already-published path reports the
+/// caveat in `detail` rather than failing the unit).
+fn default_index_probe(name: &str, version: &str) -> bool {
+    let Ok(resp) = ureq::get(&index_url(name))
+        .header("User-Agent", "tarsi-publish-crates")
+        .call()
+    else {
+        return false;
+    };
+    let Ok(body) = resp.into_body().read_to_string() else {
+        return false;
+    };
+    body.contains(&format!("\"vers\":\"{version}\""))
+}
+
+/// crates.io sparse-index lag signature: cargo's resolver reports
+/// `failed to select a version for the requirement `NAME = "…"``
+/// for a dep version uploaded seconds ago (the dep's own publish
+/// succeeded — only the index trails). Returns true only when the
+/// missing crate is a release sibling: a foreign missing dep is a
+/// real resolution failure and must not burn retry budget.
+fn is_index_lag_for_sibling(stderr: &str, siblings: &BTreeMap<String, String>) -> bool {
+    let Some(pos) = stderr.find("failed to select a version") else {
+        return false;
+    };
+    let rest = &stderr[pos..];
+    let Some(open) = rest.find('`') else {
+        return false;
+    };
+    let req = &rest[open + 1..];
+    let Some(close) = req.find('`') else {
+        return false;
+    };
+    let name = req[..close].split('=').next().unwrap_or("").trim();
+    !name.is_empty() && siblings.contains_key(name)
 }
 
 /// Server-directed retry hint. cargo doesn't always surface the
@@ -241,6 +319,7 @@ impl Publisher for CratesPublisher {
                 target: self.target(),
                 ok: true,
                 detail: format!("dry-run: would cargo publish {}", manifest.display()),
+                marker: None,
             });
         }
         // Resolve the token once per unit — after the dry-run
@@ -273,20 +352,37 @@ impl Publisher for CratesPublisher {
                         target: self.target(),
                         ok: true,
                         detail: format!("published {} (attempt {attempt})", job.version),
+                        marker: None,
                     });
                 }
                 Attempt::Exited(c) => {
                     if is_already_published(&c.stderr) {
+                        // Idempotent re-run: the version is live.
+                        // Confirm against the sparse index so the
+                        // report says *verified*, not just "cargo
+                        // said so" — an unconfirmed probe (index
+                        // lag right after the first upload, or a
+                        // network blip) downgrades the detail but
+                        // never fails the unit: crates.io's API
+                        // already asserted the version exists.
+                        let verified = (self.index_probe)(&job.unit, &job.version);
                         return Ok(PublishReport {
                             unit: job.unit.clone(),
                             target: self.target(),
                             ok: true,
-                            detail: "already published".to_string(),
+                            detail: if verified {
+                                "already published (index-verified)".to_string()
+                            } else {
+                                "already published (index did not confirm — propagation lag or probe failure)".to_string()
+                            },
+                            marker: Some("already_published".to_string()),
                         });
                     }
                     let rate_limited = is_rate_limited(&c.stderr);
+                    let index_lag = is_index_lag_for_sibling(&c.stderr, &self.release_versions);
                     last_err = stderr_tail(&c.stderr, 8);
-                    if !(self.retry_429 && rate_limited) || attempt == attempts {
+                    let retryable = self.retry_429 && (rate_limited || index_lag);
+                    if !retryable || attempt == attempts {
                         break;
                     }
                     let delay = retry_delay(attempt, &c.stderr, self.retry_base, self.retry_max);
@@ -491,6 +587,102 @@ mod tests {
                 p.max_attempts = 3;
                 p.retry_base = Duration::from_millis(1);
                 p.retry_max = Duration::from_millis(5);
+                let r = p.publish(&job(false)).unwrap();
+                assert!(r.ok, "{}", r.detail);
+                assert!(r.detail.contains("attempt 2"), "{}", r.detail);
+                assert_eq!(
+                    std::fs::read_to_string(dir.join("count.txt"))
+                        .unwrap()
+                        .trim(),
+                    "2"
+                );
+            },
+        );
+    }
+
+    #[test]
+    fn index_url_prefixes() {
+        assert_eq!(index_url("a"), "https://index.crates.io/1/a");
+        assert_eq!(index_url("ab"), "https://index.crates.io/2/ab");
+        assert_eq!(index_url("abc"), "https://index.crates.io/3/a/abc");
+        assert_eq!(
+            index_url("tamias-core"),
+            "https://index.crates.io/ta/mi/tamias-core"
+        );
+        assert_eq!(index_url("Serde"), "https://index.crates.io/se/rd/serde");
+    }
+
+    #[test]
+    fn index_lag_detection_needs_a_release_sibling() {
+        let mut siblings = BTreeMap::new();
+        siblings.insert("tamias-core".to_string(), "0.3.0".to_string());
+        let lag = "error: failed to select a version for the requirement `tamias-core = \"^0.3.0\"`\ncandidate versions found which didn't match: 0.2.0\nlocation searched: crates.io index";
+        assert!(is_index_lag_for_sibling(lag, &siblings));
+        // A dep outside the release is a real failure — no retry.
+        let foreign = "error: failed to select a version for the requirement `other = \"^9\"`";
+        assert!(!is_index_lag_for_sibling(foreign, &siblings));
+        assert!(!is_index_lag_for_sibling("error: 404 not found", &siblings));
+        assert!(!is_index_lag_for_sibling(lag, &BTreeMap::new()));
+    }
+
+    #[test]
+    fn already_published_reports_marker_and_probe_detail() {
+        with_fake_cargo(
+            |_| {
+                "#!/bin/sh\necho 'error: crate version 1.0.0 is already uploaded' >&2\nexit 1\n"
+                    .to_string()
+            },
+            |dir| {
+                let mut p = CratesPublisher::new(dir.to_path_buf());
+                p.retry_429 = false;
+                p.index_probe = Arc::new(|_, _| true);
+                let r = p.publish(&job(false)).unwrap();
+                assert!(r.ok, "{}", r.detail);
+                assert_eq!(r.marker.as_deref(), Some("already_published"));
+                assert!(r.detail.contains("index-verified"), "{}", r.detail);
+            },
+        );
+    }
+
+    #[test]
+    fn already_published_unconfirmed_probe_still_ok() {
+        with_fake_cargo(
+            |_| {
+                "#!/bin/sh\necho 'error: crate version 1.0.0 is already uploaded' >&2\nexit 1\n"
+                    .to_string()
+            },
+            |dir| {
+                let mut p = CratesPublisher::new(dir.to_path_buf());
+                p.retry_429 = false;
+                // Probe can't reach the index (offline test env) —
+                // the API's "already exists" still counts.
+                p.index_probe = Arc::new(|_, _| false);
+                let r = p.publish(&job(false)).unwrap();
+                assert!(r.ok, "{}", r.detail);
+                assert_eq!(r.marker.as_deref(), Some("already_published"));
+                assert!(r.detail.contains("did not confirm"), "{}", r.detail);
+            },
+        );
+    }
+
+    #[test]
+    fn index_lag_error_retries_then_succeeds() {
+        with_fake_cargo(
+            |dir| {
+                let count = dir.join("count.txt");
+                format!(
+                    "#!/bin/sh\nn=$(cat '{}' 2>/dev/null || echo 0)\nn=$((n+1))\necho $n > '{}'\nif [ \"$n\" -eq 1 ]; then echo 'error: failed to select a version for the requirement `sibling = \"^0.3.0\"`' >&2; echo 'candidate versions found which didn'\"'\"'t match: 0.2.0' >&2; exit 1; fi\nexit 0\n",
+                    count.display(),
+                    count.display()
+                )
+            },
+            |dir| {
+                let mut p = CratesPublisher::new(dir.to_path_buf());
+                p.max_attempts = 3;
+                p.retry_base = Duration::from_millis(1);
+                p.retry_max = Duration::from_millis(5);
+                p.release_versions
+                    .insert("sibling".to_string(), "0.3.0".to_string());
                 let r = p.publish(&job(false)).unwrap();
                 assert!(r.ok, "{}", r.detail);
                 assert!(r.detail.contains("attempt 2"), "{}", r.detail);

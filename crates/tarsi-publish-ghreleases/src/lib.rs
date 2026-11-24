@@ -345,6 +345,7 @@ impl Publisher for GhReleasePublisher {
                 target: self.target(),
                 ok: true,
                 detail,
+                marker: None,
             });
         }
         let token = self.token()?;
@@ -374,6 +375,7 @@ impl Publisher for GhReleasePublisher {
             target: self.target(),
             ok: true,
             detail: format!("{html}{suffix}"),
+            marker: None,
         })
     }
 }

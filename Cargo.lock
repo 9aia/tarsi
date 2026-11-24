@@ -852,6 +852,7 @@ dependencies = [
  "tarsi-publish",
  "tempfile",
  "thiserror",
+ "ureq",
 ]
 
 [[package]]

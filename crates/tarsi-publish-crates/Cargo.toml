@@ -10,6 +10,7 @@ repository.workspace = true
 tarsi-publish = { path = "../tarsi-publish" }
 tarsi-core = { path = "../tarsi-core" }
 thiserror = "2"
+ureq = "3"
 
 [dev-dependencies]
 tempfile = "3"
