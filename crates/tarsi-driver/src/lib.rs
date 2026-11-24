@@ -765,6 +765,9 @@ pub fn dispatch(req: &pavo_protocol::wire::Request, env: Env<'_>) -> pavo_protoc
         Request::Submit { .. } => {
             Response::err("tamias-driver-tarsi is read-only and implements no forms")
         }
+        // `invoke` — the manifest declares no actions; `ok:false`
+        // is the convention hosts read.
+        Request::Invoke { .. } => Response::err("tamias-driver-tarsi implements no actions"),
         Request::Jobs => Response::err("tamias-driver-tarsi has no job feed"),
         Request::Notifications => Response::err("tamias-driver-tarsi has no notification feed"),
     }
