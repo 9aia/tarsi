@@ -22,7 +22,7 @@ driving a release; `release`-family ops are dry-run by default.
 | `crates/tarsi-manifest` | Cargo manifest scanning — workspace members → `ReleaseUnitSpec`, version reads/writes |
 | `crates/tarsi-config` | `tarsi.toml`/`tarsi.yml` loading (scarab-config) + `type: tarsi` profile resolution |
 | `crates/tarsi-serve` | `tarsi-serve` ops surface — ndjson ops + one-shot argv over tarsi-core + lasius-vcs |
-| `crates/tarsi-publish` + `-crates`/`-ghreleases`/`-dryrun` | publish port + per-forge impls (crates.io, GitHub Releases, dry-run) |
+| `crates/tarsi-publish` + `-crates`/`-ghreleases`/`-dryrun` | publish port + per-forge impls (crates.io, GitHub Releases, dry-run). `-ghreleases`' own ureq GitHub calls are intentional — release-asset domain, not lasius-forge's workspace-CI scope; revisit only if a second forge consumer appears (P-053 item 4) |
 | `crates/tarsi-driver` | `tamias-driver-tarsi` — `type: tarsi` pack driver; also a read-only pavo view driver (`manifest`/`serve`) |
 | `crates/tarsi-testkit` | conformance fixtures + golden corpus |
 | `xtask` | check / test / coverage / install / pack / package (+ `smoke`/`site` stubs) |
