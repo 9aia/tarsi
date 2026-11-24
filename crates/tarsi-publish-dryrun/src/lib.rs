@@ -32,6 +32,7 @@ impl Publisher for DryRunPublisher {
                 job.manifest_dir.display(),
                 assets
             ),
+            marker: None,
         })
     }
 }
@@ -63,6 +64,7 @@ impl Publisher for TargetDryRun {
                 "dry-run: would publish {} {} ({:?}){}",
                 job.unit, job.version, self.0, assets
             ),
+            marker: None,
         })
     }
 }

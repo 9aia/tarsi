@@ -288,6 +288,41 @@ fn releasing_units(
     Ok((Some(plan_v["plan"].clone()), units))
 }
 
+/// Push every tag in ONE `git push` — per-tag pushes cost one
+/// SSH round-trip each (37 tags × minutes observed on a flaky
+/// link). Explicit `refs/tags/x:refs/tags/x` refspecs so an
+/// unrelated local tag can never ride along.
+fn push_tags(vcs: &dyn Vcs, dir: &Path, tags: &[String]) -> Result<(), String> {
+    if tags.is_empty() {
+        return Ok(());
+    }
+    let refspecs: Vec<String> = tags
+        .iter()
+        .map(|t| format!("refs/tags/{t}:refs/tags/{t}"))
+        .collect();
+    let mut args: Vec<&str> = vec!["push", "origin"];
+    args.extend(refspecs.iter().map(String::as_str));
+    vcs.exec_out(dir, &args)
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+/// Tag names currently on `origin` (`git ls-remote --tags`,
+/// peeled `^{}` lines dropped). A batched push is per-ref atomic
+/// — on failure some tags may have landed, and rollback plus the
+/// `pushed` report must reflect what actually arrived, not what
+/// was attempted.
+fn remote_tags(vcs: &dyn Vcs, dir: &Path) -> std::collections::BTreeSet<String> {
+    vcs.exec_out(dir, &["ls-remote", "--tags", "origin"])
+        .unwrap_or_default()
+        .lines()
+        .filter_map(|l| l.split_once('\t').map(|(_, r)| r))
+        .filter_map(|r| r.strip_prefix("refs/tags/"))
+        .filter(|t| !t.ends_with("^{}"))
+        .map(str::to_string)
+        .collect()
+}
+
 /// `schema` op — the serve-op surface as data: every op, its
 /// params, and the shape of its result. Node authors (peregrin
 /// campaigns, agents) introspect this instead of reading source.
@@ -344,9 +379,9 @@ fn op_schema() -> Value {
         ),
         (
             "publish",
-            "granular step: run publish targets (crates.io, GitHub Releases) for the units; `commitish` pins the forge target (default HEAD)",
+            "granular step: run publish targets (crates.io, GitHub Releases) for the units; `commitish` pins the forge target (default HEAD). Idempotent — already-live crates.io versions report `marker:\"already_published\"`; when the plan is empty and `units` isn't passed, units are resumed from existing release tags (`resumed_from_tags`)",
             "{dir, profile?, range?, units?, commitish?, dry_run?}",
-            "{ok, dry_run, publish[{unit, target, ok, detail}], targets[], units[]}",
+            "{ok, dry_run, publish[{unit, target, ok, detail, marker?}], targets[], units[], resumed_from_tags?}",
         ),
         (
             "release",
@@ -759,20 +794,26 @@ fn op_tag(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
             });
         }
         branch_pushed = true;
-        for t in &created {
-            if let Err(e) = vcs.exec_out(dir, &["push", "origin", t]) {
-                return json!({
-                    "ok": false,
-                    "error": format!("push-tag {t}: {e}"),
-                    "dry_run": false,
-                    "plan": plan,
-                    "tag": { "sha": sha, "tags": created, "pushed": { "branch": branch_pushed, "tags": pushed_tags }, "steps_run": steps_run },
-                    "units": releasing,
-                    "note": "branch pushed; some tags may be unpushed — re-run `tag` with push:true or push manually",
-                });
-            }
-            pushed_tags.push(t.clone());
+        if let Err(e) = push_tags(vcs, dir, &created) {
+            // One batched push — on failure, verify which tags
+            // actually landed on origin (per-ref atomicity).
+            let remote = remote_tags(vcs, dir);
+            pushed_tags = created
+                .iter()
+                .filter(|t| remote.contains(*t))
+                .cloned()
+                .collect();
+            return json!({
+                "ok": false,
+                "error": format!("push-tags: {e}"),
+                "dry_run": false,
+                "plan": plan,
+                "tag": { "sha": sha, "tags": created, "pushed": { "branch": branch_pushed, "tags": pushed_tags }, "steps_run": steps_run },
+                "units": releasing,
+                "note": "branch pushed; tags go in one batched push — pushed.tags lists the tags verified on origin; re-run `tag` with push:true or push manually",
+            });
         }
+        pushed_tags = created.clone();
         steps_run.push(json!("push"));
     }
     json!({
@@ -797,10 +838,24 @@ fn op_tag(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
 /// remote.
 fn op_publish(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
     let dry_run = dry_run_param(params);
-    let (plan, releasing) = match releasing_units(vcs, dir, params) {
+    let (plan, mut releasing) = match releasing_units(vcs, dir, params) {
         Ok(v) => v,
         Err(e) => return json!({ "ok": false, "error": e }),
     };
+    // Resume path: a partial publish failure leaves manifests at
+    // the target version and the tags pushed, so a fresh plan
+    // yields zero releasing units while forge work may still be
+    // incomplete. When the caller didn't pass `units` explicitly,
+    // derive candidates from specs whose release tag already
+    // exists at the *current* manifest version — publishers are
+    // idempotent, so already-live versions verify and skip.
+    let mut resumed = false;
+    if releasing.is_empty() && params.get("units").is_none() {
+        if let Ok(us) = tagged_release_units(vcs, dir, params) {
+            resumed = !us.is_empty();
+            releasing = us;
+        }
+    }
     if releasing.is_empty() {
         return json!({
             "ok": true,
@@ -853,7 +908,38 @@ fn op_publish(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Value {
         v["error"] = json!(format!("{failed} publish target(s) failed"));
         v["note"] = json!("publish is not rolled back by this op — tags/commits already pushed stay; clean up forges manually or re-run after fixing");
     }
+    if resumed {
+        v["resumed_from_tags"] = json!(true);
+        if failed == 0 {
+            v["note"] = json!("plan found nothing to release — resumed units from existing release tags; already-live versions report marker:\"already_published\"");
+        }
+    }
     v
+}
+
+/// Publish-resume candidates: specs whose release tag already
+/// exists at the *current* manifest version — bump+tag ran, only
+/// forge work may be missing (partial publish failure). Returns
+/// plan-unit-shaped JSON for [`run_publishers`].
+fn tagged_release_units(vcs: &dyn Vcs, dir: &Path, params: &Value) -> Result<Vec<Value>, String> {
+    let cfg = load_config(dir, params)?;
+    let specs = resolve_specs(dir, &cfg)?;
+    let mut out = Vec::new();
+    for spec in specs {
+        if spec.publish.is_empty() {
+            continue;
+        }
+        let tag = spec.tag(&spec.current_version);
+        if vcs.tag_exists(dir, &tag) {
+            out.push(json!({
+                "spec": spec,
+                "new_version": spec.current_version.to_string(),
+                "tag": tag,
+                "releases": true,
+            }));
+        }
+    }
+    Ok(out)
 }
 
 /// Dry-run preview of the `[release.sync_refs]` stage — same
@@ -1233,11 +1319,20 @@ fn mutate_release(
     vcs.push_branch(dir, "origin", None)
         .map_err(|e| format!("push: {e}"))?;
     st.branch_pushed = true;
-    for t in &st.tags {
-        vcs.exec_out(dir, &["push", "origin", t])
-            .map_err(|e| format!("push-tag {t}: {e}"))?;
-        st.tags_pushed.push(t.clone());
+    // One batched push for every tag — per-tag pushes are one SSH
+    // round-trip each. On failure, record only the tags verified
+    // on origin so rollback deletes exactly what landed.
+    if let Err(e) = push_tags(vcs, dir, &st.tags) {
+        let remote = remote_tags(vcs, dir);
+        st.tags_pushed = st
+            .tags
+            .iter()
+            .filter(|t| remote.contains(*t))
+            .cloned()
+            .collect();
+        return Err(format!("push-tags: {e}"));
     }
+    st.tags_pushed = st.tags.clone();
     steps_run.push(json!("push"));
     Ok(sync_report)
 }
@@ -1296,14 +1391,33 @@ fn rollback(vcs: &dyn Vcs, dir: &Path, st: &ReleaseState) -> Value {
         });
     }
     let mut steps: Vec<Value> = Vec::new();
-    for t in &st.tags_pushed {
-        record(
-            &mut steps,
-            format!("delete-remote-tag {t}"),
-            vcs.exec_out(dir, &["push", "origin", "--delete", t])
-                .map(|_| ())
-                .map_err(|e| e.to_string()),
-        );
+    if !st.tags_pushed.is_empty() {
+        // One batched delete — per-tag deletes are one SSH
+        // round-trip each (a 37-tag rollback took ~2h observed).
+        let mut args: Vec<String> = vec!["push".into(), "origin".into(), "--delete".into()];
+        args.extend(st.tags_pushed.iter().cloned());
+        let refs: Vec<&str> = args.iter().map(String::as_str).collect();
+        match vcs.exec_out(dir, &refs) {
+            Ok(_) => record(&mut steps, "delete-remote-tags".to_string(), Ok(())),
+            Err(e) => {
+                record(
+                    &mut steps,
+                    "delete-remote-tags".to_string(),
+                    Err(e.to_string()),
+                );
+                // Batch failed — per-tag deletes as fallback so
+                // whatever can go, goes.
+                for t in &st.tags_pushed {
+                    record(
+                        &mut steps,
+                        format!("delete-remote-tag {t}"),
+                        vcs.exec_out(dir, &["push", "origin", "--delete", t])
+                            .map(|_| ())
+                            .map_err(|e| e.to_string()),
+                    );
+                }
+            }
+        }
     }
     if st.branch_pushed {
         match (&st.pre_sha, vcs.current_branch(dir)) {
@@ -1385,6 +1499,18 @@ fn run_publishers(
     dry_run: bool,
     commitish: Option<String>,
 ) -> Vec<Value> {
+    // Every unit's name → released version — the crates.io
+    // publisher uses it to tell "sparse index lag on a sibling we
+    // just uploaded" (retry) from a genuinely missing dep (fail).
+    let release_versions: std::collections::BTreeMap<String, String> = releasing
+        .iter()
+        .map(|u| {
+            (
+                u["spec"]["name"].as_str().unwrap_or_default().to_string(),
+                u["new_version"].as_str().unwrap_or_default().to_string(),
+            )
+        })
+        .collect();
     let mut publish_reports: Vec<Value> = Vec::new();
     for u in releasing {
         let unit = u["spec"]["name"].as_str().unwrap_or_default().to_string();
@@ -1435,6 +1561,7 @@ fn run_publishers(
                     p.retry_base =
                         std::time::Duration::from_secs(cfg.publish.crates.retry_base_secs);
                     p.retry_max = std::time::Duration::from_secs(cfg.publish.crates.retry_max_secs);
+                    p.release_versions = release_versions.clone();
                     p.token_env = cfg.publish.crates.token_env.clone();
                     p.token_ref = cfg.publish.crates.token_ref.clone();
                     p.publish(&job).map(|r| json!(r)).map_err(|e| e.to_string())

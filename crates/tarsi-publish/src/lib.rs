@@ -67,6 +67,13 @@ pub struct PublishReport {
     /// Human-readable detail (URL, "already exists", retry count…).
     #[serde(default)]
     pub detail: String,
+    /// Idempotence marker — `Some("already_published")` when the
+    /// forge reported the version already live and this run
+    /// skipped the upload (re-running `publish` after a partial
+    /// failure converges instead of erroring). `None` on a real
+    /// publish; serialized only when set.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub marker: Option<String>,
 }
 
 #[derive(Debug, Error)]

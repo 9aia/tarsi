@@ -49,7 +49,7 @@ Ops (all JSON in/out — no `--json` flag exists or is needed):
 | `schema` | — | the op surface as data (params + result shapes) — introspect before driving |
 | `bump` | same + `dry_run` (default **true**) | step 1: changelogs + manifests + release commit → `bump{commit, units[]}` |
 | `tag` | same + `sha?`, `push?`, `dry_run` | step 2: tags at `sha` (default HEAD); `push:true` pushes branch+tags — **required before `publish`** |
-| `publish` | same + `commitish?`, `dry_run` | step 3: forge publishes; `commitish` pins the target (default HEAD) |
+| `publish` | same + `commitish?`, `dry_run` | step 3: forge publishes; `commitish` pins the target (default HEAD). Idempotent — already-live crates.io versions report `marker:"already_published"`; empty plan + no `units` resumes units from existing release tags (`resumed_from_tags`) |
 | `release` | same + `dry_run` (default **true**) | composed pipeline: plan → bump → tag → push → publish, with rollback |
 
 `range` overrides the since-last-tag rev (e.g. `"HEAD~5..HEAD"`)
@@ -69,6 +69,16 @@ caller to compensate; `release` is the all-or-nothing path. Read
 `rolled_back`/`publish`/`note` in results. A failed `release`
 rolls back local+remote state when nothing published; partial
 publishes are reported for manual cleanup.
+
+Publish is safe to re-run: crates.io "already exists" results are
+verified against the sparse index and reported with
+`marker:"already_published"`, crates.io's index lag behind each
+upload is retried with backoff when the missing dep is a release
+sibling, and `publish` on a fully-bumped repo (plan empty)
+auto-resumes units whose release tag exists at the manifest
+version — so retrying after a partial failure converges without
+hand-feeding `units`. Tag pushes and rollback deletes are batched
+into single `git push` invocations.
 
 ## Repo config — `tarsi.toml`
 
