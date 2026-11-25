@@ -18,9 +18,9 @@ tarsi-publish = { path = "../tarsi-publish" }
 tarsi-publish-crates = { path = "../tarsi-publish-crates" }
 tarsi-publish-ghreleases = { path = "../tarsi-publish-ghreleases" }
 tarsi-publish-dryrun = { path = "../tarsi-publish-dryrun" }
-lasius-vcs = { git = "ssh://git@github.com/9aia/lasius.git", rev = "622eae462da7a6fd31e94333a3c44aea81c4df49" }
-lasius-vcs-git = { git = "ssh://git@github.com/9aia/lasius.git", rev = "622eae462da7a6fd31e94333a3c44aea81c4df49" }
-hypha-serve-cli = { git = "https://github.com/9aia/hypha.git", rev = "5aac70b91436787783b6de9602badd7f687597bc" }
+lasius-vcs = { git = "ssh://git@github.com/9aia/lasius.git", rev = "89e51894b9cd118141fe66d1c8c1d114c60d4ea5" }
+lasius-vcs-git = { git = "ssh://git@github.com/9aia/lasius.git", rev = "89e51894b9cd118141fe66d1c8c1d114c60d4ea5" }
+hypha-serve-cli = { git = "https://github.com/9aia/hypha.git", rev = "6c6431a8565ce5a3e9feda9bd04549cdc2fa4f24" }
 semver = { version = "1", features = ["serde"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
