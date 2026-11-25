@@ -789,6 +789,16 @@ Failure handling:
 * Publish failures roll back **only if nothing published** — once a
   target succeeded, deleting the tag would orphan a live release, so
   state is left and the report asks for manual cleanup.
+* Tags push in **one batched `git push`** (explicit refspecs); on
+  partial failure the pushed set is verified via `ls-remote` and
+  rollback batch-deletes with a per-tag fallback.
+* crates.io publishes tolerate **sparse-index lag**: a
+  "failed to select a version" naming a release sibling retries, and
+  already-published versions verify against the index
+  (`marker:"already_published"`) instead of republishing.
+* `publish` **resumes** from existing release tags when the plan is
+  empty (`resumed_from_tags`) — re-running a partially-failed release
+  converges instead of erroring on missing plan units.
 
 ## The LLM boundary
 

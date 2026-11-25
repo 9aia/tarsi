@@ -67,35 +67,42 @@
 <a href=#67 id=67 data-nosnippet>67</a>    <span class="doccomment">/// Human-readable detail (URL, "already exists", retry count…).
 <a href=#68 id=68 data-nosnippet>68</a>    </span><span class="attr">#[serde(default)]
 <a href=#69 id=69 data-nosnippet>69</a>    </span><span class="kw">pub </span>detail: String,
-<a href=#70 id=70 data-nosnippet>70</a>}
-<a href=#71 id=71 data-nosnippet>71</a>
-<a href=#72 id=72 data-nosnippet>72</a><span class="attr">#[derive(Debug, Error)]
-<a href=#73 id=73 data-nosnippet>73</a></span><span class="kw">pub enum </span>PublishError {
-<a href=#74 id=74 data-nosnippet>74</a>    <span class="attr">#[error(<span class="string">"{0}"</span>)]
-<a href=#75 id=75 data-nosnippet>75</a>    </span>Msg(String),
-<a href=#76 id=76 data-nosnippet>76</a>    <span class="attr">#[error(<span class="string">"io: {0}"</span>)]
-<a href=#77 id=77 data-nosnippet>77</a>    </span>Io(<span class="attr">#[from] </span>std::io::Error),
-<a href=#78 id=78 data-nosnippet>78</a>    <span class="attr">#[error(<span class="string">"http: {0}"</span>)]
-<a href=#79 id=79 data-nosnippet>79</a>    </span>Http(String),
-<a href=#80 id=80 data-nosnippet>80</a>}
-<a href=#81 id=81 data-nosnippet>81</a>
-<a href=#82 id=82 data-nosnippet>82</a><span class="doccomment">/// A forge/registry publish target.
-<a href=#83 id=83 data-nosnippet>83</a></span><span class="kw">pub trait </span>Publisher: Send + Sync {
-<a href=#84 id=84 data-nosnippet>84</a>    <span class="doccomment">/// Which [`PublishTarget`] this impl serves.
-<a href=#85 id=85 data-nosnippet>85</a>    </span><span class="kw">fn </span>target(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PublishTarget;
-<a href=#86 id=86 data-nosnippet>86</a>    <span class="doccomment">/// Publish one unit. Implementations MUST honor `job.dry_run`.
-<a href=#87 id=87 data-nosnippet>87</a>    </span><span class="kw">fn </span>publish(<span class="kw-2">&amp;</span><span class="self">self</span>, job: <span class="kw-2">&amp;</span>PublishJob) -&gt; <span class="prelude-ty">Result</span>&lt;PublishReport, PublishError&gt;;
-<a href=#88 id=88 data-nosnippet>88</a>}
-<a href=#89 id=89 data-nosnippet>89</a>
-<a href=#90 id=90 data-nosnippet>90</a><span class="doccomment">/// Pick publishers for a plan's targets, preserving unit order —
-<a href=#91 id=91 data-nosnippet>91</a>/// callers run `publish` per unit in `plan_release` order.
-<a href=#92 id=92 data-nosnippet>92</a></span><span class="kw">pub fn </span>publishers_for(
-<a href=#93 id=93 data-nosnippet>93</a>    targets: <span class="kw-2">&amp;</span>[PublishTarget],
-<a href=#94 id=94 data-nosnippet>94</a>    builders: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Fn(PublishTarget) -&gt; <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>Publisher&gt;&gt;,
-<a href=#95 id=95 data-nosnippet>95</a>) -&gt; Vec&lt;(PublishTarget, Box&lt;<span class="kw">dyn </span>Publisher&gt;)&gt; {
-<a href=#96 id=96 data-nosnippet>96</a>    targets
-<a href=#97 id=97 data-nosnippet>97</a>        .iter()
-<a href=#98 id=98 data-nosnippet>98</a>        .filter_map(|t| builders(<span class="kw-2">*</span>t).map(|p| (<span class="kw-2">*</span>t, p)))
-<a href=#99 id=99 data-nosnippet>99</a>        .collect()
-<a href=#100 id=100 data-nosnippet>100</a>}
+<a href=#70 id=70 data-nosnippet>70</a>    <span class="doccomment">/// Idempotence marker — `Some("already_published")` when the
+<a href=#71 id=71 data-nosnippet>71</a>    /// forge reported the version already live and this run
+<a href=#72 id=72 data-nosnippet>72</a>    /// skipped the upload (re-running `publish` after a partial
+<a href=#73 id=73 data-nosnippet>73</a>    /// failure converges instead of erroring). `None` on a real
+<a href=#74 id=74 data-nosnippet>74</a>    /// publish; serialized only when set.
+<a href=#75 id=75 data-nosnippet>75</a>    </span><span class="attr">#[serde(default, skip_serializing_if = <span class="string">"Option::is_none"</span>)]
+<a href=#76 id=76 data-nosnippet>76</a>    </span><span class="kw">pub </span>marker: <span class="prelude-ty">Option</span>&lt;String&gt;,
+<a href=#77 id=77 data-nosnippet>77</a>}
+<a href=#78 id=78 data-nosnippet>78</a>
+<a href=#79 id=79 data-nosnippet>79</a><span class="attr">#[derive(Debug, Error)]
+<a href=#80 id=80 data-nosnippet>80</a></span><span class="kw">pub enum </span>PublishError {
+<a href=#81 id=81 data-nosnippet>81</a>    <span class="attr">#[error(<span class="string">"{0}"</span>)]
+<a href=#82 id=82 data-nosnippet>82</a>    </span>Msg(String),
+<a href=#83 id=83 data-nosnippet>83</a>    <span class="attr">#[error(<span class="string">"io: {0}"</span>)]
+<a href=#84 id=84 data-nosnippet>84</a>    </span>Io(<span class="attr">#[from] </span>std::io::Error),
+<a href=#85 id=85 data-nosnippet>85</a>    <span class="attr">#[error(<span class="string">"http: {0}"</span>)]
+<a href=#86 id=86 data-nosnippet>86</a>    </span>Http(String),
+<a href=#87 id=87 data-nosnippet>87</a>}
+<a href=#88 id=88 data-nosnippet>88</a>
+<a href=#89 id=89 data-nosnippet>89</a><span class="doccomment">/// A forge/registry publish target.
+<a href=#90 id=90 data-nosnippet>90</a></span><span class="kw">pub trait </span>Publisher: Send + Sync {
+<a href=#91 id=91 data-nosnippet>91</a>    <span class="doccomment">/// Which [`PublishTarget`] this impl serves.
+<a href=#92 id=92 data-nosnippet>92</a>    </span><span class="kw">fn </span>target(<span class="kw-2">&amp;</span><span class="self">self</span>) -&gt; PublishTarget;
+<a href=#93 id=93 data-nosnippet>93</a>    <span class="doccomment">/// Publish one unit. Implementations MUST honor `job.dry_run`.
+<a href=#94 id=94 data-nosnippet>94</a>    </span><span class="kw">fn </span>publish(<span class="kw-2">&amp;</span><span class="self">self</span>, job: <span class="kw-2">&amp;</span>PublishJob) -&gt; <span class="prelude-ty">Result</span>&lt;PublishReport, PublishError&gt;;
+<a href=#95 id=95 data-nosnippet>95</a>}
+<a href=#96 id=96 data-nosnippet>96</a>
+<a href=#97 id=97 data-nosnippet>97</a><span class="doccomment">/// Pick publishers for a plan's targets, preserving unit order —
+<a href=#98 id=98 data-nosnippet>98</a>/// callers run `publish` per unit in `plan_release` order.
+<a href=#99 id=99 data-nosnippet>99</a></span><span class="kw">pub fn </span>publishers_for(
+<a href=#100 id=100 data-nosnippet>100</a>    targets: <span class="kw-2">&amp;</span>[PublishTarget],
+<a href=#101 id=101 data-nosnippet>101</a>    builders: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Fn(PublishTarget) -&gt; <span class="prelude-ty">Option</span>&lt;Box&lt;<span class="kw">dyn </span>Publisher&gt;&gt;,
+<a href=#102 id=102 data-nosnippet>102</a>) -&gt; Vec&lt;(PublishTarget, Box&lt;<span class="kw">dyn </span>Publisher&gt;)&gt; {
+<a href=#103 id=103 data-nosnippet>103</a>    targets
+<a href=#104 id=104 data-nosnippet>104</a>        .iter()
+<a href=#105 id=105 data-nosnippet>105</a>        .filter_map(|t| builders(<span class="kw-2">*</span>t).map(|p| (<span class="kw-2">*</span>t, p)))
+<a href=#106 id=106 data-nosnippet>106</a>        .collect()
+<a href=#107 id=107 data-nosnippet>107</a>}
 </code></pre></div></section></main></body></html>

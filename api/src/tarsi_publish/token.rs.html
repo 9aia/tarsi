@@ -7,7 +7,7 @@
 <a href=#7 id=7 data-nosnippet>7</a>//! Resolution order (T-041):
 <a href=#8 id=8 data-nosnippet>8</a>//!
 <a href=#9 id=9 data-nosnippet>9</a>//! 1. `token_ref` — an explicit `cuora://&lt;scope&gt;/&lt;name&gt;` secret
-<a href=#10 id=10 data-nosnippet>10</a>//!    ref, fetched through `hypha-secret-cuora` (audit events and
+<a href=#10 id=10 data-nosnippet>10</a>//!    ref, fetched through `cuora-secret-cuora` (audit events and
 <a href=#11 id=11 data-nosnippet>11</a>//!    vault policy apply). Nested scopes work (`cuora://a/b/name`
 <a href=#12 id=12 data-nosnippet>12</a>//!    → scope `a/b`, name `name` — the ref tail is the secret
 <a href=#13 id=13 data-nosnippet>13</a>//!    name).
@@ -26,8 +26,8 @@
 <a href=#26 id=26 data-nosnippet>26</a><span class="kw">use </span>std::path::PathBuf;
 <a href=#27 id=27 data-nosnippet>27</a><span class="kw">use </span>std::sync::Mutex;
 <a href=#28 id=28 data-nosnippet>28</a>
-<a href=#29 id=29 data-nosnippet>29</a><span class="kw">use </span>hypha_secret::Secrets <span class="kw">as _</span>;
-<a href=#30 id=30 data-nosnippet>30</a><span class="kw">use </span>hypha_secret_cuora::CuoraSecrets;
+<a href=#29 id=29 data-nosnippet>29</a><span class="kw">use </span>cuora_secret::Secrets <span class="kw">as _</span>;
+<a href=#30 id=30 data-nosnippet>30</a><span class="kw">use </span>cuora_secret_cuora::CuoraSecrets;
 <a href=#31 id=31 data-nosnippet>31</a>
 <a href=#32 id=32 data-nosnippet>32</a><span class="kw">use </span><span class="kw">crate</span>::PublishError;
 <a href=#33 id=33 data-nosnippet>33</a>
@@ -76,7 +76,7 @@
 <a href=#76 id=76 data-nosnippet>76</a>    <span class="prelude-val">Ok</span>((scope, name))
 <a href=#77 id=77 data-nosnippet>77</a>}
 <a href=#78 id=78 data-nosnippet>78</a>
-<a href=#79 id=79 data-nosnippet>79</a><span class="doccomment">/// The default resolver: `cuora://` refs via `hypha-secret-cuora`,
+<a href=#79 id=79 data-nosnippet>79</a><span class="doccomment">/// The default resolver: `cuora://` refs via `cuora-secret-cuora`,
 <a href=#80 id=80 data-nosnippet>80</a>/// env var fallback. One [`CuoraSecrets`] store per scope, built
 <a href=#81 id=81 data-nosnippet>81</a>/// lazily and cached for the resolver's lifetime (cheap under the
 <a href=#82 id=82 data-nosnippet>82</a>/// `cli` transport; under `serve` it keeps the `cuora serve` child

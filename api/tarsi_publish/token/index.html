@@ -6,7 +6,7 @@ child process environment / <code>Authorization</code> header.</p>
 <p>Resolution order (T-041):</p>
 <ol>
 <li><code>token_ref</code> — an explicit <code>cuora://&lt;scope&gt;/&lt;name&gt;</code> secret
-ref, fetched through <code>hypha-secret-cuora</code> (audit events and
+ref, fetched through <code>cuora-secret-cuora</code> (audit events and
 vault policy apply). Nested scopes work (<code>cuora://a/b/name</code>
 → scope <code>a/b</code>, name <code>name</code> — the ref tail is the secret
 name).</li>
@@ -19,8 +19,8 @@ pre-T-041 env lookup.</p>
 <p>Env knobs follow the <code>&lt;PRODUCT&gt;_CUORA_*</code> convention:
 <code>TARSI_CUORA_BIN</code> overrides the <code>cuora</code> binary (tests stub it),
 <code>TARSI_CUORA_TRANSPORT</code> picks <code>cli</code>/<code>serve</code>.</p>
-</div></details><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.CuoraTokenResolver.html" title="struct tarsi_publish::token::CuoraTokenResolver">Cuora<wbr>Token<wbr>Resolver</a></dt><dd>The default resolver: <code>cuora://</code> refs via <code>hypha-secret-cuora</code>,
-env var fallback. One <a href="../../hypha_secret_cuora/struct.CuoraSecrets.html" title="struct hypha_secret_cuora::CuoraSecrets"><code>CuoraSecrets</code></a> store per scope, built
+</div></details><h2 id="structs" class="section-header">Structs<a href="#structs" class="anchor">§</a></h2><dl class="item-table"><dt><a class="struct" href="struct.CuoraTokenResolver.html" title="struct tarsi_publish::token::CuoraTokenResolver">Cuora<wbr>Token<wbr>Resolver</a></dt><dd>The default resolver: <code>cuora://</code> refs via <code>cuora-secret-cuora</code>,
+env var fallback. One [<code>CuoraSecrets</code>] store per scope, built
 lazily and cached for the resolver’s lifetime (cheap under the
 <code>cli</code> transport; under <code>serve</code> it keeps the <code>cuora serve</code> child
 alive across lookups).</dd></dl><h2 id="constants" class="section-header">Constants<a href="#constants" class="anchor">§</a></h2><dl class="item-table"><dt><a class="constant" href="constant.CUORA_BIN_ENV.html" title="constant tarsi_publish::token::CUORA_BIN_ENV">CUORA_<wbr>BIN_<wbr>ENV</a></dt><dd>Env var naming the <code>cuora</code> binary override.</dd><dt><a class="constant" href="constant.CUORA_TRANSPORT_ENV.html" title="constant tarsi_publish::token::CUORA_TRANSPORT_ENV">CUORA_<wbr>TRANSPORT_<wbr>ENV</a></dt><dd>Env var picking the cuora transport (<code>cli</code>/<code>serve</code>).</dd></dl><h2 id="traits" class="section-header">Traits<a href="#traits" class="anchor">§</a></h2><dl class="item-table"><dt><a class="trait" href="trait.TokenResolver.html" title="trait tarsi_publish::token::TokenResolver">Token<wbr>Resolver</a></dt><dd>Resolves a publish token from config’s <code>(token_env, token_ref)</code>

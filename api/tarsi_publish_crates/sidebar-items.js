@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["CARGO_TOKEN_ENV","DEFAULT_RETRY_BASE","DEFAULT_RETRY_MAX","DEFAULT_TIMEOUT"],"struct":["CratesPublisher"]};
+window.SIDEBAR_ITEMS = {"constant":["CARGO_TOKEN_ENV","DEFAULT_RETRY_BASE","DEFAULT_RETRY_MAX","DEFAULT_TIMEOUT"],"struct":["CratesPublisher"],"type":["IndexProbe"]};
