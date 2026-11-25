@@ -25,7 +25,7 @@ api:
 - name: PublishError
   kind: type
   file: crates/tarsi-publish/src/lib.rs
-  line: 73
+  line: 80
   module: tarsi-publish
 - name: PublishJob
   kind: type
@@ -40,7 +40,7 @@ api:
 - name: Publisher
   kind: trait
   file: crates/tarsi-publish/src/lib.rs
-  line: 83
+  line: 90
   module: tarsi-publish
 - name: TokenResolver
   kind: trait
@@ -75,7 +75,7 @@ api:
 - name: publishers_for
   kind: function
   file: crates/tarsi-publish/src/lib.rs
-  line: 92
+  line: 99
   module: tarsi-publish
 - name: resolve
   kind: function
@@ -118,14 +118,14 @@ api:
   line: 101
   module: tarsi-publish
 deps:
-- hypha-secret
-- hypha-secret-cuora
+- cuora-secret
+- cuora-secret-cuora
 - serde
 - serde_json
 - tarsi-core
 - thiserror
 - tempfile
-- hypha_secret_cuora
+- cuora_secret_cuora
 - token
 - tarsi-core
 - thiserror
@@ -140,9 +140,9 @@ provenance:
   - crates/tarsi-publish/src/lib.rs
   - crates/tarsi-publish/src/token.rs
   hashes:
-  - 49e0eef4008d717028f4fa8a6b6d9ae14b86acd4
-  - d284084a15dff7f3a79ee7ad12a04c49210f583f
-  - 4268300548580739d49ae5103640a08632572a08
-  commit_sha: 409d6ea16e90c83cafea0f603cf0f70669eedd42
-  generated_at: '1794726505'
+  - fe4449bf8a69d38068d760b74342deed279077b5
+  - 6da6fda135e6597c182828fba80fef8fd6be4dbc
+  - dd119cafd0f4230adf78ef24017a65fc5a71bf3c
+  commit_sha: b5164316af533fb2049abb81aeb29d82a81868de
+  generated_at: '1795566214'
   generator: kuda-template/0.1.4

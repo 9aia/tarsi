@@ -75,7 +75,7 @@ api:
 - name: capabilities_and_schema_shapes
   kind: function
   file: crates/tarsi-driver/src/lib.rs
-  line: 1067
+  line: 1070
   module: tarsi-driver
 - name: capabilities_answers_tamias_discovery
   kind: function
@@ -120,7 +120,7 @@ api:
 - name: config_load_rebases_and_expands
   kind: function
   file: crates/tarsi-driver/src/lib.rs
-  line: 1042
+  line: 1045
   module: tarsi-driver
 - name: config_schema
   kind: function
@@ -155,7 +155,7 @@ api:
 - name: deploy_resyncs_profiles_dir_copy
   kind: function
   file: crates/tarsi-driver/src/lib.rs
-  line: 987
+  line: 990
   module: tarsi-driver
 - name: dispatch
   kind: function
@@ -185,7 +185,7 @@ api:
 - name: env_of
   kind: function
   file: crates/tarsi-driver/src/lib.rs
-  line: 787
+  line: 790
   module: tarsi-driver
 - name: env_of
   kind: function
@@ -235,13 +235,13 @@ provenance:
   - crates/tarsi-driver/tests/conformance.rs
   - crates/tarsi-driver/tests/verbs.rs
   hashes:
-  - a65afb5383e18143bc8c3201aebdbb4b8f60743b
+  - bd221d88a6e7e0d0dd5ce9571fbb2cfdfa618088
   - fa887effe8b915f44f723146817548741f168594
-  - ec7be41c2f12c15e620f75c2a62811291c8bb50b
+  - a9169361a5fe5720776657c994ff59e6a9758527
   - a594f182ac2cef3170d14eb0baa745424850a9f6
   - d5eb06b413ff54cbecbdc82dd678ba99da83e672
   - 20dba9ed54ec0e8678d2e587ae37a41b83a9d0b1
   - 1c3d66b63c16111f5723be995a4d0a703f4dcd56
-  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
-  generated_at: '1794533324'
+  commit_sha: b5164316af533fb2049abb81aeb29d82a81868de
+  generated_at: '1795566214'
   generator: kuda-template/0.1.4

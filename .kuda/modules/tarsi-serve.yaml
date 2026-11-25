@@ -20,7 +20,7 @@ api:
 - name: ReleaseState
   kind: type
   file: crates/tarsi-serve/src/lib.rs
-  line: 1010
+  line: 1108
   module: tarsi-serve
 - name: Request
   kind: type
@@ -60,42 +60,42 @@ api:
 - name: bump_error
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 490
+  line: 525
   module: tarsi-serve
 - name: changelog_configured_path_is_unit_relative
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 1695
+  line: 1841
   module: tarsi-serve
 - name: changelog_empty_markdown_writes_nothing
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 1687
+  line: 1833
   module: tarsi-serve
 - name: changelog_new_file_reports_created
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 1673
+  line: 1819
   module: tarsi-serve
 - name: changelog_path
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 1454
+  line: 1600
   module: tarsi-serve
 - name: changelog_splice_appends_after_lone_unreleased
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 1657
+  line: 1803
   module: tarsi-serve
 - name: changelog_splice_has_single_blank_after_title
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 1611
+  line: 1757
   module: tarsi-serve
 - name: changelog_splice_keeps_unreleased_and_preamble_on_top
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 1630
+  line: 1776
   module: tarsi-serve
 - name: compile_find
   kind: function
@@ -135,7 +135,7 @@ api:
 - name: execute_release
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 1043
+  line: 1141
   module: tarsi-serve
 - name: expand_files
   kind: function
@@ -165,7 +165,7 @@ api:
 - name: gather_commits
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 904
+  line: 1002
   module: tarsi-serve
 - name: git
   kind: function
@@ -190,19 +190,19 @@ api:
 - name: latest_tag
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 942
+  line: 1040
   module: tarsi-serve
 - name: load_config
   kind: function
   file: crates/tarsi-serve/src/lib.rs
-  line: 872
+  line: 970
   module: tarsi-serve
 - name: ls_remote
   kind: function
   file: crates/tarsi-serve/tests/release_e2e.rs
   line: 100
   module: tarsi-serve
-api_omitted: 56
+api_omitted: 60
 deps:
 - glob
 - hypha-serve-cli
@@ -247,13 +247,13 @@ provenance:
   - crates/tarsi-serve/tests/profile_e2e.rs
   - crates/tarsi-serve/tests/release_e2e.rs
   hashes:
-  - a07e7e1df345e0dc0daff69efffbe0aaa912b688
-  - 4b9a8fcaf9a52269a93cde7107f52affae8d88c8
+  - 2514a60b53d5c2009c89a57a6ef0ff1b059cb495
+  - b7e4824e837778f7f82657459432023c431eb70f
   - b743a445f835cb91e5500badcfccabd1c4217675
   - 6c1f874fa8f6f585365eb631e432c8147122ae8f
-  - 79c9d9c694dbd980b9a460bb036378600b457931
+  - 61de5022c2edba6517a0e32def469d40d4d31804
   - 7a7d451a1257ef820eeb4d1c99937f3e9c64602d
-  - 9c7503a9b662c02477645d4d983ece6d8087f9c9
-  commit_sha: 409d6ea16e90c83cafea0f603cf0f70669eedd42
-  generated_at: '1794726505'
+  - ee8dd38439a54366979f05469d7168018cf70d90
+  commit_sha: b5164316af533fb2049abb81aeb29d82a81868de
+  generated_at: '1795566214'
   generator: kuda-template/0.1.4

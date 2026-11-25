@@ -10,17 +10,17 @@ api:
 - name: TargetDryRun
   kind: type
   file: crates/tarsi-publish-dryrun/src/lib.rs
-  line: 49
+  line: 50
   module: tarsi-publish-dryrun
 - name: asset_suffix
   kind: function
   file: crates/tarsi-publish-dryrun/src/lib.rs
-  line: 72
+  line: 74
   module: tarsi-publish-dryrun
 - name: for_target
   kind: function
   file: crates/tarsi-publish-dryrun/src/lib.rs
-  line: 42
+  line: 43
   module: tarsi-publish-dryrun
 - name: publish
   kind: function
@@ -30,7 +30,7 @@ api:
 - name: publish
   kind: function
   file: crates/tarsi-publish-dryrun/src/lib.rs
-  line: 56
+  line: 57
   module: tarsi-publish-dryrun
 - name: target
   kind: function
@@ -40,7 +40,7 @@ api:
 - name: target
   kind: function
   file: crates/tarsi-publish-dryrun/src/lib.rs
-  line: 52
+  line: 53
   module: tarsi-publish-dryrun
 - name: tarsi-publish-dryrun
   kind: module
@@ -62,7 +62,7 @@ provenance:
   - crates/tarsi-publish-dryrun/src/lib.rs
   hashes:
   - d1d1ecb6393519bdc92a149f813856bda9fb18dd
-  - 6360c8bec0f27937f18cc75aa9b9fc76263fede5
-  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
-  generated_at: '1794533324'
+  - b7c926a50a67a4804536a388f6c768d9f4080289
+  commit_sha: b5164316af533fb2049abb81aeb29d82a81868de
+  generated_at: '1795566214'
   generator: kuda-template/0.1.4

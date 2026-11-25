@@ -65,12 +65,12 @@ api:
 - name: DEFAULT_TAG_FORMAT
   kind: const
   file: crates/tarsi-core/src/unit.rs
-  line: 60
+  line: 70
   module: tarsi-core
 - name: GhReleasePublish
   kind: type
   file: crates/tarsi-core/src/config.rs
-  line: 221
+  line: 248
   module: tarsi-core
 - name: PlanError
   kind: type
@@ -140,7 +140,7 @@ api:
 - name: UnitMap
   kind: type
   file: crates/tarsi-core/src/unit.rs
-  line: 92
+  line: 102
   module: tarsi-core
 - name: UnitOverride
   kind: type
@@ -155,7 +155,7 @@ api:
 - name: UnitsSpec
   kind: type
   file: crates/tarsi-core/src/unit.rs
-  line: 80
+  line: 90
   module: tarsi-core
 - name: apply
   kind: function
@@ -165,7 +165,7 @@ api:
 - name: apply_overrides
   kind: function
   file: crates/tarsi-core/src/config.rs
-  line: 274
+  line: 301
   module: tarsi-core
 - name: apply_resets_lower_components
   kind: function
@@ -180,7 +180,7 @@ api:
 - name: attributes_and_infers_bumps
   kind: function
   file: crates/tarsi-core/src/plan.rs
-  line: 341
+  line: 388
   module: tarsi-core
 - name: body_footer_marks_breaking
   kind: function
@@ -202,7 +202,7 @@ api:
   file: crates/tarsi-core/src/strategy.rs
   line: 215
   module: tarsi-core
-api_omitted: 86
+api_omitted: 93
 deps:
 - semver
 - serde
@@ -244,11 +244,11 @@ provenance:
   - 487743d90e534df93d0f98cc5ba7dee7ba38b4d7
   - b413dbc52f62eac1f150c1ef0508a8361d3c6de2
   - 4e0cf57e55ad3f8e6820e42cdc43cd7adf51e5df
-  - 6c7047ec6f012883d0b508934ca57569d74addb7
+  - 5978d43f94747a910253d391a91a73eff59202a5
   - e84dd194ea80ac8fcf71f4a6d4f0034a0bcfbd3c
-  - 1054be6c74e000d42d0d5a31fcdd4e914cfba4d8
-  - 2cfd841c6976e21664a9adb9083878c4da95a370
-  - 4833e193d20b16ebd48feec85a974eee087bdb53
-  commit_sha: 409d6ea16e90c83cafea0f603cf0f70669eedd42
-  generated_at: '1794726505'
+  - d8ed3fe640dff8ee40379fa97aa19790f45d1976
+  - d8178dbd4b7a8e0778c11a2939c7e966af6cbb22
+  - cfc7fda78a50557f123a55bcae80ca08f41ccf8e
+  commit_sha: b5164316af533fb2049abb81aeb29d82a81868de
+  generated_at: '1795566214'
   generator: kuda-template/0.1.4

@@ -15,12 +15,17 @@ api:
 - name: apply_config
   kind: function
   file: crates/tarsi-manifest/src/lib.rs
-  line: 244
+  line: 257
   module: tarsi-manifest
 - name: cargo_workspace_units
   kind: function
   file: crates/tarsi-manifest/src/lib.rs
-  line: 188
+  line: 200
+  module: tarsi-manifest
+- name: dep_manifest_version
+  kind: function
+  file: crates/tarsi-manifest/src/lib.rs
+  line: 365
   module: tarsi-manifest
 - name: err_io
   kind: function
@@ -35,7 +40,7 @@ api:
 - name: fixture
   kind: function
   file: crates/tarsi-manifest/src/lib.rs
-  line: 342
+  line: 477
   module: tarsi-manifest
 - name: member_globs
   kind: function
@@ -45,12 +50,27 @@ api:
 - name: read_member
   kind: function
   file: crates/tarsi-manifest/src/lib.rs
-  line: 96
+  line: 102
   module: tarsi-manifest
 - name: read_toml
   kind: function
   file: crates/tarsi-manifest/src/lib.rs
   line: 28
+  module: tarsi-manifest
+- name: sync_path_dep_reqs
+  kind: function
+  file: crates/tarsi-manifest/src/lib.rs
+  line: 390
+  module: tarsi-manifest
+- name: sync_path_dep_reqs_tracks_bumped_versions
+  kind: function
+  file: crates/tarsi-manifest/src/lib.rs
+  line: 574
+  module: tarsi-manifest
+- name: table_at
+  kind: function
+  file: crates/tarsi-manifest/src/lib.rs
+  line: 351
   module: tarsi-manifest
 - name: tarsi-manifest
   kind: module
@@ -60,32 +80,32 @@ api:
 - name: tests
   kind: module
   file: crates/tarsi-manifest/src/lib.rs
-  line: 339
+  line: 474
   module: tarsi-manifest
 - name: workspace_members_become_specs
   kind: function
   file: crates/tarsi-manifest/src/lib.rs
-  line: 381
+  line: 524
   module: tarsi-manifest
 - name: write_unit_version
   kind: function
   file: crates/tarsi-manifest/src/lib.rs
-  line: 315
+  line: 328
   module: tarsi-manifest
 - name: write_version
   kind: function
   file: crates/tarsi-manifest/src/lib.rs
-  line: 251
+  line: 264
   module: tarsi-manifest
 - name: write_version_round_trip
   kind: function
   file: crates/tarsi-manifest/src/lib.rs
-  line: 395
+  line: 547
   module: tarsi-manifest
 - name: write_workspace_version
   kind: function
   file: crates/tarsi-manifest/src/lib.rs
-  line: 283
+  line: 296
   module: tarsi-manifest
 deps:
 - semver
@@ -108,7 +128,7 @@ provenance:
   - crates/tarsi-manifest/src/lib.rs
   hashes:
   - 3448d8125eb74b5caf809507d52b58d2a661dcac
-  - 0d6fb1c6c51780fc0f1f57dc1a308be585a42d6e
-  commit_sha: 78d37ff670c5a43840d0996ebab7d79885756b27
-  generated_at: '1794533324'
+  - 16438d447e04e530ccdc5594e10e181154065948
+  commit_sha: b5164316af533fb2049abb81aeb29d82a81868de
+  generated_at: '1795566214'
   generator: kuda-template/0.1.4

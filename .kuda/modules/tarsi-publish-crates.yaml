@@ -1,91 +1,213 @@
 name: tarsi-publish-crates
 path: crates/tarsi-publish-crates/Cargo.toml
-purpose: crates.io Publisher — dep-ordered cargo publish with 429 retry (release.sh semantics).
+purpose: crates.io Publisher — dep-ordered cargo publish with 429 retry (idempotent re-runs).
 api:
+- name: Attempt
+  kind: type
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 245
+  module: tarsi-publish-crates
 - name: CARGO_TOKEN_ENV
   kind: const
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 21
+  line: 30
+  module: tarsi-publish-crates
+- name: Captured
+  kind: type
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 238
   module: tarsi-publish-crates
 - name: CratesPublisher
   kind: type
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 25
+  line: 49
+  module: tarsi-publish-crates
+- name: DEFAULT_RETRY_BASE
+  kind: const
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 39
+  module: tarsi-publish-crates
+- name: DEFAULT_RETRY_MAX
+  kind: const
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 42
+  module: tarsi-publish-crates
+- name: DEFAULT_TIMEOUT
+  kind: const
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 35
   module: tarsi-publish-crates
 - name: FakeResolver
   kind: type
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 172
+  line: 506
+  module: tarsi-publish-crates
+- name: IndexProbe
+  kind: type
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 45
+  module: tarsi-publish-crates
+- name: PATH_LOCK
+  kind: const
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 483
+  module: tarsi-publish-crates
+- name: SEQ
+  kind: const
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 260
+  module: tarsi-publish-crates
+- name: already_published_reports_marker_and_probe_detail
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 629
+  module: tarsi-publish-crates
+- name: already_published_unconfirmed_probe_still_ok
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 648
+  module: tarsi-publish-crates
+- name: backoff_grows_and_caps
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 433
+  module: tarsi-publish-crates
+- name: default_index_probe
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 145
   module: tarsi-publish-crates
 - name: dry_run_never_spawns
   kind: function
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 142
+  line: 450
+  module: tarsi-publish-crates
+- name: exhausted_attempts_fail_with_tail
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 700
+  module: tarsi-publish-crates
+- name: index_lag_detection_needs_a_release_sibling
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 616
+  module: tarsi-publish-crates
+- name: index_lag_error_retries_then_succeeds
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 669
+  module: tarsi-publish-crates
+- name: index_url
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 129
+  module: tarsi-publish-crates
+- name: index_url_prefixes
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 604
   module: tarsi-publish-crates
 - name: is_already_published
   kind: function
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 59
+  line: 120
+  module: tarsi-publish-crates
+- name: is_index_lag_for_sibling
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 164
   module: tarsi-publish-crates
 - name: is_rate_limited
   kind: function
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 55
+  line: 111
   module: tarsi-publish-crates
 - name: job
   kind: function
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 158
+  line: 466
   module: tarsi-publish-crates
 - name: new
   kind: function
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 43
+  line: 89
+  module: tarsi-publish-crates
+- name: parse_retry_after
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 184
   module: tarsi-publish-crates
 - name: publish
   kind: function
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 70
+  line: 314
   module: tarsi-publish-crates
 - name: rate_limit_detection
   kind: function
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 132
+  line: 406
+  module: tarsi-publish-crates
+- name: rate_limited_publish_retries_then_succeeds
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 574
   module: tarsi-publish-crates
 - name: resolve
   kind: function
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 175
+  line: 509
   module: tarsi-publish-crates
 - name: resolved_token_is_injected_as_cargo_token_env
   kind: function
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 188
+  line: 522
   module: tarsi-publish-crates
 - name: resolver_error_fails_before_spawning
   kind: function
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 222
+  line: 549
+  module: tarsi-publish-crates
+- name: retry_after_parsing
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 421
+  module: tarsi-publish-crates
+- name: retry_delay
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 219
+  module: tarsi-publish-crates
+- name: run_attempt
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 259
+  module: tarsi-publish-crates
+- name: slow_publish_times_out
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 559
+  module: tarsi-publish-crates
+- name: stderr_tail
+  kind: function
+  file: crates/tarsi-publish-crates/src/lib.rs
+  line: 298
   module: tarsi-publish-crates
 - name: target
   kind: function
   file: crates/tarsi-publish-crates/src/lib.rs
-  line: 66
+  line: 310
   module: tarsi-publish-crates
 - name: tarsi-publish-crates
   kind: module
   file: crates/tarsi-publish-crates/Cargo.toml
   line: 1
   module: tarsi-publish-crates
-- name: tests
-  kind: module
-  file: crates/tarsi-publish-crates/src/lib.rs
-  line: 128
-  module: tarsi-publish-crates
+api_omitted: 2
 deps:
 - tarsi-core
 - tarsi-publish
 - thiserror
+- ureq
 - tempfile
 - tarsi-core
 - tarsi-publish
@@ -98,8 +220,8 @@ provenance:
   - crates/tarsi-publish-crates/Cargo.toml
   - crates/tarsi-publish-crates/src/lib.rs
   hashes:
-  - 616776790778c2dce765ea9f9e95fb3b0db1749e
-  - 7e5cd470f8290b4327cc91c87e0a47bfb33a1152
-  commit_sha: 409d6ea16e90c83cafea0f603cf0f70669eedd42
-  generated_at: '1794726505'
+  - dd86b9cda3a30e548964dadd5fdf7502d0e67e97
+  - 59f5c6af7ae8f3933978ac196f91b607affc3ca9
+  commit_sha: b5164316af533fb2049abb81aeb29d82a81868de
+  generated_at: '1795566214'
   generator: kuda-template/0.1.4

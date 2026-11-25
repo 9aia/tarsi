@@ -5,24 +5,27 @@ api: []
 deps: []
 notes: ''
 verify:
+- docs/.vitepress/theme/index.ts
 - docs/package.json
-- docs/explanation/boundary.md
+- docs/explanation/architecture.md
+- docs/explanation/boundaries.md
+- docs/explanation/concepts.md
+- docs/explanation/decisions.md
+- docs/explanation/index.md
 - docs/explanation/release-semantics.md
-- docs/gen-config-docs.py
-- docs/gen-crate-map.py
-- docs/getting-started.md
 - docs/how-to/author-release-profile.md
-- docs/how-to/use-serve-ops.md
-- docs/how-to/write-tarsi-toml.md
-- docs/index.md
+- docs/how-to/index.md
 provenance:
   files:
-  - docs/explanation/boundary.md
+  - docs/.vitepress/theme/index.ts
+  - docs/explanation/architecture.md
+  - docs/explanation/boundaries.md
+  - docs/explanation/concepts.md
+  - docs/explanation/decisions.md
+  - docs/explanation/index.md
   - docs/explanation/release-semantics.md
-  - docs/gen-config-docs.py
-  - docs/gen-crate-map.py
-  - docs/getting-started.md
   - docs/how-to/author-release-profile.md
+  - docs/how-to/index.md
   - docs/how-to/use-serve-ops.md
   - docs/how-to/write-tarsi-toml.md
   - docs/index.md
@@ -30,26 +33,31 @@ provenance:
   - docs/public/api/static.files/SourceSerif4-LICENSE-a2cfd9d5.md
   - docs/reference/config.md
   - docs/reference/crates.md
+  - docs/reference/index.md
   - docs/reference/ops.md
   - docs/reference/pack-layout.md
-  - docs/tutorials/first-release.md
+  - docs/tutorials/getting-started.md
   hashes:
-  - cfb1e78f63ec6fa18a7f028a3a89fb459a571cdb
-  - 7730086d96ee0ef9096c4e36c68bef2d2a3df5b4
-  - 5ef5371629ca21fc635da653ed35425d9bea8f34
-  - af7d1c2a822cdc8518bfa8ea2f16b4ac8bb281c1
-  - 4141498c39c91fb41541ff69b5735f3605d14773
+  - 73ba647e82ab0f8fec74d915003400b21fa6898b
+  - a8f6bf7fc60c6f326913a0fcd56384392697d52d
+  - bf376542d1bdbf81150fce14a6ff8383f3e96c54
+  - 54eedca1229c30dee568ed5d4658a7ecab09a54f
+  - 7b348779af0b74551807b76236254db8effb20f4
+  - f94d69eada520384dc07180093a7cecef782dd3a
+  - 0e0230543e0b95f29e6ca2284dc6434bd832501a
   - 0d3ddc126e94879a9ee8753b353c99f16fb3f800
-  - 2006ef83b8b6d2b5de3df88f9a1a704b74156da3
-  - 2fcb7e3767d3042b2827ef0bf8e65c0e73497073
-  - 0db9be1c6e8ab6d010f5854c4dcef95e4683500b
-  - e3513b929011e0f5b3b08f2745dae33b3751ff9c
+  - 0e52b168480beb99afc311a96639973c96ca1e81
+  - 9350ec259ec55bc4ea6390dc6b11dbfba05c015f
+  - 900460adc1503d759a7a1f1e6a11db86f72c38b5
+  - 309869de592a18fee3103a2a8084e3602eed45d9
+  - 3a09e9655a217b8d602a7d06b17c99a6475e4a8a
   - 175fa4f47aecdc02e902d243a1c29914eb2ee258
-  - 4d075cfe973679de303db99aa26927a1d8ad5c9f
-  - 6ae3c3b72d534e7ff369347218564570d8469c02
-  - 8fa5cde019e63bfa3804c2082ee72f482835677d
+  - 5b98d6aaed9c53e85e4a58cb41f638f5d0220f10
+  - 073dc8b21ef4671b2860850ab9a9bfc700310b8b
+  - cb122717503f55a40df0d671fe38c2b73b813121
+  - 9edf63be074b55153d2fbaa93fd43acab534ca5b
   - e26cc038db67ca7f7e891f5ef4ff6df2ab2af686
-  - 1b97c67c5601fec9926387d38a34b174d9b11555
-  commit_sha: 409d6ea16e90c83cafea0f603cf0f70669eedd42
-  generated_at: '1794726505'
+  - c639a8873d96a2ec420b89397a1aa15fcf2b483c
+  commit_sha: b5164316af533fb2049abb81aeb29d82a81868de
+  generated_at: '1795566214'
   generator: kuda-template/0.1.4

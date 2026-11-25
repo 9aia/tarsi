@@ -7,23 +7,31 @@ notes: ''
 verify:
 - refs/sturn/wal/default
 - refs/sturn/wal/devin-e5
+- refs/sturn/wal/devin-i002
+- refs/sturn/wal/devin-i003
 - refs/sturn/wal/devin-pl014-e1
+- refs/sturn/wal/devin-shim
 - refs/sturn/wal/devin-tarsi-dist
 - refs/sturn/wal/devin-tarsi-driver
-- refs/sturn/wal/main
-- refs/sturn/wal/p030
-- refs/sturn/wal/tarsi
-- refs/sturn/wal/tarsi-fix
-- refs/sturn/wal/tarsi-serve-fix
+- refs/sturn/wal/docs-audit
+- refs/sturn/wal/docs-gate
 provenance:
   files:
   - refs/sturn/wal/default
   - refs/sturn/wal/devin-e5
+  - refs/sturn/wal/devin-i002
+  - refs/sturn/wal/devin-i003
   - refs/sturn/wal/devin-pl014-e1
+  - refs/sturn/wal/devin-shim
   - refs/sturn/wal/devin-tarsi-dist
   - refs/sturn/wal/devin-tarsi-driver
+  - refs/sturn/wal/docs-audit
+  - refs/sturn/wal/docs-gate
+  - refs/sturn/wal/docs-tutorial-merge
   - refs/sturn/wal/main
   - refs/sturn/wal/p030
+  - refs/sturn/wal/pl-024
+  - refs/sturn/wal/pl-032
   - refs/sturn/wal/tarsi
   - refs/sturn/wal/tarsi-fix
   - refs/sturn/wal/tarsi-serve-fix
@@ -31,15 +39,23 @@ provenance:
   hashes:
   - 45b586746d386e61860fdc91489e382f05f62587
   - c244c7d5e2641a60d17f5606a0536e660b8f99f0
+  - 7139516d3680b760f4a68892876745f83456278e
+  - 689f78a06730e24517e630bf60082eca4b7b9b01
   - 3dbbc77fc67f5020f30193a6cf4b4c31e833bc98
+  - 57eae4b494820bad4b335966ca161226ba8975e0
   - 3e8b98732480a740379d6374d8d99cd07e013bb0
   - 15c5624417b70fce5c8390ec0be2588ea00ceae4
+  - d5ae3f095b23ad78936564478da95a3c2401a8a9
+  - aca37c764c214a91c0e3db7f6af4a43a9181232f
+  - 9ee114fd78562ac553ed3f7348e0310c9769c2d9
   - 4ba4cfbc676dd2e5584df5b0939ac605c150c6e6
   - e93265d2234e594ffc400e5c09c1eabbc144cdf5
-  - c3ccf9a0b5d5f8145273c037ec7ec37e312a3fe5
+  - 9cc24c7bfab01551bac08aaded676140506db2a1
+  - feb8ce1cfaa1f547b174eb50841de96e17508174
+  - 5d8406dada111139c72180ef2d87d36cd5c8a2a8
   - daeff29c4a015d4744cd2109f66eb1ffe37eb113
   - b819dca51ef0b854af93c2eeb69c3fc915bac820
   - f2ad4c479958b241d2dcb025b272eb7ff2361118
-  commit_sha: 409d6ea16e90c83cafea0f603cf0f70669eedd42
-  generated_at: '1794726505'
+  commit_sha: b5164316af533fb2049abb81aeb29d82a81868de
+  generated_at: '1795566214'
   generator: kuda-template/0.1.4
